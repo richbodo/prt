@@ -1,0 +1,6 @@
+# requirements.txt
+typer
+sqlcipher3
+langchain
+google-api-python-client
+
