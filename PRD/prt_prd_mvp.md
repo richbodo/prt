@@ -14,6 +14,7 @@ The MVP aims to provide a privacy-first relationship manager that helps a single
 - Cloud-based storage without encryption
 - Advertising or data monetization
 - Complex social networking features
+- Web interface or GUI of any kind
 
 ## Technical Considerations
 - **Typer** for building the CLI experience
