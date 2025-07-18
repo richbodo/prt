@@ -12,7 +12,7 @@ Run all commands from the repository root (the directory containing this README)
 Create a virtual environment and install dependencies:
 
 ```bash
-./setup.sh
+source ./init.sh
 ```
 
 The script creates a `.venv` directory and installs packages listed in
@@ -24,7 +24,7 @@ The main application is a Typer CLI located inside the `prt` package. Launch it
 with:
 
 ```bash
-python -m prt.cli run
+python -m prt.cli
 ```
 
 Because the project folder shares the same name as the package, ensure you are
@@ -32,12 +32,15 @@ in the repository root before executing this command.
 
 ## Running the tests
 
-Activate the virtual environment if it is not already active and execute
-pytest:
 
 ```bash
-source .venv/bin/activate
 pytest -q
+```
+
+## Exit the virtual environment
+
+```bash
+source ./uninit.sh
 ```
 
 
