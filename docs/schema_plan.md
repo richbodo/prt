@@ -5,7 +5,7 @@ This document outlines the proposed schema for PRT.
 ## Reference
 
 The latest Google Contacts download schema is available on GitHub:
-<https://github.com/googleworkspace/datadownload-schemas/tree/main/contacts>
+<https://developers.google.com/people/api/rest/v1/people#Person>
 
 ## Proposed Superset Schema
 
