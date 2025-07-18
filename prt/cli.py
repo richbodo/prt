@@ -35,7 +35,8 @@ def run(debug: Optional[bool] = True):
 
     db = Database(Path(cfg["db_path"]))
     db.connect()
-    db.initialize()
+    schema_path = Path(__file__).resolve().parents[1] / "docs" / "latest_google_people_schema.json"
+    db.initialize(schema_path)
     typer.echo("Database initialized.")
     db.backup()
 
