@@ -1,7 +1,8 @@
 import sqlite3
 import shutil
+import json
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 
 class Database:
@@ -12,8 +13,17 @@ class Database:
     def connect(self) -> None:
         self.conn = sqlite3.connect(self.path)
 
-    def initialize(self) -> None:
+    def initialize(self, schema_path: Path) -> None:
+        """Initialize database tables using the provided Google People schema."""
         cur = self.conn.cursor()
+        if schema_path:
+            with open(schema_path, "r") as f:
+                schema = json.load(f)
+            columns = ["id INTEGER PRIMARY KEY AUTOINCREMENT"]
+            for prop in schema.get("properties", {}).keys():
+                columns.append(f'"{prop}" TEXT')
+            cur.execute(f'CREATE TABLE IF NOT EXISTS people ({", ".join(columns)})')
+
         cur.execute(
             'CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, name TEXT, email TEXT)'
         )
@@ -40,6 +50,25 @@ class Database:
     def insert_contacts(self, contacts: List[Tuple[str, str]]):
         cur = self.conn.cursor()
         cur.executemany('INSERT INTO contacts(name, email) VALUES (?, ?)', contacts)
+        self.conn.commit()
+
+    def insert_people(self, people: List[Dict[str, Any]]):
+        """Insert list of people dictionaries into the people table."""
+        cur = self.conn.cursor()
+        for person in people:
+            columns = []
+            values = []
+            for k, v in person.items():
+                columns.append(f'"{k}"')
+                if isinstance(v, (dict, list)):
+                    values.append(json.dumps(v))
+                else:
+                    values.append(v)
+            placeholders = ",".join(["?"] * len(values))
+            cur.execute(
+                f'INSERT INTO people({", ".join(columns)}) VALUES ({placeholders})',
+                values,
+            )
         self.conn.commit()
 
     def list_contacts(self) -> List[Tuple[int, str, str]]:
