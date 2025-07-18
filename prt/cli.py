@@ -2,7 +2,7 @@ import typer
 from pathlib import Path
 from typing import Optional
 
-from .config import load_config, save_config, config_path, REQUIRED_FIELDS
+from .config import load_config, save_config, config_path, data_dir, REQUIRED_FIELDS
 from .db import Database
 from .google_contacts import fetch_contacts
 from .llm import chat
@@ -21,7 +21,8 @@ def run(debug: Optional[bool] = True):
             cfg = {}
             cfg["google_api_key"] = typer.prompt("Google API key", default="demo")
             cfg["openai_api_key"] = typer.prompt("OpenAI API key", default="demo")
-            cfg["db_path"] = typer.prompt("Database path", default="prt.db")
+            default_db = str(data_dir() / "prt.db")
+            cfg["db_path"] = typer.prompt("Database path", default=default_db)
             save_config(cfg)
             typer.echo(f"Config saved to {config_path()}")
         else:
