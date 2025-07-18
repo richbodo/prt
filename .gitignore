@@ -197,3 +197,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 .venv
+prt_env/
