@@ -5,4 +5,5 @@ def fetch_contacts(config: Dict[str, str]) -> List[Tuple[str, str]]:
     return [
         ("Alice Example", "alice@example.com"),
         ("Bob Example", "bob@example.com"),
+        ("Carol Example", "carol@example.com"),
     ]
