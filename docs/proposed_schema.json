@@ -1,0 +1,27 @@
+{
+  "contacts": {
+    "id": "INTEGER PRIMARY KEY",
+    "name": "TEXT",
+    "email": "TEXT",
+    "google_fields": "JSON"
+  },
+  "tags": {
+    "id": "INTEGER PRIMARY KEY",
+    "name": "TEXT UNIQUE"
+  },
+  "relationships": {
+    "id": "INTEGER PRIMARY KEY",
+    "contact_id": "INTEGER REFERENCES contacts(id)"
+  },
+  "relationship_tags": {
+    "relationship_id": "INTEGER REFERENCES relationships(id)",
+    "tag_id": "INTEGER REFERENCES tags(id)",
+    "PRIMARY KEY": ["relationship_id", "tag_id"]
+  },
+  "notes": {
+    "id": "INTEGER PRIMARY KEY",
+    "relationship_id": "INTEGER REFERENCES relationships(id)",
+    "text": "TEXT",
+    "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+  }
+}
