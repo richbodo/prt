@@ -1,0 +1,287 @@
+{
+  "description": "Information about a person merged from various data sources such as the authenticated user's contacts and profile data. Most fields can have multiple items. The items in a field have no guaranteed order, but each non-empty field is guaranteed to have exactly one field with `metadata.primary` set to true.",
+  "id": "Person",
+  "properties": {
+    "addresses": {
+      "description": "The person's street addresses.",
+      "items": {
+        "$ref": "Address"
+      },
+      "type": "array"
+    },
+    "ageRange": {
+      "deprecated": true,
+      "description": "Output only. **DEPRECATED** (Please use `person.ageRanges` instead) The person's age range.",
+      "enum": [
+        "AGE_RANGE_UNSPECIFIED",
+        "LESS_THAN_EIGHTEEN",
+        "EIGHTEEN_TO_TWENTY",
+        "TWENTY_ONE_OR_OLDER"
+      ],
+      "enumDescriptions": [
+        "Unspecified.",
+        "Younger than eighteen.",
+        "Between eighteen and twenty.",
+        "Twenty-one and older."
+      ],
+      "readOnly": true,
+      "type": "string"
+    },
+    "ageRanges": {
+      "description": "Output only. The person's age ranges.",
+      "items": {
+        "$ref": "AgeRangeType"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "biographies": {
+      "description": "The person's biographies. This field is a singleton for contact sources.",
+      "items": {
+        "$ref": "Biography"
+      },
+      "type": "array"
+    },
+    "birthdays": {
+      "description": "The person's birthdays. This field is a singleton for contact sources.",
+      "items": {
+        "$ref": "Birthday"
+      },
+      "type": "array"
+    },
+    "braggingRights": {
+      "deprecated": true,
+      "description": "**DEPRECATED**: No data will be returned The person's bragging rights.",
+      "items": {
+        "$ref": "BraggingRights"
+      },
+      "type": "array"
+    },
+    "calendarUrls": {
+      "description": "The person's calendar URLs.",
+      "items": {
+        "$ref": "CalendarUrl"
+      },
+      "type": "array"
+    },
+    "clientData": {
+      "description": "The person's client data.",
+      "items": {
+        "$ref": "ClientData"
+      },
+      "type": "array"
+    },
+    "coverPhotos": {
+      "description": "Output only. The person's cover photos.",
+      "items": {
+        "$ref": "CoverPhoto"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "emailAddresses": {
+      "description": "The person's email addresses. For `people.connections.list` and `otherContacts.list` the number of email addresses is limited to 100. If a Person has more email addresses the entire set can be obtained by calling GetPeople.",
+      "items": {
+        "$ref": "EmailAddress"
+      },
+      "type": "array"
+    },
+    "etag": {
+      "description": "The [HTTP entity tag](https://en.wikipedia.org/wiki/HTTP_ETag) of the resource. Used for web cache validation.",
+      "type": "string"
+    },
+    "events": {
+      "description": "The person's events.",
+      "items": {
+        "$ref": "Event"
+      },
+      "type": "array"
+    },
+    "externalIds": {
+      "description": "The person's external IDs.",
+      "items": {
+        "$ref": "ExternalId"
+      },
+      "type": "array"
+    },
+    "fileAses": {
+      "description": "The person's file-ases.",
+      "items": {
+        "$ref": "FileAs"
+      },
+      "type": "array"
+    },
+    "genders": {
+      "description": "The person's genders. This field is a singleton for contact sources.",
+      "items": {
+        "$ref": "Gender"
+      },
+      "type": "array"
+    },
+    "imClients": {
+      "description": "The person's instant messaging clients.",
+      "items": {
+        "$ref": "ImClient"
+      },
+      "type": "array"
+    },
+    "interests": {
+      "description": "The person's interests.",
+      "items": {
+        "$ref": "Interest"
+      },
+      "type": "array"
+    },
+    "locales": {
+      "description": "The person's locale preferences.",
+      "items": {
+        "$ref": "Locale"
+      },
+      "type": "array"
+    },
+    "locations": {
+      "description": "The person's locations.",
+      "items": {
+        "$ref": "Location"
+      },
+      "type": "array"
+    },
+    "memberships": {
+      "description": "The person's group memberships.",
+      "items": {
+        "$ref": "Membership"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "$ref": "PersonMetadata",
+      "description": "Output only. Metadata about the person.",
+      "readOnly": true
+    },
+    "miscKeywords": {
+      "description": "The person's miscellaneous keywords.",
+      "items": {
+        "$ref": "MiscKeyword"
+      },
+      "type": "array"
+    },
+    "names": {
+      "description": "The person's names. This field is a singleton for contact sources.",
+      "items": {
+        "$ref": "Name"
+      },
+      "type": "array"
+    },
+    "nicknames": {
+      "description": "The person's nicknames.",
+      "items": {
+        "$ref": "Nickname"
+      },
+      "type": "array"
+    },
+    "occupations": {
+      "description": "The person's occupations.",
+      "items": {
+        "$ref": "Occupation"
+      },
+      "type": "array"
+    },
+    "organizations": {
+      "description": "The person's past or current organizations.",
+      "items": {
+        "$ref": "Organization"
+      },
+      "type": "array"
+    },
+    "phoneNumbers": {
+      "description": "The person's phone numbers. For `people.connections.list` and `otherContacts.list` the number of phone numbers is limited to 100. If a Person has more phone numbers the entire set can be obtained by calling GetPeople.",
+      "items": {
+        "$ref": "PhoneNumber"
+      },
+      "type": "array"
+    },
+    "photos": {
+      "description": "Output only. The person's photos.",
+      "items": {
+        "$ref": "Photo"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "relations": {
+      "description": "The person's relations.",
+      "items": {
+        "$ref": "Relation"
+      },
+      "type": "array"
+    },
+    "relationshipInterests": {
+      "deprecated": true,
+      "description": "Output only. **DEPRECATED**: No data will be returned The person's relationship interests.",
+      "items": {
+        "$ref": "RelationshipInterest"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "relationshipStatuses": {
+      "deprecated": true,
+      "description": "Output only. **DEPRECATED**: No data will be returned The person's relationship statuses.",
+      "items": {
+        "$ref": "RelationshipStatus"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "residences": {
+      "deprecated": true,
+      "description": "**DEPRECATED**: (Please use `person.locations` instead) The person's residences.",
+      "items": {
+        "$ref": "Residence"
+      },
+      "type": "array"
+    },
+    "resourceName": {
+      "description": "The resource name for the person, assigned by the server. An ASCII string in the form of `people/{person_id}`.",
+      "type": "string"
+    },
+    "sipAddresses": {
+      "description": "The person's SIP addresses.",
+      "items": {
+        "$ref": "SipAddress"
+      },
+      "type": "array"
+    },
+    "skills": {
+      "description": "The person's skills.",
+      "items": {
+        "$ref": "Skill"
+      },
+      "type": "array"
+    },
+    "taglines": {
+      "deprecated": true,
+      "description": "Output only. **DEPRECATED**: No data will be returned The person's taglines.",
+      "items": {
+        "$ref": "Tagline"
+      },
+      "readOnly": true,
+      "type": "array"
+    },
+    "urls": {
+      "description": "The person's associated URLs.",
+      "items": {
+        "$ref": "Url"
+      },
+      "type": "array"
+    },
+    "userDefined": {
+      "description": "The person's user defined data.",
+      "items": {
+        "$ref": "UserDefined"
+      },
+      "type": "array"
+    }
+  },
+  "type": "object"
+}
