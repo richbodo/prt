@@ -30,6 +30,9 @@ python -m prt.cli
 Because the project folder shares the same name as the package, ensure you are
 in the repository root before executing this command.
 
+The CLI leverages the [Rich](https://github.com/Textualize/rich) library to
+display colorful tables and styled messages.
+
 ## Running the tests
 
 
