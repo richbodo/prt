@@ -6,7 +6,13 @@ from typing import Optional
 from rich.console import Console
 from rich.table import Table
 
-from .config import load_config, save_config, config_path, REQUIRED_FIELDS
+from .config import (
+    load_config,
+    save_config,
+    config_path,
+    REQUIRED_FIELDS,
+    data_dir,
+)
 
 from .db import Database
 from .google_contacts import fetch_contacts
