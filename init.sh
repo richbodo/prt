@@ -11,7 +11,7 @@ fi
 
 # Check if virtual environment exists, if not create it
 if [ ! -d "prt_env" ]; then
-    echo "Creating new virtual environment: snh_env"
+    echo "Creating new virtual environment: prt_env"
     python3 -m venv prt_env || { echo "Failed to create virtual environment"; exit 1; }
     
     # Activate and install requirements
