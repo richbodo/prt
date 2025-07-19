@@ -3,4 +3,5 @@ typer
 langchain
 google-api-python-client
 pytest
+rich
 
