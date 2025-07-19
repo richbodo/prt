@@ -2,10 +2,12 @@ import typer
 from pathlib import Path
 from typing import Optional
 
+
 from rich.console import Console
 from rich.table import Table
 
 from .config import load_config, save_config, config_path, REQUIRED_FIELDS
+
 from .db import Database
 from .google_contacts import fetch_contacts
 from .llm import chat
@@ -29,7 +31,8 @@ def run(debug: Optional[bool] = True):
             cfg = {}
             cfg["google_api_key"] = typer.prompt("Google API key", default="demo")
             cfg["openai_api_key"] = typer.prompt("OpenAI API key", default="demo")
-            cfg["db_path"] = typer.prompt("Database path", default="prt.db")
+            default_db = str(data_dir() / "prt.db")
+            cfg["db_path"] = typer.prompt("Database path", default=default_db)
             save_config(cfg)
             console.print(f"Config saved to {config_path()}", style="green")
             console.print()
@@ -44,7 +47,9 @@ def run(debug: Optional[bool] = True):
 
     db = Database(Path(cfg["db_path"]))
     db.connect()
-    db.initialize()
+
+    schema_path = Path(__file__).resolve().parents[1] / "docs" / "latest_google_people_schema.json"
+    db.initialize(schema_path)
     console.print("Database initialized.", style="bold green")
     console.print()
     db.backup()

@@ -10,5 +10,5 @@ def test_config_roundtrip(tmp_path):
     }
     os.chdir(tmp_path)
     save_config(cfg)
-    assert (tmp_path / 'prt_config.json').exists()
+    assert (tmp_path / 'prt_data' / 'prt_config.json').exists()
     assert load_config() == cfg
