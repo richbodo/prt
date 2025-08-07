@@ -17,6 +17,7 @@ from .config import (
 from .db import Database
 from .google_contacts import fetch_contacts
 from .llm import chat
+from utils.google_contacts_summary import parse_contacts
 
 app = typer.Typer(help="Personal Relationship Toolkit")
 console = Console()
@@ -62,8 +63,71 @@ def run(debug: Optional[bool] = True):
 
     if db.count_contacts() == 0:
         console.print("No contacts in database.", style="yellow")
+        """  We are not going to sync for now - takes too long to configure - no one will use it       
         if typer.confirm("Sync contacts from Google?"):
             contacts = fetch_contacts(cfg)
+            db.insert_contacts(contacts)
+            console.print(f"Inserted {len(contacts)} contacts.", style="green")
+            console.print()
+        """
+        if typer.confirm("Import contacts from a Google Contacts CSV file?"):
+            # Find CSV files in prt_data directory
+            csv_files = list(data_dir().glob("*.csv"))
+            
+            if not csv_files:
+                console.print("No CSV files found in prt_data/ directory.", style="yellow")
+                console.print("Please export your Google Contacts to CSV and place the file in the prt_data/ directory, then run the CLI again.", style="cyan")
+                raise typer.Exit()
+            
+            # Display available CSV files
+            console.print("Available CSV files:", style="bold blue")
+            for i, csv_file in enumerate(csv_files, 1):
+                console.print(f"  {i}. {csv_file.name}")
+            console.print()
+            
+            # Let user select a file
+            while True:
+                try:
+                    choice = int(typer.prompt(f"Select a file (1-{len(csv_files)})"))
+                    if 1 <= choice <= len(csv_files):
+                        csv_path = str(csv_files[choice - 1])
+                        break
+                    else:
+                        console.print(f"Please enter a number between 1 and {len(csv_files)}", style="red")
+                except ValueError:
+                    console.print("Please enter a valid number", style="red")
+            
+            contacts = parse_contacts(csv_path)
+            
+            # Show contact count and first contact for verification
+            console.print(f"Found {len(contacts)} contacts in the CSV file.", style="bold blue")
+            console.print()
+            
+            if contacts:
+                first_contact = contacts[0]
+                name = f"{first_contact['first']} {first_contact['last']}".strip()
+                if not name:
+                    name = "(No name)"
+                
+                console.print("First contact details:", style="bold green")
+                console.print(f"  Name: {name}")
+                if first_contact['emails']:
+                    console.print("  Emails:")
+                    for email in first_contact['emails']:
+                        console.print(f"    {email}")
+                if first_contact['phones']:
+                    console.print("  Phones:")
+                    for phone in first_contact['phones']:
+                        console.print(f"    {phone}")
+                console.print()
+            else:
+                console.print("No contacts found in the CSV file.", style="yellow")
+                console.print()
+            
+            if not typer.confirm("Does the contact count and the first contact look correct?"):
+                console.print("Stopping program - see the utils directory for parsing utilities to test with.", style="red")
+                raise typer.Exit()
+            
             db.insert_contacts(contacts)
             console.print(f"Inserted {len(contacts)} contacts.", style="green")
             console.print()
