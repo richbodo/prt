@@ -200,3 +200,4 @@ cython_debug/
 .venv
 prt_env/
 secrets/
+prt_data
