@@ -2,8 +2,8 @@
 """Summarize Google Contacts CSV exports.
 
 This script reads an exported Google Contacts CSV file, counts the
-number of contacts, and prints each contact's name along with any
-associated email addresses and phone numbers.
+number of contacts, and prints the total number of contacts along with 
+each contact's name and associated email addresses and phone numbers.
 
 Usage:
     python google_contacts_summary.py contacts.csv

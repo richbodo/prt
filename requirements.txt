@@ -6,4 +6,4 @@ google-auth-httplib2
 google-auth-oauthlib
 pytest
 rich
-
+alembic
