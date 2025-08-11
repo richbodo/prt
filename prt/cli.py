@@ -128,9 +128,9 @@ def run(debug: Optional[bool] = True):
                 console.print("Stopping program - see the utils directory for parsing utilities to test with.", style="red")
                 raise typer.Exit()
             
-            db.insert_contacts(contacts)
+            """db.insert_contacts(contacts)
             console.print(f"Inserted {len(contacts)} contacts.", style="green")
-            console.print()
+            console.print()"""
     else:
         console.print(f"{db.count_contacts()} contacts in database.", style="green")
         console.print()
