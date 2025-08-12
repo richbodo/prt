@@ -23,8 +23,11 @@ def load_config() -> Dict[str, Any]:
     path = config_path()
     if not path.exists():
         return {}
-    with path.open('r') as f:
-        return json.load(f)
+    try:
+        with path.open('r') as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError("Config file is corrupt") from e
 
 
 def save_config(cfg: Dict[str, Any]) -> None:

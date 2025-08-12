@@ -16,6 +16,8 @@ from rich.console import Console
 sys.path.insert(0, str(Path(__file__).parent / "prt"))
 
 from config import get_db_credentials, data_dir, load_config, save_config
+from db import Database
+import shutil
 
 app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()
@@ -52,7 +54,11 @@ def setup(
     console.print(f"Credentials saved to: secrets/db_secrets.txt", style="green")
     
     # Update config with credentials
-    config = load_config()
+    try:
+        config = load_config()
+    except ValueError:
+        console.print("Existing config is corrupt. Creating new config...", style="yellow")
+        config = {}
     if not config:
         console.print("No config found. Creating new config...", style="yellow")
         config = {
@@ -76,7 +82,32 @@ def setup(
     
     save_config(config)
     console.print(f"Config updated: {data_path / 'prt_config.json'}", style="green")
-    
+
+    # Validate existing database
+    db_file = Path(config["db_path"])
+    if db_file.exists():
+        db = Database(db_file)
+        db.connect()
+        if not db.is_valid():
+            db.conn.close()
+            backup_path = db_file.with_name(db_file.name + ".corrupt.bak")
+            shutil.move(db_file, backup_path)
+            console.print(
+                f"Existing database appears corrupt. Backed up to {backup_path}",
+                style="bold red",
+            )
+            if typer.confirm("Create a new clean database?"):
+                db = Database(db_file)
+                db.connect()
+                schema_path = Path(__file__).parent / "docs" / "latest_google_people_schema.json"
+                db.initialize(schema_path)
+                console.print(
+                    f"Created new database at {db_file}", style="green"
+                )
+            else:
+                console.print("Exiting without creating new database.", style="yellow")
+                raise typer.Exit()
+
     if show_alembic:
         console.print("\nAlembic Configuration:", style="bold blue")
         console.print("=" * 30)
@@ -100,7 +131,11 @@ def setup(
 @app.command()
 def show_config():
     """Show current database configuration."""
-    config = load_config()
+    try:
+        config = load_config()
+    except ValueError:
+        console.print("Configuration file is corrupt.", style="red")
+        return
     if not config:
         console.print("No configuration found.", style="red")
         return
