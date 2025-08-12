@@ -70,7 +70,7 @@ def run(debug: Optional[bool] = True):
     if not cfg:
         console.print("Config file not found.", style="bold red")
         console.print(
-            "See documentation at https://github.com/example/prt",
+            "See documentation at https://github.com/richbodo/prt",
             style="cyan",
         )
         console.print()
