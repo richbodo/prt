@@ -12,6 +12,7 @@ from .config import (
     config_path,
     REQUIRED_FIELDS,
     data_dir,
+    get_db_credentials,
 )
 
 from .db import Database
@@ -40,6 +41,12 @@ def run(debug: Optional[bool] = True):
             cfg["openai_api_key"] = typer.prompt("OpenAI API key", default="demo")
             default_db = str(data_dir() / "prt.db")
             cfg["db_path"] = typer.prompt("Database path", default=default_db)
+            
+            # Get or generate database credentials
+            db_username, db_password = get_db_credentials()
+            cfg["db_username"] = db_username
+            cfg["db_password"] = db_password
+            
             save_config(cfg)
             console.print(f"Config saved to {config_path()}", style="green")
             console.print()
@@ -47,7 +54,15 @@ def run(debug: Optional[bool] = True):
             raise typer.Exit()
     missing = [f for f in REQUIRED_FIELDS if f not in cfg]
     for field in missing:
-        cfg[field] = typer.prompt(f"Enter value for {field}")
+        if field in ['db_username', 'db_password']:
+            # Handle database credentials specially
+            if field == 'db_username':
+                db_username, db_password = get_db_credentials()
+                cfg['db_username'] = db_username
+                cfg['db_password'] = db_password
+                console.print(f"Database credentials generated and saved to secrets/db_secrets.txt", style="green")
+        else:
+            cfg[field] = typer.prompt(f"Enter value for {field}")
     if missing:
         save_config(cfg)
         console.print()
