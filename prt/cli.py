@@ -1,10 +1,13 @@
 import typer
 from pathlib import Path
 from typing import Optional
+import configparser
 
 
 from rich.console import Console
 from rich.table import Table
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 
 from .config import (
     load_config,
@@ -24,10 +27,46 @@ app = typer.Typer(help="Personal Relationship Toolkit")
 console = Console()
 
 
+def test_db_credentials() -> None:
+    """Verify DB credentials from alembic.ini and report record count."""
+    parser = configparser.ConfigParser()
+    if not parser.read("alembic.ini"):
+        console.print("Alembic configuration not found.", style="bold red")
+        return
+    url = parser.get("alembic", "sqlalchemy.url", fallback="")
+    if not url:
+        console.print("Database URL not set in alembic.ini.", style="bold red")
+        return
+    url_obj = make_url(url)
+    try:
+        engine = create_engine(url)
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            count = 0
+            try:
+                result = conn.execute(text("SELECT COUNT(*) FROM contacts"))
+                count = result.scalar() or 0
+            except Exception:
+                console.print("Contacts table not found.", style="yellow")
+        console.print(
+            f"Credentials for user '{url_obj.username}' are valid. {count} records in database.",
+            style="green",
+        )
+    except Exception as e:
+        console.print(
+            f"Failed to connect with credentials for user '{url_obj.username}': {e}",
+            style="bold red",
+        )
+
+
 @app.command()
 def run(debug: Optional[bool] = True):
     """Run the interactive CLI."""
-    cfg = load_config()
+    try:
+        cfg = load_config()
+    except ValueError:
+        console.print("Config file is corrupt.", style="bold red")
+        cfg = {}
     if not cfg:
         console.print("Config file not found.", style="bold red")
         console.print(
@@ -41,12 +80,12 @@ def run(debug: Optional[bool] = True):
             cfg["openai_api_key"] = typer.prompt("OpenAI API key", default="demo")
             default_db = str(data_dir() / "prt.db")
             cfg["db_path"] = typer.prompt("Database path", default=default_db)
-            
+
             # Get or generate database credentials
             db_username, db_password = get_db_credentials()
             cfg["db_username"] = db_username
             cfg["db_password"] = db_password
-            
+
             save_config(cfg)
             console.print(f"Config saved to {config_path()}", style="green")
             console.print()
@@ -69,11 +108,14 @@ def run(debug: Optional[bool] = True):
 
     db = Database(Path(cfg["db_path"]))
     db.connect()
+    if not db.is_valid():
+        console.print("Database appears to be corrupt.", style="bold red")
 
     schema_path = Path(__file__).resolve().parents[1] / "docs" / "latest_google_people_schema.json"
     db.initialize(schema_path)
     console.print("Database initialized.", style="bold green")
     console.print()
+    test_db_credentials()
     db.backup()
 
     if db.count_contacts() == 0:

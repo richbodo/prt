@@ -13,6 +13,17 @@ class Database:
     def connect(self) -> None:
         self.conn = sqlite3.connect(self.path)
 
+    def is_valid(self) -> bool:
+        """Check if the database is valid using SQLite integrity check."""
+        if self.conn is None:
+            return False
+        try:
+            cur = self.conn.cursor()
+            cur.execute("PRAGMA integrity_check")
+            return cur.fetchone()[0] == "ok"
+        except sqlite3.DatabaseError:
+            return False
+
     def initialize(self, schema_path: Path) -> None:
         """Initialize database tables using the provided Google People schema."""
         cur = self.conn.cursor()
@@ -32,10 +43,23 @@ class Database:
         )
         self.conn.commit()
 
-    def backup(self) -> None:
-        backup_path = self.path.with_suffix('.bak')
+    def backup(self, suffix: str = ".bak") -> Path:
+        """Backup the database file with a custom suffix.
+
+        Parameters
+        ----------
+        suffix: str
+            Suffix to append to the database filename. Defaults to ".bak".
+
+        Returns
+        -------
+        Path
+            Path to the backup file.
+        """
+        backup_path = self.path.with_name(self.path.name + suffix)
         if self.path.exists():
             shutil.copy(self.path, backup_path)
+        return backup_path
 
     def count_contacts(self) -> int:
         cur = self.conn.cursor()
