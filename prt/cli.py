@@ -1,4 +1,5 @@
 import typer
+import shutil
 from pathlib import Path
 from typing import Optional
 import configparser
@@ -22,6 +23,12 @@ from .db import Database
 from .google_contacts import fetch_contacts
 from .llm import chat
 from utils.google_contacts_summary import parse_contacts
+
+# Import setup functions
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from setup_database import setup_database, initialize_database
 
 app = typer.Typer(help="Personal Relationship Toolkit")
 console = Console()
@@ -75,45 +82,55 @@ def run(debug: Optional[bool] = True):
         )
         console.print()
         if typer.confirm("Create a new config file?"):
-            cfg = {}
-            cfg["google_api_key"] = typer.prompt("Google API key", default="demo")
-            cfg["openai_api_key"] = typer.prompt("OpenAI API key", default="demo")
-            default_db = str(data_dir() / "prt.db")
-            cfg["db_path"] = typer.prompt("Database path", default=default_db)
-
-            # Get or generate database credentials
-            db_username, db_password = get_db_credentials()
-            cfg["db_username"] = db_username
-            cfg["db_password"] = db_password
-
-            save_config(cfg)
+            # Use the setup function to create config
+            cfg = setup_database(quiet=True)
             console.print(f"Config saved to {config_path()}", style="green")
             console.print()
         else:
             raise typer.Exit()
+    # Check for missing required fields and handle them automatically
     missing = [f for f in REQUIRED_FIELDS if f not in cfg]
-    for field in missing:
-        if field in ['db_username', 'db_password']:
-            # Handle database credentials specially
-            if field == 'db_username':
-                db_username, db_password = get_db_credentials()
-                cfg['db_username'] = db_username
-                cfg['db_password'] = db_password
-                console.print(f"Database credentials generated and saved to secrets/db_secrets.txt", style="green")
-        else:
-            cfg[field] = typer.prompt(f"Enter value for {field}")
     if missing:
+        console.print("Updating configuration with missing fields...", style="blue")
+        
+        # Handle database credentials automatically
+        if 'db_username' in missing or 'db_password' in missing:
+            db_username, db_password = get_db_credentials()
+            cfg['db_username'] = db_username
+            cfg['db_password'] = db_password
+            console.print("Database credentials updated", style="green")
+        
+        # Handle other missing fields
+        for field in missing:
+            if field not in ['db_username', 'db_password']:
+                cfg[field] = typer.prompt(f"Enter value for {field}")
+        
         save_config(cfg)
         console.print()
 
+    # Check if database exists and is valid
     db = Database(Path(cfg["db_path"]))
     db.connect()
+    
     if not db.is_valid():
-        console.print("Database appears to be corrupt.", style="bold red")
-
-    schema_path = Path(__file__).resolve().parents[1] / "docs" / "latest_google_people_schema.json"
-    db.initialize(schema_path)
-    console.print("Database initialized.", style="bold green")
+        console.print("Database not found or invalid. Setting up...", style="yellow")
+        
+        # Backup existing database if it exists
+        db_file = Path(cfg["db_path"])
+        if db_file.exists():
+            backup_path = db_file.with_name(db_file.name + ".backup")
+            shutil.move(db_file, backup_path)
+            console.print(f"Backed up existing database to {backup_path}", style="blue")
+        
+        # Initialize database
+        if initialize_database(cfg, quiet=True):
+            console.print("Database initialized successfully.", style="bold green")
+        else:
+            console.print("Failed to initialize database.", style="bold red")
+            raise typer.Exit(1)
+    else:
+        console.print("Database connected successfully.", style="bold green")
+    
     console.print()
     test_db_credentials()
     db.backup()

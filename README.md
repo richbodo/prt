@@ -46,41 +46,48 @@ pytest -q
 source ./uninit.sh
 ```
 
-## Database Setup and Migrations
+## Database Setup
+
+PRT automatically handles database setup when you first run the CLI. The database is stored locally in SQLite format.
+
+### Automatic Setup
+
+Simply run the CLI and it will:
+- Create the necessary directories
+- Generate database credentials
+- Set up the database schema
+- Create a backup of any existing database if needed
+
+```bash
+python -m prt.cli
+```
+
+### Manual Setup (Advanced)
+
+If you need to manually configure the database:
+
+```bash
+python setup_database.py setup
+```
+
+This will:
+- Generate database credentials
+- Create/update your configuration file
+- Set up the database schema
+
+### Using Alembic for Migrations (Advanced)
 
 PRT uses Alembic for database migrations, allowing you to version-control your database schema and easily roll forward and backward through changes.
 
-### Initial Database Setup
-
-1. **Set up database configuration:**
-   ```bash
-   python setup_database.py setup
-   ```
-   This will:
-   - Generate database credentials
-   - Create/update your configuration file
-   - Show you the Alembic connection string
-
-2. **Configure Alembic:**
-   Edit `alembic.ini` line 87 with the connection string shown by the setup script:
-   ```ini
-   sqlalchemy.url = sqlite:///prt_data/prt.db
-   ```
-
-### Using Alembic for Migrations
-
 #### Creating Your First Migration
 
-1. **Generate the initial migration from your current schema:**
-   ```bash
-   alembic revision --autogenerate -m "Initial schema"
-   ```
-   This creates a migration file in `alembic/versions/` based on your current database schema.
+The initial migration is created automatically when you run `python create_initial_migration.py`. This script:
 
-2. **Apply the migration:**
-   ```bash
-   alembic upgrade head
-   ```
+1. **Sets up Alembic configuration** to work with your SQLAlchemy models
+2. **Generates the initial migration** from your models in `prt/models.py`
+3. **Creates migration files** in `alembic/versions/`
+
+For subsequent migrations, see "Creating New Migrations" below.
 
 #### Working with Migrations
 
@@ -164,34 +171,14 @@ PRT uses schema files to define the structure of your data:
 - **Proposed Schema**: `docs/proposed_schema.json` - Your custom schema extensions
 - **Schema Plan**: `docs/schema_plan.md` - Documentation of schema decisions
 
-### Switching Database Types
+### Database Configuration
 
-**From SQLite to PostgreSQL:**
+The database configuration is stored in `prt_data/prt_config.json`. This file contains:
+- Database connection settings
+- API keys (for future use)
+- Other application settings
 
-1. **Update database configuration:**
-   ```bash
-   python setup_database.py setup --db-type postgresql --host localhost --port 5432 --name prt
-   ```
-
-2. **Create PostgreSQL database:**
-   ```bash
-   createdb prt
-   ```
-
-3. **Update alembic.ini** with the new connection string:
-   ```ini
-   sqlalchemy.url = postgresql://username:password@localhost:5432/prt
-   ```
-
-4. **Apply migrations:**
-   ```bash
-   alembic upgrade head
-   ```
-
-**From PostgreSQL to SQLite:**
-```bash
-python setup_database.py setup --db-type sqlite
-```
+**Note:** PRT currently uses SQLite for simplicity. The database file is stored in `prt_data/prt.db`.
 
 ### Troubleshooting
 

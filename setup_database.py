@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Database setup script for PRT.
+Database setup utility for PRT.
 
-This script helps set up the database configuration and generates
-Alembic configuration for database migrations.
+This module provides functions to set up the database configuration
+and initialize the database schema. Designed to be called automatically
+by the CLI when needed.
 """
 
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 import typer
 from rich.console import Console
 
@@ -23,44 +24,44 @@ app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()
 
 
-@app.command()
-def setup(
-    db_type: str = typer.Option("sqlite", "--db-type", "-t", help="Database type (sqlite/postgresql)"),
-    db_host: str = typer.Option("localhost", "--host", "-h", help="Database host"),
-    db_port: int = typer.Option(5432, "--port", "-p", help="Database port"),
-    db_name: str = typer.Option("prt", "--name", "-n", help="Database name"),
-    force: bool = typer.Option(False, "--force", "-f", help="Force regeneration of credentials"),
-    show_alembic: bool = typer.Option(True, "--show-alembic", help="Show Alembic configuration"),
-):
-    """Set up database configuration and generate credentials."""
-    console.print("PRT Database Setup", style="bold blue")
-    console.print("=" * 50)
+def setup_database(force: bool = False, quiet: bool = False) -> Dict[str, Any]:
+    """
+    Set up database configuration and initialize database if needed.
+    
+    Args:
+        force: Force regeneration of credentials
+        quiet: Suppress output messages
+        
+    Returns:
+        Dictionary containing the configuration
+    """
+    if not quiet:
+        console.print("Setting up PRT database...", style="bold blue")
     
     # Ensure data directory exists
     data_path = data_dir()
-    console.print(f"Data directory: {data_path}", style="green")
     
     # Get or generate database credentials
     if force:
-        # Remove existing secrets file to force regeneration
         secrets_file = Path.cwd() / "secrets" / "db_secrets.txt"
         if secrets_file.exists():
             secrets_file.unlink()
-            console.print("Removed existing credentials file", style="yellow")
+            if not quiet:
+                console.print("Removed existing credentials file", style="yellow")
     
     username, password = get_db_credentials()
-    console.print(f"Database username: {username}", style="cyan")
-    console.print(f"Database password: {password}", style="cyan")
-    console.print(f"Credentials saved to: secrets/db_secrets.txt", style="green")
+    if not quiet:
+        console.print("Database credentials generated", style="green")
     
     # Update config with credentials
     try:
         config = load_config()
     except ValueError:
-        console.print("Existing config is corrupt. Creating new config...", style="yellow")
+        if not quiet:
+            console.print("Existing config is corrupt. Creating new config...", style="yellow")
         config = {}
+    
     if not config:
-        console.print("No config found. Creating new config...", style="yellow")
         config = {
             "google_api_key": "demo",
             "openai_api_key": "demo",
@@ -69,10 +70,7 @@ def setup(
     
     config['db_username'] = username
     config['db_password'] = password
-    config['db_type'] = db_type
-    config['db_host'] = db_host
-    config['db_port'] = db_port
-    config['db_name'] = db_name
+    config['db_type'] = "sqlite"
     
     # Ensure db_path is absolute and points to prt_data
     if 'db_path' in config:
@@ -81,51 +79,65 @@ def setup(
             config['db_path'] = str(data_path / "prt.db")
     
     save_config(config)
-    console.print(f"Config updated: {data_path / 'prt_config.json'}", style="green")
+    if not quiet:
+        console.print("Database configuration updated", style="green")
+    
+    return config
 
-    # Validate existing database
+
+def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
+    """
+    Initialize the database with schema if it doesn't exist or is corrupt.
+    
+    Args:
+        config: Database configuration dictionary
+        quiet: Suppress output messages
+        
+    Returns:
+        True if database was initialized successfully, False otherwise
+    """
     db_file = Path(config["db_path"])
+    
+    # Check if database exists and is valid
     if db_file.exists():
         db = Database(db_file)
         db.connect()
-        if not db.is_valid():
-            db.conn.close()
+        if db.is_valid():
+            if not quiet:
+                console.print("Database exists and is valid", style="green")
+            return True
+        else:
+            # Database is corrupt, backup and recreate
             backup_path = db_file.with_name(db_file.name + ".corrupt.bak")
             shutil.move(db_file, backup_path)
-            console.print(
-                f"Existing database appears corrupt. Backed up to {backup_path}",
-                style="bold red",
-            )
-            if typer.confirm("Create a new clean database?"):
-                db = Database(db_file)
-                db.connect()
-                schema_path = Path(__file__).parent / "docs" / "latest_google_people_schema.json"
-                db.initialize(schema_path)
-                console.print(
-                    f"Created new database at {db_file}", style="green"
-                )
-            else:
-                console.print("Exiting without creating new database.", style="yellow")
-                raise typer.Exit()
+            if not quiet:
+                console.print(f"Database was corrupt. Backed up to {backup_path}", style="yellow")
+    
+    # Create new database
+    if not quiet:
+        console.print("Creating new database...", style="blue")
+    
+    db = Database(db_file)
+    db.connect()
+    db.initialize()
+    
+    if not quiet:
+        console.print("Database initialized successfully", style="green")
+    
+    return True
 
-    if show_alembic:
-        console.print("\nAlembic Configuration:", style="bold blue")
-        console.print("=" * 30)
-        console.print("For alembic.ini line 87, use these settings:", style="cyan")
-        
-        if db_type.lower() == "postgresql":
-            url = f"postgresql://{username}:{password}@{db_host}:{db_port}/{db_name}"
-        else:
-            url = f"sqlite:///{data_path}/prt.db"
-        
-        console.print(f"sqlalchemy.url = {url}", style="bold green")
-        
-        if db_type.lower() == "sqlite":
-            console.print("\nNote: Currently using SQLite. To switch to PostgreSQL:", style="yellow")
-            console.print("1. Run: python setup_database.py setup --db-type postgresql")
-            console.print("2. Create a PostgreSQL database named 'prt'")
-            console.print("3. Update the Database class in prt/db.py to use SQLAlchemy")
-            console.print("4. Run: alembic upgrade head")
+
+@app.command()
+def setup(
+    force: bool = typer.Option(False, "--force", "-f", help="Force regeneration of credentials"),
+    quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress output"),
+):
+    """Set up database configuration for SQLite."""
+    config = setup_database(force=force, quiet=quiet)
+    
+    if not quiet:
+        console.print("\nDatabase setup complete!", style="bold green")
+        console.print("You can now run: python -m prt.cli", style="cyan")
 
 
 @app.command()
