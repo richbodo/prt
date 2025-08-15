@@ -1,6 +1,6 @@
 # PRT Development Roadmap
 
-This document outlines the development roadmap for the Personal Relationship Toolkit (PRT)
+This document outlines the development roadmap for the Personal Relationship Toolkit (PRT).  Not exactly doing these in order, but there is a [Project](https://github.com/users/richbodo/projects/2) that shows what is being worked on, more or less. 
 
 ## Phase 1: Database Encryption 
 ### Tasks
