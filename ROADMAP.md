@@ -11,7 +11,7 @@ This document outlines the development roadmap for the Personal Relationship Too
 
 ## Phase 2: Enhanced Search & Filtering, Web Views
 ### Tasks
-_ [ ] **Web Views** create a "directory" of any group of contacts - a static page to nav the group with contact details on mouseover or click.
+- [ ] **Web Views** create a "directory" of any group of contacts - a static page to nav the group with contact details on mouseover or click.
 - [ ] **Image support for contacts** upload images or find them online
 - [ ] **Extend database schema** with additional qualia
 - [ ] **Implement advanced search** with multiple criteria
