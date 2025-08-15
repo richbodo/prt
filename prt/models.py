@@ -5,7 +5,7 @@ These models define the database structure and are used by Alembic
 to generate and apply migrations.
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -24,29 +24,85 @@ class Contact(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    relationships = relationship("Relationship", back_populates="contact")
+    # One-to-one relationship with Relationship
+    relationship = relationship("Relationship", back_populates="contact", uselist=False)
     
     def __repr__(self):
         return f"<Contact(id={self.id}, name='{self.name}', email='{self.email}')>"
 
 
-class Relationship(Base):
-    """Relationship data and notes for contacts."""
-    __tablename__ = 'relationships'
+class Tag(Base):
+    """Editable list of tag names that can be applied to relationships."""
+    __tablename__ = 'tags'
     
     id = Column(Integer, primary_key=True)
-    contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False)
-    tag = Column(String(100), nullable=False)
-    note = Column(Text)
+    name = Column(String(100), nullable=False, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    contact = relationship("Contact", back_populates="relationships")
+    # Many-to-many relationship with Relationship via relationship_tags
+    relationships = relationship("Relationship", secondary="relationship_tags", back_populates="tags")
     
     def __repr__(self):
-        return f"<Relationship(id={self.id}, contact_id={self.contact_id}, tag='{self.tag}')>"
+        return f"<Tag(id={self.id}, name='{self.name}')>"
+
+
+class Note(Base):
+    """Free-form notes with titles that can be associated with relationships."""
+    __tablename__ = 'notes'
+    
+    id = Column(Integer, primary_key=True)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Many-to-many relationship with Relationship via relationship_notes
+    relationships = relationship("Relationship", secondary="relationship_notes", back_populates="notes")
+    
+    def __repr__(self):
+        return f"<Note(id={self.id}, title='{self.title}')>"
+
+
+class Relationship(Base):
+    """Links a contact to multiple tags and notes."""
+    __tablename__ = 'relationships'
+    
+    id = Column(Integer, primary_key=True)
+    contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False, unique=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # One-to-one relationship with Contact
+    contact = relationship("Contact", back_populates="relationship")
+    
+    # Many-to-many relationship with Tag via relationship_tags
+    tags = relationship("Tag", secondary="relationship_tags", back_populates="relationships")
+    
+    # Many-to-many relationship with Note via relationship_notes
+    notes = relationship("Note", secondary="relationship_notes", back_populates="relationships")
+    
+    def __repr__(self):
+        return f"<Relationship(id={self.id}, contact_id={self.contact_id})>"
+
+
+# Many-to-many join table between relationships and tags
+relationship_tags = Table(
+    'relationship_tags',
+    Base.metadata,
+    Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
+# Many-to-many join table between relationships and notes
+relationship_notes = Table(
+    'relationship_notes',
+    Base.metadata,
+    Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
+    Column('note_id', Integer, ForeignKey('notes.id'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
 
 
 class Person(Base):

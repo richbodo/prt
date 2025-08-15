@@ -89,6 +89,8 @@ The initial migration is created automatically when you run `python create_initi
 
 For subsequent migrations, see "Creating New Migrations" below.
 
+**Note:** The CLI automatically handles database initialization for new users. You only need to use Alembic if you want to version-control schema changes or are developing the application.
+
 #### Working with Migrations
 
 **View migration history:**
@@ -168,8 +170,7 @@ alembic upgrade head
 PRT uses schema files to define the structure of your data:
 
 - **Google People Schema**: `docs/latest_google_people_schema.json` - Defines the structure for Google Contacts data
-- **Proposed Schema**: `docs/proposed_schema.json` - Your custom schema extensions
-- **Schema Plan**: `docs/schema_plan.md` - Documentation of schema decisions
+- **Schema Plan**: `docs/schema_plan.md` - Complete documentation of database schema and design decisions
 
 ### Database Configuration
 
@@ -179,6 +180,19 @@ The database configuration is stored in `prt_data/prt_config.json`. This file co
 - Other application settings
 
 **Note:** PRT currently uses SQLite for simplicity. The database file is stored in `prt_data/prt.db`.
+
+### Schema Migration
+
+If you have an existing database with the old schema, you can migrate to the new schema:
+
+```bash
+python migrate_schema.py
+```
+
+This will:
+- Create a backup of your existing database
+- Migrate existing relationship data to the new schema
+- Preserve all your existing tags and notes
 
 ### Troubleshooting
 
