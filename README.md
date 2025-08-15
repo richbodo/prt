@@ -1,247 +1,286 @@
-# prt
-Personal Relationship Toolkit is a privacy-first local-first encrypted database designed to support mental health through intentional relationship management.
+# Personal Relationship Toolkit (PRT)
 
+A comprehensive toolkit for managing personal relationships, built with Python and featuring encrypted database support.
 
-Started ideating on this [here](http://richbodo.pbworks.com/w/page/160555728/Personal%20Social%20Network%20Health)
+## Features
 
-I synthesized an [MVP PRD](docs/PRD/prt_prd_mvp.md) for the consolidated requirements.
+- **Contact Management**: Import and manage contacts from Google Contacts
+- **Relationship Tracking**: Add tags and notes to track relationship details
+- **Encrypted Database**: Secure your data with SQLCipher encryption
+- **LLM Integration**: AI-powered insights and conversation assistance
+- **CLI Interface**: Easy-to-use command-line interface
 
-## Setup
+## Documentation
 
-Run all commands from the repository root (the directory containing this README).
+- **[Installation Guide](docs/INSTALLATION.md)**: Detailed platform-specific installation instructions
+- **[Database Management](DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
 
-Create a virtual environment and install dependencies:
+## Installation
 
-```bash
-source ./init.sh
-```
+### Prerequisites
 
-The script creates a `.venv` directory and installs packages listed in
-`requirements.txt`.
+- Python 3.8 or higher
+- SQLCipher development libraries (for encrypted database support)
 
-## Running the CLI
+### Platform-Specific Installation
 
-The main application is a Typer CLI located inside the `prt` package. Launch it
-with:
+For detailed installation instructions for each platform, see the [Installation Guide](docs/INSTALLATION.md).
 
-```bash
-python -m prt.cli
-```
+#### macOS
 
-Because the project folder shares the same name as the package, ensure you are
-in the repository root before executing this command.
+**Required Dependencies:**
+- Homebrew (for package management)
+- SQLCipher development libraries
 
-The CLI leverages the [Rich](https://github.com/Textualize/rich) library to
-display colorful tables and styled messages.
+**Installation Steps:**
 
-## Running the tests
-
-
-```bash
-pytest -q
-```
-
-## Exit the virtual environment
-
-```bash
-source ./uninit.sh
-```
-
-## Database Setup
-
-PRT automatically handles database setup when you first run the CLI. The database is stored locally in SQLite format.
-
-### Automatic Setup
-
-Simply run the CLI and it will:
-- Create the necessary directories
-- Generate database credentials
-- Set up the database schema
-- Create a backup of any existing database if needed
-
-```bash
-python -m prt.cli
-```
-
-### Manual Setup (Advanced)
-
-If you need to manually configure the database:
-
-```bash
-python setup_database.py setup
-```
-
-This will:
-- Generate database credentials
-- Create/update your configuration file
-- Set up the database schema
-
-### Using Alembic for Migrations (Advanced)
-
-PRT uses a comprehensive migration system with both Alembic and manual migrations for managing database schema changes.
-
-#### Migration Types
-
-1. **Alembic Migrations** (Recommended for schema changes)
-   - Location: `alembic/versions/`
-   - Format: `{revision}_{description}.py`
-   - Usage: `alembic revision --autogenerate -m "description"`
-
-2. **Manual Migrations** (For complex data migrations)
-   - Location: `migrations/`
-   - Format: `{number}_{description}.py`
-   - Usage: `python migrations/run_migrations.py --run-all`
-
-#### Migration Management
-
-```bash
-# List available migrations
-python migrations/run_migrations.py --list
-
-# Check migration status
-python migrations/run_migrations.py --status
-
-# Run all pending migrations
-python migrations/run_migrations.py --run-all
-
-# Run specific migration
-python migrations/run_migrations.py --run 001
-```
-
-**Note:** The CLI automatically handles database initialization for new users. You only need to use migrations if you want to version-control schema changes or are developing the application.
-
-#### Working with Migrations
-
-**View migration history:**
-```bash
-alembic history
-```
-
-**Check current database version:**
-```bash
-alembic current
-```
-
-**Apply all pending migrations:**
-```bash
-alembic upgrade head
-```
-
-**Roll back one migration:**
-```bash
-alembic downgrade -1
-```
-
-**Roll back to a specific migration:**
-```bash
-alembic downgrade <revision_id>
-```
-
-**Roll back all migrations:**
-```bash
-alembic downgrade base
-```
-
-#### Creating New Migrations
-
-When you modify your database schema (e.g., add new tables, columns, or indexes):
-
-1. **Generate a new migration:**
+1. **Install Homebrew** (if not already installed):
    ```bash
-   alembic revision --autogenerate -m "Description of changes"
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
 
-2. **Review the generated migration file** in `alembic/versions/` to ensure it captures your intended changes.
-
-3. **Apply the migration:**
+2. **Install SQLCipher**:
    ```bash
-   alembic upgrade head
+   brew install sqlcipher
    ```
 
-#### Testing Migrations
+3. **Clone and setup PRT**:
+   ```bash
+   git clone https://github.com/richbodo/prt.git
+   cd prt
+   ```
 
-**Test rollback and reapply:**
+4. **Create virtual environment and install dependencies**:
+   ```bash
+   source ./init.sh
+   ```
+
+5. **Install pysqlcipher3** (may require environment variables):
+   ```bash
+   export CFLAGS="-I/opt/homebrew/Cellar/sqlcipher/4.6.1/include"
+   export LDFLAGS="-L/opt/homebrew/Cellar/sqlcipher/4.6.1/lib"
+   pip install pysqlcipher3
+   ```
+
+6. **Set up the database**:
+   ```bash
+   python -m prt.cli setup
+   ```
+
+**Troubleshooting macOS:**
+- If you get "command not found: brew", install Homebrew first
+- If pysqlcipher3 installation fails, ensure SQLCipher is installed via Homebrew
+- The exact path for CFLAGS/LDFLAGS may vary depending on your SQLCipher version
+
+#### Linux (Ubuntu/Debian)
+
+**Required Dependencies:**
+- SQLCipher development libraries
+- Python development headers
+
+**Installation Steps:**
+
+1. **Install system dependencies**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install libsqlcipher-dev python3-dev python3-pip python3-venv
+   ```
+
+2. **Clone and setup PRT**:
+   ```bash
+   git clone https://github.com/richbodo/prt.git
+   cd prt
+   ```
+
+3. **Create virtual environment and install dependencies**:
+   ```bash
+   source ./init.sh
+   ```
+
+4. **Install pysqlcipher3**:
+   ```bash
+   pip install pysqlcipher3
+   ```
+
+5. **Set up the database**:
+   ```bash
+   python -m prt.cli setup
+   ```
+
+**Troubleshooting Linux:**
+- If you get "libsqlcipher-dev not found", try `sudo apt-get install sqlcipher-dev`
+- For other distributions, use the appropriate package manager:
+  - **CentOS/RHEL/Fedora**: `sudo yum install sqlcipher-devel` or `sudo dnf install sqlcipher-devel`
+  - **Arch Linux**: `sudo pacman -S sqlcipher`
+
+#### Windows
+
+**Status**: TBD - Windows installation instructions will be added when Windows support is implemented.
+
+**Planned Requirements:**
+- Windows 10/11
+- Python 3.8+
+- SQLCipher Windows binaries
+- Visual Studio Build Tools (for compiling pysqlcipher3)
+
+**Note**: Windows support is planned but not yet implemented. The encrypted database functionality may require additional work for Windows compatibility.
+
+### Install PRT
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/richbodo/prt.git
+   cd prt
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up the database**:
+   ```bash
+   python -m prt.cli setup
+   ```
+
+## Quick Start
+
+### Basic Setup
+
+1. **Initial Setup**: Run the setup command to configure your database:
+   ```bash
+   python -m prt.cli setup
+   ```
+
+2. **Start the CLI**: Launch the interactive interface:
+   ```bash
+   python -m prt.cli run
+   ```
+
+3. **Import Contacts**: Use the `fetch` command to import contacts from Google:
+   ```bash
+   python -m prt.cli run
+   # Then type: fetch
+   ```
+
+## Database Management
+
+For advanced database configuration, encryption setup, and management tools, see the comprehensive [Database Management Guide](DB_MANAGEMENT.md).
+
+### Quick Database Commands
+
 ```bash
-# Roll back one migration
-alembic downgrade -1
+# Set up database
+python -m prt.cli setup [--encrypted]
 
-# Verify the rollback worked
-alembic current
+# Check database status
+python -m prt.cli db-status
 
-# Reapply the migration
-alembic upgrade +1
+# Encrypt existing database
+python -m prt.cli encrypt-db
 
-# Verify you're back to the latest
-alembic current
+# Decrypt database (emergency)
+python -m prt.cli decrypt-db
+
+# Test database connection
+python -m prt.cli test
 ```
 
-**Test from scratch:**
-```bash
-# Remove the database
-rm prt_data/prt.db
+## Configuration
 
-# Apply all migrations from scratch
-alembic upgrade head
+PRT stores configuration in `prt_data/prt_config.json`. Key settings:
+
+- `db_path`: Path to the database file
+- `db_encrypted`: Whether the database is encrypted
+- `db_username`/`db_password`: Database credentials
+- `google_api_key`: Google API key for contact import
+- `openai_api_key`: OpenAI API key for LLM features
+
+## Usage
+
+### Interactive Mode
+```bash
+# Start interactive CLI
+python -m prt.cli run
 ```
 
-### Schema Files
+Available commands in interactive mode:
+- View and search contacts
+- Import contacts from Google
+- Manage tags and notes
+- Start LLM chat
+- Database status and backup
+- Encryption management
 
-PRT uses schema files to define the structure of your data:
+### Security Features
 
-- **Google People Schema**: `docs/latest_google_people_schema.json` - Defines the structure for Google Contacts data
-- **Schema Plan**: `docs/schema_plan.md` - Complete documentation of database schema and design decisions
+- **Database Encryption**: Optional SQLCipher encryption for enhanced security
+- **Local Storage**: All data stored locally on your machine
+- **No Cloud Sync**: Your data never leaves your control
+- **Secure Key Management**: Automatic encryption key generation and storage
 
-### Database Configuration
+## Troubleshooting
 
-The database configuration is stored in `prt_data/prt_config.json`. This file contains:
-- Database connection settings
-- API keys (for future use)
-- Other application settings
+### Common Issues
 
-**Note:** PRT currently uses SQLite for simplicity. The database file is stored in `prt_data/prt.db`.
-
-### Schema Migration
-
-If you have an existing database with the old schema, you can migrate to the new schema:
-
+#### "pysqlcipher3 not found" Error
 ```bash
-python migrate_schema.py
+# Install SQLCipher dependencies first, then:
+pip install pysqlcipher3
 ```
 
-This will:
-- Create a backup of your existing database
-- Migrate existing relationship data to the new schema
-- Preserve all your existing tags and notes
+**Platform-specific solutions:**
+- **macOS**: Ensure SQLCipher is installed via Homebrew
+- **Linux**: Install `libsqlcipher-dev` package
+- **Windows**: TBD - Windows support not yet implemented
 
-### Troubleshooting
-
-**Migration conflicts:**
-If you get conflicts between your current database state and migration history:
+#### Database Connection Errors
 ```bash
-# Mark the current database as the latest migration
-alembic stamp head
+# Check database status
+python -m prt.cli db-status
 
-# Or reset to a known good state
-alembic stamp <revision_id>
+# Reinitialize database if needed
+python -m prt.cli setup --force
 ```
 
-**Database locked (SQLite):**
-If you get database locked errors with SQLite:
-```bash
-# Check for open connections
-lsof prt_data/prt.db
+For detailed troubleshooting and advanced database management, see [DB_MANAGEMENT.md](DB_MANAGEMENT.md).
 
-# Or restart your application
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run encrypted database tests only
+pytest tests/test_encrypted_db.py
+
+# Run migration tests
+pytest tests/test_migrations.py
 ```
 
-**Invalid migration files:**
-If a migration file is corrupted or incorrect:
-```bash
-# Remove the problematic migration file
-rm alembic/versions/<problematic_migration>.py
+### Contributing
 
-# Regenerate from current state
-alembic revision --autogenerate -m "Regenerated migration"
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For issues and questions:
+- Check the troubleshooting section above
+- Review the test files for usage examples
+- Open an issue on GitHub
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
 
 
