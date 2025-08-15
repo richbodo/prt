@@ -4,7 +4,7 @@ I am solving a few personal pain points with this project:
 
 1) Storing all my info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable.
 2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.
-3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find with the tools I have - I never find them.  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane.
+3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations - therefore I never the people I need to find when I most need to.  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.
 4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.
    
 ## Version History
