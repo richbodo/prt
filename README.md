@@ -1,12 +1,16 @@
 # Personal Relationship Toolkit (PRT)
 
+## Version
+
+MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
+
 ## Features
 
-- **Contact Management**: Import and manage contacts from Google Contacts
-- **Relationship Tracking**: Add tags and notes to track relationship details
-- **Encrypted Database**: Secure your data with SQLCipher encryption
-- **LLM Integration**: AI-powered insights and conversation assistance
-- **CLI Interface**: Easy-to-use command-line interface
+- **Contact Storage**: Import and store contact databases (Google Contacts implemented)
+- **Relationship Management**: Add and edit tags and notes to manage relationship details
+- **Encrypted Database**: Secured local data with SQLCipher encryption
+- **LLM Integration**: AI-powered insights and conversation assistance (working on it)
+- **CLI Interface**: Easy-to-use command-line interface and API
 
 ## Documentation
 
