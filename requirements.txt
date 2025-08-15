@@ -7,3 +7,6 @@ google-auth-oauthlib
 pytest
 rich
 alembic
+transformers
+accelerate
+torch
