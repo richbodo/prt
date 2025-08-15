@@ -352,11 +352,11 @@ PRAGMA key = 'your_encryption_key';
 
 For additional help:
 
-- Check the main [README.md](README.md) for basic setup
+- Check the main [README.md](../README.md) for basic setup
 - Review the test files for usage examples
 - Open an issue on GitHub for bugs or feature requests
-- Check the [ROADMAP.md](ROADMAP.md) for planned features
+- Check the [ROADMAP.md](../ROADMAP.md) for planned features
 
 ---
 
-**Note**: This guide covers advanced database management. For basic setup and usage, see the main [README.md](README.md).
+**Note**: This guide covers advanced database management. For basic setup and usage, see the main [README.md](../README.md).
