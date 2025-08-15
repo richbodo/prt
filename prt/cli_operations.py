@@ -30,19 +30,22 @@ class PRTCLI:
             console.print()
             console.print("1. Search & Browse")
             console.print("2. Manage Tags & Notes")
-            console.print("3. Chat Mode")
-            console.print("4. Exit")
+            console.print("3. Import Contacts")
+            console.print("4. Chat Mode")
+            console.print("5. Exit")
             console.print()
             
-            choice = Prompt.ask("Select an option", choices=["1", "2", "3", "4"])
+            choice = Prompt.ask("Select an option", choices=["1", "2", "3", "4", "5"])
             
             if choice == "1":
                 self.search_and_browse_menu()
             elif choice == "2":
                 self.manage_tags_notes_menu()
             elif choice == "3":
-                self.enter_chat_mode()
+                self.import_contacts()
             elif choice == "4":
+                self.enter_chat_mode()
+            elif choice == "5":
                 console.print("Goodbye!", style="green")
                 break
     
@@ -476,6 +479,80 @@ class PRTCLI:
                 console.print(f"Deleted note '{note_title}'.", style="green")
             else:
                 console.print("Failed to delete note.", style="red")
+    
+    def import_contacts(self):
+        """Import contacts from a Google Contacts CSV file."""
+        from pathlib import Path
+        from ..cli import data_dir, parse_contacts
+        
+        console.print("\n" + "-"*30)
+        console.print("Import Contacts", style="bold blue")
+        console.print("-"*30)
+        console.print()
+        
+        # Find CSV files in prt_data directory
+        csv_files = list(data_dir().glob("*.csv"))
+        
+        if not csv_files:
+            console.print("No CSV files found in prt_data/ directory.", style="yellow")
+            console.print("Please export your Google Contacts to CSV and place the file in the prt_data/ directory.", style="cyan")
+            return
+        
+        # Display available CSV files
+        console.print("Available CSV files:", style="bold blue")
+        for i, csv_file in enumerate(csv_files, 1):
+            console.print(f"  {i}. {csv_file.name}")
+        console.print()
+        
+        # Let user select a file
+        while True:
+            try:
+                choice = int(Prompt.ask(f"Select a file (1-{len(csv_files)})"))
+                if 1 <= choice <= len(csv_files):
+                    csv_path = str(csv_files[choice - 1])
+                    break
+                else:
+                    console.print(f"Please enter a number between 1 and {len(csv_files)}", style="red")
+            except ValueError:
+                console.print("Please enter a valid number", style="red")
+        
+        contacts = parse_contacts(csv_path)
+        
+        # Show contact count and first contact for verification
+        console.print(f"Found {len(contacts)} contacts in the CSV file.", style="bold blue")
+        console.print()
+        
+        if contacts:
+            first_contact = contacts[0]
+            name = f"{first_contact['first']} {first_contact['last']}".strip()
+            if not name:
+                name = "(No name)"
+            
+            console.print("First contact details:", style="bold green")
+            console.print(f"  Name: {name}")
+            if first_contact['emails']:
+                console.print("  Emails:")
+                for email in first_contact['emails']:
+                    console.print(f"    {email}")
+            if first_contact['phones']:
+                console.print("  Phones:")
+                for phone in first_contact['phones']:
+                    console.print(f"    {phone}")
+            console.print()
+        else:
+            console.print("No contacts found in the CSV file.", style="yellow")
+            console.print()
+            return
+        
+        if not Confirm.ask("Does the contact count and the first contact look correct?"):
+            console.print("Import cancelled.", style="yellow")
+            return
+        
+        # Import the contacts
+        if self.api.import_contacts(contacts):
+            console.print(f"Successfully imported {len(contacts)} contacts.", style="green")
+        else:
+            console.print("Failed to import contacts.", style="red")
     
     def enter_chat_mode(self):
         """Enter AI chat mode (placeholder for future implementation)."""

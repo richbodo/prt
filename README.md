@@ -78,19 +78,37 @@ This will:
 
 ### Using Alembic for Migrations (Advanced)
 
-PRT uses Alembic for database migrations, allowing you to version-control your database schema and easily roll forward and backward through changes.
+PRT uses a comprehensive migration system with both Alembic and manual migrations for managing database schema changes.
 
-#### Creating Your First Migration
+#### Migration Types
 
-The initial migration is created automatically when you run `python create_initial_migration.py`. This script:
+1. **Alembic Migrations** (Recommended for schema changes)
+   - Location: `alembic/versions/`
+   - Format: `{revision}_{description}.py`
+   - Usage: `alembic revision --autogenerate -m "description"`
 
-1. **Sets up Alembic configuration** to work with your SQLAlchemy models
-2. **Generates the initial migration** from your models in `prt/models.py`
-3. **Creates migration files** in `alembic/versions/`
+2. **Manual Migrations** (For complex data migrations)
+   - Location: `migrations/`
+   - Format: `{number}_{description}.py`
+   - Usage: `python migrations/run_migrations.py --run-all`
 
-For subsequent migrations, see "Creating New Migrations" below.
+#### Migration Management
 
-**Note:** The CLI automatically handles database initialization for new users. You only need to use Alembic if you want to version-control schema changes or are developing the application.
+```bash
+# List available migrations
+python migrations/run_migrations.py --list
+
+# Check migration status
+python migrations/run_migrations.py --status
+
+# Run all pending migrations
+python migrations/run_migrations.py --run-all
+
+# Run specific migration
+python migrations/run_migrations.py --run 001
+```
+
+**Note:** The CLI automatically handles database initialization for new users. You only need to use migrations if you want to version-control schema changes or are developing the application.
 
 #### Working with Migrations
 
