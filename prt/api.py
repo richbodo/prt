@@ -9,7 +9,7 @@ provides a consistent interface for all PRT functionality.
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from .db import Database
-from .config import load_config
+from .config import load_config, data_dir
 
 
 class PRTAPI:
@@ -24,6 +24,37 @@ class PRTAPI:
         self.db = Database(db_path)
         self.db.connect()
     
+    # Database management operations
+    def get_database_stats(self) -> Dict[str, int]:
+        """Get database statistics."""
+        return {
+            "contacts": self.db.count_contacts(),
+            "relationships": self.db.count_relationships()
+        }
+    
+    def validate_database(self) -> bool:
+        """Validate database integrity."""
+        return self.db.is_valid()
+    
+    def backup_database(self, suffix: str = ".bak") -> Path:
+        """Create database backup."""
+        return self.db.backup(suffix)
+    
+    def get_config(self) -> Dict[str, Any]:
+        """Get current configuration."""
+        return load_config()
+    
+    def get_data_directory(self) -> Path:
+        """Get data directory path."""
+        return data_dir()
+    
+    def test_database_connection(self) -> bool:
+        """Test database connection and credentials."""
+        try:
+            return self.db.is_valid()
+        except Exception:
+            return False
+
     # Search operations
     def search_contacts(self, query: str) -> List[Dict[str, Any]]:
         """Search contacts by name (case-insensitive partial match)."""
@@ -327,3 +358,17 @@ class PRTAPI:
         except Exception as e:
             print(f"Error importing contacts: {e}")
             return False
+    
+    def parse_csv_contacts(self, csv_path: str) -> List[Dict[str, Any]]:
+        """Parse CSV file and return contacts data."""
+        try:
+            from utils.google_contacts_summary import parse_contacts
+            return parse_contacts(csv_path)
+        except Exception as e:
+            print(f"Error parsing CSV file: {e}")
+            return []
+    
+    def get_csv_files(self) -> List[Path]:
+        """Get list of available CSV files in data directory."""
+        data_dir_path = self.get_data_directory()
+        return list(data_dir_path.glob("*.csv"))

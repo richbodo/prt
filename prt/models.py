@@ -6,9 +6,9 @@ to generate and apply migrations.
 """
 
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, UTC
 
 Base = declarative_base()
 
@@ -21,8 +21,8 @@ class Contact(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255))
     phone = Column(String(50))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     # One-to-one relationship with Relationship
     relationship = relationship("Relationship", back_populates="contact", uselist=False)
@@ -37,8 +37,8 @@ class Tag(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     # Many-to-many relationship with Relationship via relationship_tags
     relationships = relationship("Relationship", secondary="relationship_tags", back_populates="tags")
@@ -54,8 +54,8 @@ class Note(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     # Many-to-many relationship with Relationship via relationship_notes
     relationships = relationship("Relationship", secondary="relationship_notes", back_populates="notes")
@@ -70,8 +70,8 @@ class Relationship(Base):
     
     id = Column(Integer, primary_key=True)
     contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False, unique=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     # One-to-one relationship with Contact
     contact = relationship("Contact", back_populates="relationship")
@@ -92,7 +92,7 @@ relationship_tags = Table(
     Base.metadata,
     Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
     Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True),
-    Column('created_at', DateTime, default=datetime.utcnow)
+    Column('created_at', DateTime, default=lambda: datetime.now(UTC))
 )
 
 # Many-to-many join table between relationships and notes
@@ -101,7 +101,7 @@ relationship_notes = Table(
     Base.metadata,
     Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
     Column('note_id', Integer, ForeignKey('notes.id'), primary_key=True),
-    Column('created_at', DateTime, default=datetime.utcnow)
+    Column('created_at', DateTime, default=lambda: datetime.now(UTC))
 )
 
 
@@ -113,8 +113,8 @@ class Person(Base):
     # Dynamic columns will be added via migrations based on Google People schema
     # For now, we'll store the raw JSON data
     raw_data = Column(Text)  # JSON string of all Google People data
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     def __repr__(self):
         return f"<Person(id={self.id})>"

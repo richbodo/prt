@@ -19,10 +19,9 @@ from .config import (
     get_db_credentials,
 )
 
-from .db import Database
+from .api import PRTAPI
 from .google_contacts import fetch_contacts
 from .llm import chat
-from utils.google_contacts_summary import parse_contacts
 
 # Import setup functions
 import sys
@@ -108,11 +107,11 @@ def run(debug: Optional[bool] = True):
         save_config(cfg)
         console.print()
 
-    # Check if database exists and is valid
-    db = Database(Path(cfg["db_path"]))
-    db.connect()
+    # Initialize API
+    api = PRTAPI()
     
-    if not db.is_valid():
+    # Check if database exists and is valid
+    if not api.validate_database():
         console.print("Database not found or invalid. Setting up...", style="yellow")
         
         # Backup existing database if it exists
@@ -133,17 +132,18 @@ def run(debug: Optional[bool] = True):
     
     console.print()
     test_db_credentials()
-    db.backup()
+    api.backup_database()
 
     # Check database status and report
-    contact_count = db.count_contacts()
-    relationship_count = db.count_relationships()
+    stats = api.get_database_stats()
+    contact_count = stats["contacts"]
+    relationship_count = stats["relationships"]
     
     if contact_count == 0:
         console.print("No contacts in database.", style="yellow")
         if typer.confirm("Import contacts from a Google Contacts CSV file?"):
             # Find CSV files in prt_data directory
-            csv_files = list(data_dir().glob("*.csv"))
+            csv_files = api.get_csv_files()
             
             if not csv_files:
                 console.print("No CSV files found in prt_data/ directory.", style="yellow")
@@ -168,7 +168,7 @@ def run(debug: Optional[bool] = True):
                 except ValueError:
                     console.print("Please enter a valid number", style="red")
             
-            contacts = parse_contacts(csv_path)
+            contacts = api.parse_csv_contacts(csv_path)
             
             # Show contact count and first contact for verification
             console.print(f"Found {len(contacts)} contacts in the CSV file.", style="bold blue")
@@ -199,13 +199,17 @@ def run(debug: Optional[bool] = True):
                 console.print("Stopping program - see the utils directory for parsing utilities to test with.", style="red")
                 raise typer.Exit()
             
-            db.insert_contacts(contacts)
-            console.print(f"Inserted {len(contacts)} contacts.", style="green")
-            console.print()
-            
-            # Update counts after import
-            contact_count = db.count_contacts()
-            relationship_count = db.count_relationships()
+            if api.import_contacts(contacts):
+                console.print(f"Inserted {len(contacts)} contacts.", style="green")
+                console.print()
+                
+                # Update counts after import
+                stats = api.get_database_stats()
+                contact_count = stats["contacts"]
+                relationship_count = stats["relationships"]
+            else:
+                console.print("Failed to import contacts.", style="red")
+                raise typer.Exit(1)
     else:
         # Report existing data
         console.print(f"Database contains {contact_count} contacts and {relationship_count} relationships.", style="green")
@@ -213,13 +217,13 @@ def run(debug: Optional[bool] = True):
         
         # Show some relationship examples if they exist
         if relationship_count > 0:
-            contacts = db.list_contacts()
+            contacts = api.list_all_contacts()
             if contacts:
                 console.print("Relationship examples:", style="bold blue")
-                for cid, name, email in contacts[:3]:  # Show first 3 contacts
-                    rel_info = db.get_relationship_info(cid)
+                for contact in contacts[:3]:  # Show first 3 contacts
+                    rel_info = contact["relationship_info"]
                     if rel_info["tags"] or rel_info["notes"]:
-                        console.print(f"  {name}:", style="cyan")
+                        console.print(f"  {contact['name']}:", style="cyan")
                         if rel_info["tags"]:
                             console.print(f"    Tags: {', '.join(rel_info['tags'])}", style="green")
                         if rel_info["notes"]:
