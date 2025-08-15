@@ -15,7 +15,9 @@ This document outlines the development roadmap for the Personal Relationship Too
 - [ ] **Implement advanced search** with multiple criteria
 
 ## Phase 3: AI Chat Integration I
-### Tasks TBD
+### Tasks
+- [ ] Hugging Face transformer can use gpt-oss-20b to chat generically in chat mode
+- [ ] Duplicate CLI in chat mode
 
 ## Phase 4: Message Analysis 
 ### Tasks
