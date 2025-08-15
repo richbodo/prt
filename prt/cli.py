@@ -211,7 +211,7 @@ def run(debug: Optional[bool] = True):
 
     if db.count_relationships() == 0:
         console.print("No relationship data found.", style="yellow")
-        if typer.confirm("Add a relationship now?"):
+        if typer.confirm("Add relationship data now?"):
             contacts = db.list_contacts()
             table = Table(title="Contacts")
             table.add_column("ID", style="cyan", justify="right")
@@ -221,16 +221,63 @@ def run(debug: Optional[bool] = True):
                 table.add_row(str(cid), name, email)
             console.print(table)
             chosen = int(typer.prompt("Select contact id"))
-            tag = typer.prompt("Tag")
-            note = typer.prompt("Note", default="")
-            db.add_relationship(chosen, tag, note)
-            console.print("Relationship added.", style="green")
+            
+            # Add tags
+            while True:
+                tag = typer.prompt("Add a tag (or press Enter to skip)")
+                if not tag:
+                    break
+                try:
+                    db.add_relationship_tag(chosen, tag)
+                    console.print(f"Added tag: {tag}", style="green")
+                except ValueError as e:
+                    console.print(f"Error: {e}", style="red")
+                    break
+            
+            # Add notes
+            while True:
+                note_title = typer.prompt("Add a note title (or press Enter to skip)")
+                if not note_title:
+                    break
+                note_content = typer.prompt("Note content")
+                try:
+                    db.add_relationship_note(chosen, note_title, note_content)
+                    console.print(f"Added note: {note_title}", style="green")
+                except ValueError as e:
+                    console.print(f"Error: {e}", style="red")
+                    break
+            
+            console.print("Relationship data added.", style="green")
             console.print()
     else:
         console.print(
             f"{db.count_relationships()} relationships in database.", style="green"
         )
+        
+        # Show some relationship examples
+        contacts = db.list_contacts()
+        if contacts:
+            console.print("\nRelationship examples:", style="bold blue")
+            for cid, name, email in contacts[:3]:  # Show first 3 contacts
+                rel_info = db.get_relationship_info(cid)
+                if rel_info["tags"] or rel_info["notes"]:
+                    console.print(f"  {name}:", style="cyan")
+                    if rel_info["tags"]:
+                        console.print(f"    Tags: {', '.join(rel_info['tags'])}", style="green")
+                    if rel_info["notes"]:
+                        for note in rel_info["notes"][:2]:  # Show first 2 notes
+                            console.print(f"    Note: {note['title']} - {note['content'][:50]}...", style="yellow")
+        
         console.print(chat("introduce", cfg), style="bold blue")
+        
+        # Transition to regular operations menu
+        console.print("\n" + "="*50)
+        console.print("Setup complete! Starting regular operations...", style="bold green")
+        console.print("="*50)
+        
+        # Import and run the regular operations CLI
+        from .cli_operations import run_cli
+        run_cli()
 
 
 if __name__ == "__main__":

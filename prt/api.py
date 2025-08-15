@@ -1,0 +1,320 @@
+"""
+PRT API Layer
+
+This module provides a clean API for PRT operations that can be used by both
+the CLI interface and AI chat mode. It abstracts database operations and
+provides a consistent interface for all PRT functionality.
+"""
+
+from typing import List, Dict, Any, Optional, Tuple
+from pathlib import Path
+from .db import Database
+from .config import load_config
+
+
+class PRTAPI:
+    """Main API class for PRT operations."""
+    
+    def __init__(self, db_path: Optional[Path] = None):
+        """Initialize the API with database connection."""
+        if db_path is None:
+            config = load_config()
+            db_path = Path(config["db_path"])
+        
+        self.db = Database(db_path)
+        self.db.connect()
+    
+    # Search operations
+    def search_contacts(self, query: str) -> List[Dict[str, Any]]:
+        """Search contacts by name (case-insensitive partial match)."""
+        from .models import Contact
+        
+        contacts = self.db.session.query(Contact).filter(
+            Contact.name.ilike(f"%{query}%")
+        ).order_by(Contact.name).all()
+        
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "email": c.email,
+                "phone": c.phone,
+                "relationship_info": self.get_relationship_info(c.id)
+            }
+            for c in contacts
+        ]
+    
+    def search_tags(self, query: str) -> List[Dict[str, Any]]:
+        """Search tags by name (case-insensitive partial match)."""
+        from .models import Tag
+        
+        tags = self.db.session.query(Tag).filter(
+            Tag.name.ilike(f"%{query}%")
+        ).order_by(Tag.name).all()
+        
+        return [
+            {
+                "id": t.id,
+                "name": t.name,
+                "contact_count": len(t.relationships)
+            }
+            for t in tags
+        ]
+    
+    def search_notes(self, query: str) -> List[Dict[str, Any]]:
+        """Search notes by title or content (case-insensitive partial match)."""
+        from .models import Note
+        
+        notes = self.db.session.query(Note).filter(
+            (Note.title.ilike(f"%{query}%")) | (Note.content.ilike(f"%{query}%"))
+        ).order_by(Note.title).all()
+        
+        return [
+            {
+                "id": n.id,
+                "title": n.title,
+                "content": n.content,
+                "contact_count": len(n.relationships)
+            }
+            for n in notes
+        ]
+    
+    def get_contacts_by_tag(self, tag_name: str) -> List[Dict[str, Any]]:
+        """Get all contacts that have a specific tag."""
+        from .models import Tag, Contact
+        
+        tag = self.db.session.query(Tag).filter(Tag.name == tag_name).first()
+        if not tag:
+            return []
+        
+        contacts = []
+        for relationship in tag.relationships:
+            contact = relationship.contact
+            contacts.append({
+                "id": contact.id,
+                "name": contact.name,
+                "email": contact.email,
+                "phone": contact.phone,
+                "relationship_info": self.get_relationship_info(contact.id)
+            })
+        
+        return sorted(contacts, key=lambda c: c["name"])
+    
+    def get_contacts_by_note(self, note_title: str) -> List[Dict[str, Any]]:
+        """Get all contacts that have a specific note."""
+        from .models import Note, Contact
+        
+        note = self.db.session.query(Note).filter(Note.title == note_title).first()
+        if not note:
+            return []
+        
+        contacts = []
+        for relationship in note.relationships:
+            contact = relationship.contact
+            contacts.append({
+                "id": contact.id,
+                "name": contact.name,
+                "email": contact.email,
+                "phone": contact.phone,
+                "relationship_info": self.get_relationship_info(contact.id)
+            })
+        
+        return sorted(contacts, key=lambda c: c["name"])
+    
+    def get_relationship_info(self, contact_id: int) -> Dict[str, Any]:
+        """Get relationship information for a contact."""
+        return self.db.get_relationship_info(contact_id)
+    
+    # CRUD operations for relationships
+    def add_tag_to_contact(self, contact_id: int, tag_name: str) -> bool:
+        """Add a tag to a contact's relationship."""
+        try:
+            self.db.add_relationship_tag(contact_id, tag_name)
+            return True
+        except ValueError:
+            return False
+    
+    def remove_tag_from_contact(self, contact_id: int, tag_name: str) -> bool:
+        """Remove a tag from a contact's relationship."""
+        from .models import Contact, Tag
+        
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+        if not contact or not contact.relationship:
+            return False
+        
+        tag = self.db.session.query(Tag).filter(Tag.name == tag_name).first()
+        if not tag or tag not in contact.relationship.tags:
+            return False
+        
+        contact.relationship.tags.remove(tag)
+        self.db.session.commit()
+        return True
+    
+    def add_note_to_contact(self, contact_id: int, note_title: str, note_content: str) -> bool:
+        """Add a note to a contact's relationship."""
+        try:
+            self.db.add_relationship_note(contact_id, note_title, note_content)
+            return True
+        except ValueError:
+            return False
+    
+    def remove_note_from_contact(self, contact_id: int, note_title: str) -> bool:
+        """Remove a note from a contact's relationship."""
+        from .models import Contact, Note
+        
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+        if not contact or not contact.relationship:
+            return False
+        
+        note = self.db.session.query(Note).filter(Note.title == note_title).first()
+        if not note or note not in contact.relationship.notes:
+            return False
+        
+        contact.relationship.notes.remove(note)
+        self.db.session.commit()
+        return True
+    
+    # Management operations for tags and notes
+    def list_all_tags(self) -> List[Dict[str, Any]]:
+        """List all tags with usage information."""
+        from .models import Tag
+        
+        tags = self.db.session.query(Tag).order_by(Tag.name).all()
+        return [
+            {
+                "id": t.id,
+                "name": t.name,
+                "contact_count": len(t.relationships)
+            }
+            for t in tags
+        ]
+    
+    def create_tag(self, name: str) -> Optional[Dict[str, Any]]:
+        """Create a new tag."""
+        from .models import Tag
+        
+        # Check if tag already exists
+        existing = self.db.session.query(Tag).filter(Tag.name == name).first()
+        if existing:
+            return None
+        
+        tag = Tag(name=name)
+        self.db.session.add(tag)
+        self.db.session.commit()
+        
+        return {
+            "id": tag.id,
+            "name": tag.name,
+            "contact_count": 0
+        }
+    
+    def delete_tag(self, name: str) -> bool:
+        """Delete a tag (removes it from all relationships)."""
+        from .models import Tag
+        
+        tag = self.db.session.query(Tag).filter(Tag.name == name).first()
+        if not tag:
+            return False
+        
+        # Remove tag from all relationships
+        for relationship in tag.relationships:
+            relationship.tags.remove(tag)
+        
+        self.db.session.delete(tag)
+        self.db.session.commit()
+        return True
+    
+    def list_all_notes(self) -> List[Dict[str, Any]]:
+        """List all notes with usage information."""
+        from .models import Note
+        
+        notes = self.db.session.query(Note).order_by(Note.title).all()
+        return [
+            {
+                "id": n.id,
+                "title": n.title,
+                "content": n.content,
+                "contact_count": len(n.relationships)
+            }
+            for n in notes
+        ]
+    
+    def create_note(self, title: str, content: str) -> Optional[Dict[str, Any]]:
+        """Create a new note."""
+        from .models import Note
+        
+        # Check if note already exists
+        existing = self.db.session.query(Note).filter(Note.title == title).first()
+        if existing:
+            return None
+        
+        note = Note(title=title, content=content)
+        self.db.session.add(note)
+        self.db.session.commit()
+        
+        return {
+            "id": note.id,
+            "title": note.title,
+            "content": note.content,
+            "contact_count": 0
+        }
+    
+    def update_note(self, title: str, content: str) -> bool:
+        """Update an existing note's content."""
+        from .models import Note
+        
+        note = self.db.session.query(Note).filter(Note.title == title).first()
+        if not note:
+            return False
+        
+        note.content = content
+        self.db.session.commit()
+        return True
+    
+    def delete_note(self, title: str) -> bool:
+        """Delete a note (removes it from all relationships)."""
+        from .models import Note
+        
+        note = self.db.session.query(Note).filter(Note.title == title).first()
+        if not note:
+            return False
+        
+        # Remove note from all relationships
+        for relationship in note.relationships:
+            relationship.notes.remove(note)
+        
+        self.db.session.delete(note)
+        self.db.session.commit()
+        return True
+    
+    def get_contact_details(self, contact_id: int) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific contact."""
+        from .models import Contact
+        
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+        if not contact:
+            return None
+        
+        return {
+            "id": contact.id,
+            "name": contact.name,
+            "email": contact.email,
+            "phone": contact.phone,
+            "relationship_info": self.get_relationship_info(contact.id)
+        }
+    
+    def list_all_contacts(self) -> List[Dict[str, Any]]:
+        """List all contacts with basic relationship info."""
+        from .models import Contact
+        
+        contacts = self.db.session.query(Contact).order_by(Contact.name).all()
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "email": c.email,
+                "phone": c.phone,
+                "relationship_info": self.get_relationship_info(c.id)
+            }
+            for c in contacts
+        ]
