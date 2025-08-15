@@ -483,7 +483,8 @@ class PRTCLI:
     def import_contacts(self):
         """Import contacts from a Google Contacts CSV file."""
         from pathlib import Path
-        from ..cli import data_dir, parse_contacts
+        from .config import data_dir
+        from utils.google_contacts_summary import parse_contacts
         
         console.print("\n" + "-"*30)
         console.print("Import Contacts", style="bold blue")
