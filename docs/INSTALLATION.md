@@ -370,7 +370,7 @@ Successful installation should show:
 If you encounter issues:
 
 1. **Check this guide** for platform-specific solutions
-2. **Review the main README.md** for general troubleshooting
+2. **Review the main [README.md](../README.md)** for general troubleshooting
 3. **Check the test files** for usage examples
 4. **Open an issue** on GitHub with:
    - Your platform and version

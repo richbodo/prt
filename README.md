@@ -13,7 +13,8 @@ A comprehensive toolkit for managing personal relationships, built with Python a
 ## Documentation
 
 - **[Installation Guide](docs/INSTALLATION.md)**: Detailed platform-specific installation instructions
-- **[Database Management](DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
+- **[Database Management](docs/DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
+- **[Encryption Implementation](docs/ENCRYPTION_IMPLEMENTATION.md)**: Technical details of the encryption implementation
 
 ## Installation
 
@@ -165,7 +166,7 @@ For detailed installation instructions for each platform, see the [Installation 
 
 ## Database Management
 
-For advanced database configuration, encryption setup, and management tools, see the comprehensive [Database Management Guide](DB_MANAGEMENT.md).
+For advanced database configuration, encryption setup, and management tools, see the comprehensive [Database Management Guide](docs/DB_MANAGEMENT.md).
 
 ### Quick Database Commands
 
@@ -243,7 +244,7 @@ python -m prt.cli db-status
 python -m prt.cli setup --force
 ```
 
-For detailed troubleshooting and advanced database management, see [DB_MANAGEMENT.md](DB_MANAGEMENT.md).
+For detailed troubleshooting and advanced database management, see [DB_MANAGEMENT.md](docs/DB_MANAGEMENT.md).
 
 ## Development
 
