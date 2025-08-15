@@ -318,3 +318,12 @@ class PRTAPI:
             }
             for c in contacts
         ]
+    
+    def import_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
+        """Import contacts from parsed CSV data."""
+        try:
+            self.db.insert_contacts(contacts)
+            return True
+        except Exception as e:
+            print(f"Error importing contacts: {e}")
+            return False

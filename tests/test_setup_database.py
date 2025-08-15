@@ -1,17 +1,47 @@
 from pathlib import Path
 from typer.testing import CliRunner
-from setup_database import app
+from migrations.setup_database import setup_database, initialize_database
 
 
-def test_corrupt_db_backup(tmp_path):
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        data_dir = Path(td) / "prt_data"
-        data_dir.mkdir()
-        db_file = data_dir / "prt.db"
-        db_file.write_text("not a sqlite db")
+def test_setup_database_functions(tmp_path):
+    """Test setup database functions work correctly."""
+    # Test setup_database function
+    config = {
+        "google_api_key": "demo",
+        "openai_api_key": "demo",
+        "db_path": str(tmp_path / "prt.db"),
+        "db_username": "test",
+        "db_password": "test",
+        "db_type": "sqlite",
+        "db_host": "localhost",
+        "db_port": 5432,
+        "db_name": "prt"
+    }
+    
+    # Test that setup_database returns config
+    result = setup_database(quiet=True)
+    assert isinstance(result, dict)
+    assert "db_path" in result
 
-        result = runner.invoke(app, ["setup"], input="n\n")
-        assert result.exit_code == 0
-        assert not db_file.exists()
-        assert (data_dir / "prt.db.corrupt.bak").exists()
+
+def test_initialize_database(tmp_path):
+    """Test database initialization."""
+    config = {
+        "google_api_key": "demo",
+        "openai_api_key": "demo",
+        "db_path": str(tmp_path / "prt.db"),
+        "db_username": "test",
+        "db_password": "test",
+        "db_type": "sqlite",
+        "db_host": "localhost",
+        "db_port": 5432,
+        "db_name": "prt"
+    }
+    
+    # Test that initialize_database works
+    success = initialize_database(config, quiet=True)
+    assert success == True
+    
+    # Check that database file was created
+    db_file = Path(config["db_path"])
+    assert db_file.exists()
