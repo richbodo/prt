@@ -11,7 +11,7 @@ I am solving a few personal pain points with this project:
 
 MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
 
-## Features
+## Features currently under development
 
 - **Contact Storage**: Import and store contact databases (Google Contacts implemented)
 - **Relationship Management**: Add and edit tags and notes to manage relationship details
