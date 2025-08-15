@@ -10,3 +10,4 @@ alembic
 transformers
 accelerate
 torch
+pysqlcipher3

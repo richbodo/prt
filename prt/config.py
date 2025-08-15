@@ -58,3 +58,43 @@ def get_db_credentials() -> tuple[str, str]:
         f.write(f"{username}\n{password}")
     
     return username, password
+
+
+def get_encryption_key() -> str:
+    """Get database encryption key from secrets file or generate new one."""
+    secrets_dir = Path.cwd() / "secrets"
+    secrets_dir.mkdir(exist_ok=True)
+    encryption_file = secrets_dir / "db_encryption_key.txt"
+    
+    if encryption_file.exists():
+        with open(encryption_file, 'r') as f:
+            return f.read().strip()
+    
+    # Generate new encryption key (32 bytes = 256 bits)
+    import secrets as secrets_module
+    import base64
+    
+    key_bytes = secrets_module.token_bytes(32)
+    key_b64 = base64.b64encode(key_bytes).decode('utf-8')
+    
+    with open(encryption_file, 'w') as f:
+        f.write(key_b64)
+    
+    return key_b64
+
+
+def is_database_encrypted(config: Dict[str, Any]) -> bool:
+    """Check if the database is configured to use encryption."""
+    return config.get('db_encrypted', False)
+
+
+def get_database_url(config: Dict[str, Any]) -> str:
+    """Get the appropriate database URL based on encryption settings."""
+    db_path = config.get('db_path', 'prt_data/prt.db')
+    
+    if is_database_encrypted(config):
+        # For encrypted databases, we'll use a custom URL format
+        # that will be handled by our encrypted database class
+        return f"sqlite:///{db_path}?encrypted=true"
+    else:
+        return f"sqlite:///{db_path}"

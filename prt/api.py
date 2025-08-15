@@ -9,19 +9,27 @@ provides a consistent interface for all PRT functionality.
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from .db import Database
-from .config import load_config, data_dir
+from .config import load_config, data_dir, get_encryption_key
 
 
 class PRTAPI:
     """Main API class for PRT operations."""
     
-    def __init__(self, db_path: Optional[Path] = None):
-        """Initialize the API with database connection."""
-        if db_path is None:
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize PRT API with configuration."""
+        if config is None:
             config = load_config()
-            db_path = Path(config["db_path"])
         
-        self.db = Database(db_path)
+        # Get database path from config
+        db_path = Path(config["db_path"])
+        
+        # Check if database should be encrypted
+        encrypted = config.get('db_encrypted', False)
+        encryption_key = None
+        if encrypted:
+            encryption_key = get_encryption_key()
+        
+        self.db = Database(db_path, encrypted=encrypted, encryption_key=encryption_key)
         self.db.connect()
     
     # Database management operations
@@ -357,6 +365,15 @@ class PRTAPI:
             return True
         except Exception as e:
             print(f"Error importing contacts: {e}")
+            return False
+    
+    def insert_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
+        """Insert contacts into the database."""
+        try:
+            self.db.insert_contacts(contacts)
+            return True
+        except Exception as e:
+            print(f"Error inserting contacts: {e}")
             return False
     
     def parse_csv_contacts(self, csv_path: str) -> List[Dict[str, Any]]:

@@ -1,7 +1,31 @@
+"""
+Tests for database migrations and setup.
+
+This module tests the migration utilities, setup processes,
+and encrypted database integration.
+"""
+
 import pytest
+import tempfile
+import shutil
 from pathlib import Path
-import sqlite3
+from unittest.mock import patch, MagicMock
+
+# Add the prt package to the path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from migrations.run_migrations import MigrationRunner, MigrationTracker
+from migrations.setup_database import setup_database, initialize_database
+from migrations.encrypt_database import (
+    encrypt_database,
+    decrypt_database,
+    backup_database,
+    verify_database_integrity
+)
+from prt.config import load_config, save_config, get_encryption_key
+from prt.db import create_database
+from prt.encrypted_db import create_encrypted_database
 
 
 def test_migration_tracker(tmp_path):
@@ -107,3 +131,340 @@ def test_migration_runner_with_no_migrations(tmp_path):
     
     # Test that status reporting works with no migrations
     runner.show_status()
+
+
+class TestSetupDatabase:
+    """Test database setup functionality."""
+    
+    @pytest.fixture
+    def temp_config_dir(self):
+        """Create a temporary directory for configuration files."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            yield temp_path
+    
+    def test_setup_database_basic(self, temp_config_dir):
+        """Test basic database setup."""
+        with patch('prt.config.data_dir', return_value=temp_config_dir):
+            config = setup_database(quiet=True)
+            
+            assert 'db_username' in config
+            assert 'db_password' in config
+            assert 'db_path' in config
+            assert config['db_encrypted'] is False
+            assert config['db_type'] == 'sqlite'
+    
+    def test_setup_database_encrypted(self, temp_config_dir):
+        """Test encrypted database setup."""
+        with patch('prt.config.data_dir', return_value=temp_config_dir):
+            config = setup_database(quiet=True, encrypted=True)
+            
+            assert 'db_username' in config
+            assert 'db_password' in config
+            assert 'db_path' in config
+            assert config['db_encrypted'] is True
+            assert config['db_type'] == 'sqlite'
+    
+    def test_setup_database_force(self, temp_config_dir):
+        """Test forced database setup."""
+        with patch('prt.config.data_dir', return_value=temp_config_dir):
+            # First setup
+            config1 = setup_database(quiet=True)
+            
+            # Force setup
+            config2 = setup_database(force=True, quiet=True)
+            
+            # Should have different credentials
+            assert config1['db_username'] != config2['db_username']
+            assert config1['db_password'] != config2['db_password']
+
+
+class TestInitializeDatabase:
+    """Test database initialization."""
+    
+    @pytest.fixture
+    def temp_db_path(self):
+        """Create a temporary database path."""
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+            db_path = Path(f.name)
+        yield db_path
+        # Cleanup
+        if db_path.exists():
+            db_path.unlink()
+    
+    def test_initialize_unencrypted_database(self, temp_db_path):
+        """Test initializing an unencrypted database."""
+        config = {
+            'db_path': str(temp_db_path),
+            'db_encrypted': False
+        }
+        
+        result = initialize_database(config, quiet=True)
+        assert result is True
+        
+        # Verify database was created
+        assert temp_db_path.exists()
+        
+        # Verify it's a valid database
+        db = create_database(temp_db_path, encrypted=False)
+        assert db.is_valid() is True
+    
+    def test_initialize_encrypted_database(self, temp_db_path):
+        """Test initializing an encrypted database."""
+        config = {
+            'db_path': str(temp_db_path),
+            'db_encrypted': True
+        }
+        
+        result = initialize_database(config, quiet=True)
+        assert result is True
+        
+        # Verify database was created
+        assert temp_db_path.exists()
+        
+        # Verify it's a valid encrypted database
+        db = create_encrypted_database(temp_db_path)
+        assert db.is_valid() is True
+        assert db.test_encryption() is True
+    
+    def test_initialize_existing_database(self, temp_db_path):
+        """Test initializing when database already exists."""
+        # Create database first
+        config = {
+            'db_path': str(temp_db_path),
+            'db_encrypted': False
+        }
+        
+        initialize_database(config, quiet=True)
+        
+        # Try to initialize again
+        result = initialize_database(config, quiet=True)
+        assert result is True  # Should succeed with existing database
+
+
+class TestEncryptionMigration:
+    """Test encryption migration functionality."""
+    
+    @pytest.fixture
+    def temp_db_path(self):
+        """Create a temporary database path."""
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+            db_path = Path(f.name)
+        yield db_path
+        # Cleanup
+        if db_path.exists():
+            db_path.unlink()
+    
+    def test_encrypt_database(self, temp_db_path):
+        """Test encrypting an unencrypted database."""
+        # Create unencrypted database with data
+        db = create_database(temp_db_path, encrypted=False)
+        db.initialize()
+        
+        # Add some test data
+        from prt.models import Contact, Relationship
+        contact = Contact(name="Test Contact", email="test@example.com")
+        db.session.add(contact)
+        db.session.flush()
+        
+        relationship = Relationship(contact_id=contact.id)
+        db.session.add(relationship)
+        db.session.commit()
+        db.session.close()
+        
+        # Encrypt the database
+        result = encrypt_database(
+            db_path=temp_db_path,
+            backup=False,
+            verify=True
+        )
+        
+        assert result is True
+        
+        # Verify it's now encrypted
+        encrypted_db = create_encrypted_database(temp_db_path)
+        assert encrypted_db.is_valid() is True
+        assert encrypted_db.test_encryption() is True
+        
+        # Verify data is still there
+        assert encrypted_db.count_contacts() == 1
+        assert encrypted_db.count_relationships() == 1
+    
+    def test_decrypt_database(self, temp_db_path):
+        """Test decrypting an encrypted database."""
+        # Create encrypted database with data
+        db = create_encrypted_database(temp_db_path)
+        db.initialize()
+        
+        # Add some test data
+        from prt.models import Contact, Relationship
+        contact = Contact(name="Test Contact", email="test@example.com")
+        db.session.add(contact)
+        db.session.flush()
+        
+        relationship = Relationship(contact_id=contact.id)
+        db.session.add(relationship)
+        db.session.commit()
+        db.session.close()
+        
+        # Decrypt the database
+        result = decrypt_database(
+            db_path=temp_db_path,
+            backup=False
+        )
+        
+        assert result is True
+        
+        # Verify it's now unencrypted
+        unencrypted_db = create_database(temp_db_path, encrypted=False)
+        assert unencrypted_db.is_valid() is True
+        
+        # Verify data is still there
+        assert unencrypted_db.count_contacts() == 1
+        assert unencrypted_db.count_relationships() == 1
+    
+    def test_backup_database(self, temp_db_path):
+        """Test database backup functionality."""
+        # Create a database file
+        db = create_database(temp_db_path, encrypted=False)
+        db.initialize()
+        db.session.close()
+        
+        # Create backup
+        backup_path = backup_database(temp_db_path, ".test_backup")
+        
+        assert backup_path.exists()
+        assert backup_path != temp_db_path
+        
+        # Cleanup
+        backup_path.unlink()
+    
+    def test_verify_database_integrity(self, temp_db_path):
+        """Test database integrity verification."""
+        # Create a valid database
+        db = create_database(temp_db_path, encrypted=False)
+        db.initialize()
+        
+        # Add some data
+        from prt.models import Contact
+        contact = Contact(name="Test Contact", email="test@example.com")
+        db.session.add(contact)
+        db.session.commit()
+        
+        # Verify integrity
+        result = verify_database_integrity(db)
+        assert result is True
+        
+        db.session.close()
+
+
+class TestErrorHandling:
+    """Test error handling in migrations."""
+    
+    @pytest.fixture
+    def temp_db_path(self):
+        """Create a temporary database path."""
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+            db_path = Path(f.name)
+        yield db_path
+        # Cleanup
+        if db_path.exists():
+            db_path.unlink()
+    
+    def test_encrypt_nonexistent_database(self):
+        """Test encrypting a database that doesn't exist."""
+        result = encrypt_database(
+            db_path=Path("/nonexistent/path/database.db"),
+            backup=False
+        )
+        
+        assert result is False
+    
+    def test_encrypt_already_encrypted_database(self, temp_db_path):
+        """Test encrypting an already encrypted database."""
+        # Create encrypted database
+        db = create_encrypted_database(temp_db_path)
+        db.initialize()
+        db.session.close()
+        
+        # Try to encrypt again
+        result = encrypt_database(
+            db_path=temp_db_path,
+            backup=False,
+            force=False
+        )
+        
+        # Should fail without force flag
+        assert result is False
+    
+    def test_decrypt_with_wrong_key(self, temp_db_path):
+        """Test decrypting with wrong encryption key."""
+        # Create encrypted database
+        db = create_encrypted_database(temp_db_path)
+        db.initialize()
+        db.session.close()
+        
+        # Try to decrypt with wrong key
+        result = decrypt_database(
+            db_path=temp_db_path,
+            key="wrong_key_32_bytes_long_key!",
+            backup=False
+        )
+        
+        # Should fail
+        assert result is False
+
+
+class TestConfigurationIntegration:
+    """Test configuration integration with migrations."""
+    
+    @pytest.fixture
+    def temp_config_dir(self):
+        """Create a temporary directory for configuration files."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            yield temp_path
+    
+    def test_config_persistence_after_encryption(self, temp_config_dir):
+        """Test that configuration is updated after encryption."""
+        with patch('prt.config.data_dir', return_value=temp_config_dir):
+            # Setup unencrypted database
+            config = setup_database(quiet=True, encrypted=False)
+            db_path = Path(config['db_path'])
+            
+            # Initialize database
+            initialize_database(config, quiet=True)
+            
+            # Encrypt database
+            result = encrypt_database(
+                db_path=db_path,
+                backup=False
+            )
+            
+            assert result is True
+            
+            # Verify config was updated
+            updated_config = load_config()
+            assert updated_config['db_encrypted'] is True
+    
+    def test_config_persistence_after_decryption(self, temp_config_dir):
+        """Test that configuration is updated after decryption."""
+        with patch('prt.config.data_dir', return_value=temp_config_dir):
+            # Setup encrypted database
+            config = setup_database(quiet=True, encrypted=True)
+            db_path = Path(config['db_path'])
+            
+            # Initialize database
+            initialize_database(config, quiet=True)
+            
+            # Decrypt database
+            result = decrypt_database(
+                db_path=db_path,
+                backup=False
+            )
+            
+            assert result is True
+            
+            # Verify config was updated
+            updated_config = load_config()
+            assert updated_config['db_encrypted'] is False
