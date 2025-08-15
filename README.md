@@ -1,7 +1,5 @@
 # Personal Relationship Toolkit (PRT)
 
-A comprehensive toolkit for managing personal relationships, built with Python and featuring encrypted database support.
-
 ## Features
 
 - **Contact Management**: Import and manage contacts from Google Contacts
