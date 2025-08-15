@@ -4,10 +4,10 @@ This document outlines the development roadmap for the Personal Relationship Too
 
 ## Phase 1: Database Encryption 
 ### Tasks
-- [ ] **Implement database encryption** at rest
+- [x] **Implement database encryption** at rest
 - [ ] **Add key management**
-- [ ] **Update CLI for encryption setup**
-- [ ] **Document encryption security model**
+- [x] **Update CLI for encryption setup**
+- [x] **Document encryption security model**
 
 ## Phase 2: Enhanced Search & Filtering 
 ### Tasks
