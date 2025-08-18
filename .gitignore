@@ -201,3 +201,4 @@ cython_debug/
 prt_env/
 secrets/
 prt_data
+takeout-*.zip
