@@ -6,8 +6,6 @@ The init.sh file installs sqlcipher and sets some environment variables so the p
 
 source ./init.sh
 
-pip install -r requirements.txt
-
 python -m prt.cli run
 
 ## Motivation: 
