@@ -1,15 +1,17 @@
 # Personal Relationship Toolkit (PRT)
 
-I am solving a few personal pain points with this project:
+Motivation: I am solving a few personal pain points with this project:
 
-1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.
-2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals should help with that.
-3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore never find the people I need to find when I most need to find them, using any centralize contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.
-4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.
+1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
+2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
+3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore never find the people I need to find when I most need to find them, using any centralize contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be that UI for finding folks for me.
+4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me.
    
 ## Version History
 
 MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
+
+Note: these docs suck.  I'm not going to make them awesome until I hit a milestone where I think this could be useful to someone else, and then I'll fix docs, and look for feedback. 
 
 ## Features currently under development
 
