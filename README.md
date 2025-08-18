@@ -3,6 +3,7 @@
 ## QuickStart
 
 pip install -r requirements.txt
+
 python -m prt.cli run
 
 ## Motivation: 
