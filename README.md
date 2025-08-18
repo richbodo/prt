@@ -2,6 +2,10 @@
 
 ## QuickStart
 
+The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development
+
+source ./init.sh
+
 pip install -r requirements.txt
 
 python -m prt.cli run
