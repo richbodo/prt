@@ -1,6 +1,13 @@
 # Personal Relationship Toolkit (PRT)
 
-Motivation: I am solving a few personal pain points with this project:
+## QuickStart
+
+pip install -r requirements.txt
+python -m prt.cli run
+
+## Motivation: 
+
+I am solving a few personal pain points with this project:
 
 1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
 2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
