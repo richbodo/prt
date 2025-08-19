@@ -8,6 +8,48 @@ source ./init.sh
 
 python -m prt_src.cli run
 
+## CLI Overview
+
+PRT provides both direct commands and an interactive menu interface. Use the `map` command to visualize the complete CLI structure:
+
+```bash
+# Show the CLI command hierarchy
+python -m prt_src.cli map
+```
+
+### Direct Commands
+
+```bash
+# Setup and configuration
+python -m prt_src.cli setup          # Initial setup
+python -m prt_src.cli db-status       # Check database status
+
+# Database operations  
+python -m prt_src.cli encrypt-db      # Encrypt database
+python -m prt_src.cli decrypt-db      # Decrypt database
+python -m prt_src.cli test            # Test connection
+
+# Interactive mode
+python -m prt_src.cli run             # Main interactive interface
+```
+
+### Interactive Menu
+
+The `run` command launches an interactive menu with these options:
+- **[1] View Contacts** - Browse and view contact information
+- **[2] Search Contacts** - Search contacts by various criteria  
+- **[3] Fetch Contacts from Google** - Import from Google Contacts
+- **[4] View Tags** - Browse and manage contact tags
+- **[5] View Notes** - Browse and manage contact notes
+- **[6] Start LLM Chat** - AI-powered contact queries
+- **[7] Database Status** - Check database statistics
+- **[8] Database Backup** - Create database backup
+- **[9] Encrypt Database** - Enable database encryption
+- **[10] Decrypt Database** - Emergency decryption
+- **[0] Exit** - Exit the application
+
+Use `python -m prt_src.cli map --show-params` for detailed parameter information.
+
 ## Motivation: 
 
 I am solving a few personal pain points with this project:

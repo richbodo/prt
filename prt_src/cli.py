@@ -27,6 +27,7 @@ from .config import (
 from .api import PRTAPI
 from .google_contacts import fetch_contacts
 from .llm import chat
+from .cli_map import create_map_command
 
 # Import setup functions
 import sys
@@ -501,6 +502,10 @@ def setup():
 def test():
     """Test database connection and credentials."""
     test_db_credentials()
+
+
+# Add the map command
+app.command(name="map")(create_map_command(app))
 
 
 if __name__ == "__main__":
