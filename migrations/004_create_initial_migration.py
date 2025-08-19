@@ -3,7 +3,7 @@
 Create initial Alembic migration from SQLAlchemy models.
 
 This script helps set up the initial migration for PRT using the
-SQLAlchemy models defined in prt/models.py.
+SQLAlchemy models defined in prt_src/models.py.
 """
 
 import sys
@@ -73,7 +73,7 @@ def update_env_py():
         content = f.read()
     
     # Add our model imports
-    if "from prt.models import Base" not in content:
+    if "from prt_src.models import Base" not in content:
         # Find the target line and add our imports
         lines = content.split("\n")
         new_lines = []
@@ -87,7 +87,7 @@ def update_env_py():
                 new_lines.append("import sys")
                 new_lines.append("from pathlib import Path")
                 new_lines.append("sys.path.insert(0, str(Path(__file__).parent.parent))")
-                new_lines.append("from prt.models import Base")
+                new_lines.append("from prt_src.models import Base")
         
         # Update the target_metadata line
         for i, line in enumerate(new_lines):

@@ -4,8 +4,8 @@ Tests for the PRT API layer.
 
 import pytest
 from pathlib import Path
-from prt.api import PRTAPI
-from prt.config import load_config
+from prt_src.api import PRTAPI
+from prt_src.config import load_config
 
 
 class TestPRTAPI:
@@ -14,7 +14,8 @@ class TestPRTAPI:
     def test_api_initialization(self, tmp_path):
         """Test API initialization with custom database path."""
         db_path = tmp_path / "test.db"
-        api = PRTAPI(db_path)
+        config = {"db_path": str(db_path), "db_encrypted": False}
+        api = PRTAPI(config)
         assert api.db.path == db_path
     
     def test_api_initialization_default(self):
@@ -47,7 +48,8 @@ class TestPRTAPI:
         """Test database backup functionality."""
         # Create a test database
         db_path = tmp_path / "test.db"
-        api = PRTAPI(db_path)
+        config = {"db_path": str(db_path), "db_encrypted": False}
+        api = PRTAPI(config)
         api.db.initialize()  # Create the database
         
         # Test backup

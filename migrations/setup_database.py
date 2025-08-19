@@ -16,8 +16,8 @@ from rich.console import Console
 # Add the prt package to the path
 sys.path.insert(0, str(Path(__file__).parent / "prt"))
 
-from prt.config import get_db_credentials, data_dir, load_config, save_config, get_encryption_key
-from prt.db import Database
+from prt_src.config import get_db_credentials, data_dir, load_config, save_config, get_encryption_key
+from prt_src.db import Database
 import shutil
 
 app = typer.Typer(help="PRT Database Setup Utility")
@@ -112,10 +112,10 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
         try:
             # Try to connect to existing database
             if config.get('db_encrypted', False):
-                from prt.encrypted_db import create_encrypted_database
+                from prt_src.encrypted_db import create_encrypted_database
                 db = create_encrypted_database(db_file)
             else:
-                from prt.db import create_database
+                from prt_src.db import create_database
                 db = create_database(db_file, encrypted=False)
             
             if db.is_valid():

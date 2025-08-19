@@ -1,6 +1,6 @@
 from pathlib import Path
 from typer.testing import CliRunner
-from prt.cli import app
+from prt_src.cli import app
 
 
 def test_cli_creates_config(tmp_path):

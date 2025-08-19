@@ -8,6 +8,7 @@ and encrypted database integration.
 import pytest
 import tempfile
 import shutil
+import sqlite3
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -23,9 +24,9 @@ from migrations.encrypt_database import (
     backup_database,
     verify_database_integrity
 )
-from prt.config import load_config, save_config, get_encryption_key
-from prt.db import create_database
-from prt.encrypted_db import create_encrypted_database
+from prt_src.config import load_config, save_config, get_encryption_key
+from prt_src.db import create_database
+from prt_src.encrypted_db import create_encrypted_database
 
 
 def test_migration_tracker(tmp_path):
@@ -145,7 +146,7 @@ class TestSetupDatabase:
     
     def test_setup_database_basic(self, temp_config_dir):
         """Test basic database setup."""
-        with patch('prt.config.data_dir', return_value=temp_config_dir):
+        with patch('prt_src.config.data_dir', return_value=temp_config_dir):
             config = setup_database(quiet=True)
             
             assert 'db_username' in config
@@ -156,7 +157,7 @@ class TestSetupDatabase:
     
     def test_setup_database_encrypted(self, temp_config_dir):
         """Test encrypted database setup."""
-        with patch('prt.config.data_dir', return_value=temp_config_dir):
+        with patch('prt_src.config.data_dir', return_value=temp_config_dir):
             config = setup_database(quiet=True, encrypted=True)
             
             assert 'db_username' in config
@@ -167,7 +168,7 @@ class TestSetupDatabase:
     
     def test_setup_database_force(self, temp_config_dir):
         """Test forced database setup."""
-        with patch('prt.config.data_dir', return_value=temp_config_dir):
+        with patch('prt_src.config.data_dir', return_value=temp_config_dir):
             # First setup
             config1 = setup_database(quiet=True)
             
@@ -262,7 +263,7 @@ class TestEncryptionMigration:
         db.initialize()
         
         # Add some test data
-        from prt.models import Contact, Relationship
+        from prt_src.models import Contact, Relationship
         contact = Contact(name="Test Contact", email="test@example.com")
         db.session.add(contact)
         db.session.flush()
@@ -297,7 +298,7 @@ class TestEncryptionMigration:
         db.initialize()
         
         # Add some test data
-        from prt.models import Contact, Relationship
+        from prt_src.models import Contact, Relationship
         contact = Contact(name="Test Contact", email="test@example.com")
         db.session.add(contact)
         db.session.flush()
@@ -346,7 +347,7 @@ class TestEncryptionMigration:
         db.initialize()
         
         # Add some data
-        from prt.models import Contact
+        from prt_src.models import Contact
         contact = Contact(name="Test Contact", email="test@example.com")
         db.session.add(contact)
         db.session.commit()
@@ -427,7 +428,7 @@ class TestConfigurationIntegration:
     
     def test_config_persistence_after_encryption(self, temp_config_dir):
         """Test that configuration is updated after encryption."""
-        with patch('prt.config.data_dir', return_value=temp_config_dir):
+        with patch('prt_src.config.data_dir', return_value=temp_config_dir):
             # Setup unencrypted database
             config = setup_database(quiet=True, encrypted=False)
             db_path = Path(config['db_path'])
@@ -449,7 +450,7 @@ class TestConfigurationIntegration:
     
     def test_config_persistence_after_decryption(self, temp_config_dir):
         """Test that configuration is updated after decryption."""
-        with patch('prt.config.data_dir', return_value=temp_config_dir):
+        with patch('prt_src.config.data_dir', return_value=temp_config_dir):
             # Setup encrypted database
             config = setup_database(quiet=True, encrypted=True)
             db_path = Path(config['db_path'])

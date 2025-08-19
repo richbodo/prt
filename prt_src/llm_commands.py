@@ -146,7 +146,7 @@ All commands return JSON results except for success/failure messages.
 def main():
     """Main function for command-line usage."""
     if len(sys.argv) < 2:
-        print("Usage: python -m prt.llm_commands <command> [args...]")
+        print("Usage: python -m prt_src.llm_commands <command> [args...]")
         print("Use 'help' command to see available commands")
         sys.exit(1)
     

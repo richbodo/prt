@@ -6,7 +6,7 @@ The init.sh file installs sqlcipher and sets some environment variables so the p
 
 source ./init.sh
 
-python -m prt.cli run
+python -m prt_src.cli run
 
 ## Motivation: 
 
@@ -86,7 +86,7 @@ For detailed installation instructions for each platform, see the [Installation 
 
 6. **Set up the database**:
    ```bash
-   python -m prt.cli setup
+   python -m prt_src.cli setup
    ```
 
 **Troubleshooting macOS:**
@@ -126,7 +126,7 @@ For detailed installation instructions for each platform, see the [Installation 
 
 5. **Set up the database**:
    ```bash
-   python -m prt.cli setup
+   python -m prt_src.cli setup
    ```
 
 **Troubleshooting Linux:**
@@ -162,7 +162,7 @@ For detailed installation instructions for each platform, see the [Installation 
 
 3. **Set up the database**:
    ```bash
-   python -m prt.cli setup
+   python -m prt_src.cli setup
    ```
 
 ## Quick Start
@@ -171,17 +171,17 @@ For detailed installation instructions for each platform, see the [Installation 
 
 1. **Initial Setup**: Run the setup command to configure your database:
    ```bash
-   python -m prt.cli setup
+   python -m prt_src.cli setup
    ```
 
 2. **Start the CLI**: Launch the interactive interface:
    ```bash
-   python -m prt.cli run
+   python -m prt_src.cli run
    ```
 
 3. **Import Contacts**: Use the `fetch` command to import contacts from Google:
    ```bash
-   python -m prt.cli run
+   python -m prt_src.cli run
    # Then type: fetch
    ```
 
@@ -193,19 +193,19 @@ For advanced database configuration, encryption setup, and management tools, see
 
 ```bash
 # Set up database
-python -m prt.cli setup [--encrypted]
+python -m prt_src.cli setup [--encrypted]
 
 # Check database status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 
 # Encrypt existing database
-python -m prt.cli encrypt-db
+python -m prt_src.cli encrypt-db
 
 # Decrypt database (emergency)
-python -m prt.cli decrypt-db
+python -m prt_src.cli decrypt-db
 
 # Test database connection
-python -m prt.cli test
+python -m prt_src.cli test
 ```
 
 ## Configuration
@@ -223,7 +223,7 @@ PRT stores configuration in `prt_data/prt_config.json`. Key settings:
 ### Interactive Mode
 ```bash
 # Start interactive CLI
-python -m prt.cli run
+python -m prt_src.cli run
 ```
 
 Available commands in interactive mode:
@@ -259,10 +259,10 @@ pip install pysqlcipher3
 #### Database Connection Errors
 ```bash
 # Check database status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 
 # Reinitialize database if needed
-python -m prt.cli setup --force
+python -m prt_src.cli setup --force
 ```
 
 For detailed troubleshooting and advanced database management, see [DB_MANAGEMENT.md](docs/DB_MANAGEMENT.md).

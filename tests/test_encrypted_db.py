@@ -12,15 +12,15 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from sqlalchemy import text
 
-from prt.encrypted_db import (
+from prt_src.encrypted_db import (
     EncryptedDatabase,
     create_encrypted_database,
     migrate_to_encrypted,
     PYSQLCIPHER3_AVAILABLE
 )
-from prt.db import Database, create_database
-from prt.config import get_encryption_key, is_database_encrypted
-from prt.models import Contact, Relationship, Tag, Note, Person
+from prt_src.db import Database, create_database
+from prt_src.config import get_encryption_key, is_database_encrypted
+from prt_src.models import Contact, Relationship, Tag, Note, Person
 
 
 class TestEncryptedDatabase:
@@ -234,7 +234,7 @@ class TestErrorHandling:
     
     def test_missing_pysqlcipher3(self, temp_db_path):
         """Test handling when pysqlcipher3 is not available."""
-        with patch('prt.encrypted_db.EncryptedDatabase') as mock_encrypted:
+        with patch('prt_src.encrypted_db.EncryptedDatabase') as mock_encrypted:
             mock_encrypted.side_effect = ImportError("No module named 'pysqlcipher3'")
             
             with pytest.raises(RuntimeError, match="pysqlcipher3 is required for encrypted databases"):

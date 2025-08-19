@@ -21,8 +21,8 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from prt.models import Base
-from prt.config import load_config, is_database_encrypted, get_encryption_key
+from prt_src.models import Base
+from prt_src.config import load_config, is_database_encrypted, get_encryption_key
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
