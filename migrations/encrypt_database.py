@@ -110,7 +110,8 @@ def encrypt_database(
     backup: bool = True,
     verify: bool = True,
     force: bool = False,
-    export_key: bool = True
+    export_key: bool = True,
+    quiet: bool = False
 ) -> bool:
     """
     Encrypt an existing unencrypted database.
@@ -122,6 +123,7 @@ def encrypt_database(
         verify: Whether to verify the encrypted database after migration
         force: Force encryption even if database appears to be encrypted
         export_key: Whether to export the encryption key to a backup file
+        quiet: Skip interactive confirmation prompts (for testing)
         
     Returns:
         True if encryption was successful, False otherwise
@@ -129,11 +131,12 @@ def encrypt_database(
     console.print("Starting database encryption process...", style="bold blue")
     
     # Show encryption warnings
-    show_encryption_warnings()
-    
-    if not typer.confirm("Do you understand the risks and want to proceed?"):
-        console.print("Encryption cancelled", style="yellow")
-        return False
+    if not quiet:
+        show_encryption_warnings()
+        
+        if not typer.confirm("Do you understand the risks and want to proceed?"):
+            console.print("Encryption cancelled", style="yellow")
+            return False
     
     # Get database path from config if not provided
     if db_path is None:
@@ -154,7 +157,10 @@ def encrypt_database(
         config = load_config()
         if is_database_encrypted(config) and not force:
             console.print("Database is already configured as encrypted", style="yellow")
-            if not typer.confirm("Force re-encryption?"):
+            if not quiet and not typer.confirm("Force re-encryption?"):
+                return False
+            elif quiet:
+                # In quiet mode, don't re-encrypt unless force is explicitly set
                 return False
     except Exception:
         pass  # Config might not exist yet
@@ -244,7 +250,8 @@ def encrypt_database(
 def decrypt_database(
     db_path: Optional[Path] = None,
     encryption_key: Optional[str] = None,
-    backup: bool = True
+    backup: bool = True,
+    quiet: bool = False
 ) -> bool:
     """
     Decrypt an encrypted database (emergency function).
@@ -253,23 +260,25 @@ def decrypt_database(
         db_path: Path to the database file (uses config if None)
         encryption_key: Encryption key to use (loads from secrets if None)
         backup: Whether to create a backup before decryption
+        quiet: Skip interactive confirmation prompts (for testing)
         
     Returns:
         True if decryption was successful, False otherwise
     """
     console.print("Starting database decryption process...", style="bold yellow")
     
-    warning_text = Text()
-    warning_text.append("⚠️  DECRYPTION WARNING ⚠️\n\n", style="bold red")
-    warning_text.append("This will decrypt your database, making it unencrypted.\n", style="red")
-    warning_text.append("Only use this in emergency situations.\n", style="yellow")
-    warning_text.append("Your data will no longer be encrypted at rest.\n", style="red")
-    
-    console.print(Panel(warning_text, title="Security Warning", border_style="red"))
-    
-    if not typer.confirm("Are you sure you want to decrypt your database?"):
-        console.print("Decryption cancelled", style="yellow")
-        return False
+    if not quiet:
+        warning_text = Text()
+        warning_text.append("⚠️  DECRYPTION WARNING ⚠️\n\n", style="bold red")
+        warning_text.append("This will decrypt your database, making it unencrypted.\n", style="red")
+        warning_text.append("Only use this in emergency situations.\n", style="yellow")
+        warning_text.append("Your data will no longer be encrypted at rest.\n", style="red")
+        
+        console.print(Panel(warning_text, title="Security Warning", border_style="red"))
+        
+        if not typer.confirm("Are you sure you want to decrypt your database?"):
+            console.print("Decryption cancelled", style="yellow")
+            return False
     
     # Get database path from config if not provided
     if db_path is None:

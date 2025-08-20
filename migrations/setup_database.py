@@ -139,10 +139,10 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
         
         # Create database based on encryption setting
         if config.get('db_encrypted', False):
-            from prt.encrypted_db import create_encrypted_database
+            from prt_src.encrypted_db import create_encrypted_database
             db = create_encrypted_database(db_file)
         else:
-            from prt.db import create_database
+            from prt_src.db import create_database
             db = create_database(db_file, encrypted=False)
         
         # Initialize schema

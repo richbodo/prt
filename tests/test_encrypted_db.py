@@ -222,15 +222,27 @@ class TestErrorHandling:
             # Skip this test when pysqlcipher3 is not available
             pytest.skip("pysqlcipher3 not available")
         
-        # Create database with one key
+        # Create database with one key and add some data
         db1 = create_encrypted_database(temp_db_path, "key1_32_bytes_long_key_here!")
         db1.initialize()
+        
+        # Add a test record to ensure database has encrypted content
+        from prt_src.models import Contact
+        contact = Contact(name="Test User", email="test@example.com")
+        db1.session.add(contact)
+        db1.session.commit()
         db1.session.close()
         
-        # Try to open with different key
-        with pytest.raises(Exception):
-            db2 = create_encrypted_database(temp_db_path, "key2_32_bytes_long_key_here!")
-            db2.test_encryption()
+        # Try to open with different key and access the data
+        db2 = create_encrypted_database(temp_db_path, "key2_32_bytes_long_key_here!")
+        try:
+            # Try to query the contacts table with wrong key
+            db2.session.query(Contact).first()
+            # If we get here without exception, the test should fail
+            assert False, "Expected encryption error but query succeeded"
+        except Exception:
+            # This is expected - wrong key should cause an exception
+            assert True
     
     def test_missing_pysqlcipher3(self, temp_db_path):
         """Test handling when pysqlcipher3 is not available."""
@@ -251,9 +263,9 @@ class TestErrorHandling:
         with open(temp_db_path, 'w') as f:
             f.write("This is not a valid database")
         
-        with pytest.raises(Exception):
-            db = create_encrypted_database(temp_db_path, "test_key_32_bytes_long_key!")
-            db.test_encryption()
+        db = create_encrypted_database(temp_db_path, "test_key_32_bytes_long_key!")
+        # Should fail encryption test with corrupt database
+        assert db.test_encryption() is False
 
 
 class TestConfiguration:

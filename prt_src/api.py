@@ -37,7 +37,9 @@ class PRTAPI:
         self.schema_manager = SchemaManager(self.db)
         
         # Auto-migrate if needed (with user safety)
-        if self.schema_manager.check_migration_needed():
+        current_version = self.schema_manager.get_schema_version()
+        if current_version > 0 and self.schema_manager.check_migration_needed():
+            # Only auto-migrate if we have an existing schema to migrate
             from rich.console import Console
             console = Console()
             console.print("\n🔄 Database schema update needed...", style="blue")
