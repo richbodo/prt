@@ -27,6 +27,7 @@ python -m prt_src.cli db-status       # Check database status
 # Database operations  
 python -m prt_src.cli encrypt-db      # Encrypt database
 python -m prt_src.cli decrypt-db      # Decrypt database
+python -m prt_src.cli migrate         # Update database schema
 python -m prt_src.cli test            # Test connection
 
 # Interactive mode
@@ -38,7 +39,7 @@ python -m prt_src.cli run             # Main interactive interface
 The `run` command launches an interactive menu with these options:
 - **[1] View Contacts** - Browse and view contact information
 - **[2] Search Contacts** - Search contacts by various criteria  
-- **[3] Fetch Contacts from Google** - Import from Google Contacts
+- **[3] Import Google Contacts from Takeout** - Import contacts with images from Google Takeout zip file
 - **[4] View Tags** - Browse and manage contact tags
 - **[5] View Notes** - Browse and manage contact notes
 - **[6] Start LLM Chat** - AI-powered contact queries

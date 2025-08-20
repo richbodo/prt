@@ -202,18 +202,52 @@ python -m prt_src.cli decrypt-db
 
 ### Database Schema Migrations
 
-PRT uses Alembic for database schema migrations:
+PRT uses a simple, safe schema management system that automatically backs up your data before any changes:
 
 ```bash
-# Run pending migrations
-alembic upgrade head
+# Check current schema version and apply any needed updates
+python -m prt_src.cli migrate
 
-# Create a new migration
-alembic revision --autogenerate -m "Description of changes"
-
-# Rollback to previous version
-alembic downgrade -1
+# The system will automatically:
+# 1. Create a timestamped backup of your database
+# 2. Apply schema changes safely
+# 3. Provide recovery instructions if anything goes wrong
 ```
+
+#### How Schema Migration Works
+
+- **Version Tracking**: Each database has a schema version number
+- **Automatic Backups**: Before any migration, a timestamped backup is created
+- **Safety First**: If migration fails, you get exact instructions to recover
+- **User Control**: You can always restore from backup if needed
+
+#### Migration Process Example
+
+```
+🔄 Upgrading database schema from v1 to v2...
+📁 Backup created: prt.v1.20250820_234010.backup
+Adding profile image support to contacts...
+  ✓ Added profile_image column
+  ✓ Added profile_image_filename column
+  ✓ Added profile_image_mime_type column
+✅ Database successfully upgraded to version 2!
+```
+
+#### Recovery from Failed Migration
+
+If a migration fails, you'll see clear recovery instructions:
+
+```
+❌ Database migration failed!
+Your data is safe! A backup was created before the migration.
+
+🔧 To recover:
+1. Restore your backup: cp "prt.v1.backup" "prt_data/prt.db"
+2. Get the working version: Download PRT v1.x from GitHub releases
+3. Continue using the older version until this issue is fixed
+```
+
+This approach prioritizes **data safety** over complex migration features, perfect for a privacy-focused local application.
 
 ## Troubleshooting
 

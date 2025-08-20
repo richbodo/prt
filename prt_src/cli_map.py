@@ -63,6 +63,7 @@ class CLIMapper:
                 'encrypt-db': 'Encrypt the database',
                 'decrypt-db': 'Decrypt the database', 
                 'test': 'Test database connection and credentials',
+                'migrate': 'Migrate database schema to latest version',
                 'map': 'Display a map of all CLI commands and menu structure'
             }
             
@@ -120,9 +121,9 @@ class CLIMapper:
                     "handler": "handle_contacts_search"
                 },
                 "3": {
-                    "name": "Fetch Contacts from Google",
-                    "description": "Import contacts from Google Contacts",
-                    "handler": "handle_fetch_google_contacts"
+                    "name": "Import Google Contacts from Takeout",
+                    "description": "Import contacts with images from Google Takeout zip file",
+                    "handler": "handle_import_google_takeout"
                 },
                 "4": {
                     "name": "View Tags",

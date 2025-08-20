@@ -13,7 +13,10 @@ The PRT schema extends Google Contacts by adding dedicated tables to track relat
 
 ### Core Tables
 
-- **contacts** – stores imported Google Contacts fields (name, email, etc.) along with any additional attributes.
+- **contacts** – stores imported contact information with support for profile images:
+  - Basic fields: name, email, phone
+  - Profile image fields: image data (binary), filename, MIME type
+  - Import source: Google Contacts CSV or Google Takeout (with images)
 - **relationships** – links a contact to multiple tags and notes (one-to-one with contacts).
 - **tags** – editable list of tag names that can be applied to relationships.
 - **relationship_tags** – many‑to‑many join table between relationships and tags.
@@ -47,3 +50,35 @@ Relationship:
 ```
 
 This design supports unlimited tags and notes per relationship while remaining compatible with Google Contacts fields.
+
+## Schema Evolution
+
+### Version 1 (Initial)
+- Basic contact storage: name, email, phone
+- Relationship management with tags and notes
+- Google Contacts CSV import support
+
+### Version 2 (Current)
+- **Profile Image Support**: Added fields for storing contact profile pictures
+  - `profile_image`: Binary image data stored directly in database
+  - `profile_image_filename`: Original filename for reference
+  - `profile_image_mime_type`: MIME type (e.g., 'image/jpeg')
+- **Google Takeout Import**: Import contacts with images from Google Takeout zip files
+- **Safe Migration System**: Automatic backup and recovery for schema changes
+
+### Future Considerations
+- Additional contact fields (address, organization, etc.)
+- Image optimization and compression
+- Support for multiple images per contact
+- Integration with other contact sources
+
+## Migration Management
+
+PRT uses a simple schema versioning system that prioritizes data safety:
+
+- **Automatic Detection**: System detects current schema version
+- **Safe Upgrades**: Creates backup before any schema changes
+- **Recovery Instructions**: Clear guidance if migration fails
+- **User Control**: Users can always restore from backup
+
+See [Database Management Guide](DB_MANAGEMENT.md#database-schema-migrations) for detailed migration procedures.

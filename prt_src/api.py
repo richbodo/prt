@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from .db import Database
 from .config import load_config, data_dir, get_encryption_key
+from .schema_manager import SchemaManager
 
 
 class PRTAPI:
@@ -31,6 +32,18 @@ class PRTAPI:
         
         self.db = Database(db_path, encrypted=encrypted, encryption_key=encryption_key)
         self.db.connect()
+        
+        # Initialize schema manager and check for migrations
+        self.schema_manager = SchemaManager(self.db)
+        
+        # Auto-migrate if needed (with user safety)
+        if self.schema_manager.check_migration_needed():
+            from rich.console import Console
+            console = Console()
+            console.print("\n🔄 Database schema update needed...", style="blue")
+            success = self.schema_manager.migrate_safely()
+            if not success:
+                raise RuntimeError("Database migration failed. See instructions above to recover.")
     
     # Database management operations
     def get_database_stats(self) -> Dict[str, int]:

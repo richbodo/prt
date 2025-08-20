@@ -82,7 +82,7 @@ def show_main_menu() -> None:
     menu_text.append("2. ", style="cyan")
     menu_text.append("Search Contacts\n", style="white")
     menu_text.append("3. ", style="cyan")
-    menu_text.append("Fetch Contacts from Google\n", style="white")
+    menu_text.append("Import Google Contacts from Takeout\n", style="white")
     menu_text.append("4. ", style="cyan")
     menu_text.append("View Tags\n", style="white")
     menu_text.append("5. ", style="cyan")
@@ -161,8 +161,99 @@ def handle_contacts_search(api: PRTAPI) -> None:
         console.print(f"Error searching contacts: {e}", style="red")
 
 
+def handle_import_google_takeout(api: PRTAPI) -> None:
+    """Handle importing contacts from Google Takeout zip file."""
+    from .google_takeout import find_takeout_files, GoogleTakeoutParser
+    from .config import data_dir
+    
+    console.print("\n" + "="*50)
+    console.print("Import Google Contacts from Takeout", style="bold blue")
+    console.print("="*50)
+    console.print()
+    
+    # Find Google Takeout zip files in prt_data directory
+    takeout_files = find_takeout_files(data_dir())
+    
+    if not takeout_files:
+        console.print("No Google Takeout zip files found in prt_data/ directory.", style="yellow")
+        console.print()
+        console.print("To import contacts with images:", style="cyan")
+        console.print("1. Go to Google Takeout (https://takeout.google.com/)", style="cyan")
+        console.print("2. Select only 'Contacts' for export", style="cyan")
+        console.print("3. Choose 'Export once' and 'ZIP' format", style="cyan")
+        console.print("4. Download the zip file", style="cyan")
+        console.print("5. Place the zip file in the prt_data/ directory", style="cyan")
+        console.print("6. Run this import command again", style="cyan")
+        return
+    
+    # Display available zip files
+    console.print("Available Google Takeout files:", style="bold blue")
+    for i, zip_file in enumerate(takeout_files, 1):
+        console.print(f"  {i}. {zip_file.name}")
+    console.print()
+    
+    # Let user select a file
+    while True:
+        try:
+            choice = int(Prompt.ask(f"Select a file (1-{len(takeout_files)})"))
+            if 1 <= choice <= len(takeout_files):
+                selected_file = takeout_files[choice - 1]
+                break
+            else:
+                console.print(f"Please enter a number between 1 and {len(takeout_files)}", style="red")
+        except ValueError:
+            console.print("Please enter a valid number", style="red")
+    
+    # Parse and validate the selected file
+    console.print(f"Analyzing {selected_file.name}...", style="blue")
+    parser = GoogleTakeoutParser(selected_file)
+    preview = parser.get_preview_info()
+    
+    if not preview['valid']:
+        console.print(f"Error: {preview['error']}", style="red")
+        return
+    
+    # Show preview information
+    console.print(f"✓ Valid Google Takeout file", style="green")
+    console.print(f"  Contacts found: {preview['contact_count']}", style="white")
+    console.print(f"  Images found: {preview['image_count']}", style="white")
+    console.print(f"  Contacts with images: {preview['contacts_with_images']}", style="white")
+    console.print()
+    
+    if preview['sample_contacts']:
+        console.print("Sample contacts:", style="bold green")
+        for contact in preview['sample_contacts']:
+            image_indicator = "📷" if contact['has_image'] else "👤"
+            console.print(f"  {image_indicator} {contact['name']}")
+        console.print()
+    
+    if not Confirm.ask("Does this look correct? Import these contacts?"):
+        console.print("Import cancelled.", style="yellow")
+        return
+    
+    # Import the contacts
+    console.print("Importing contacts...", style="blue")
+    try:
+        contacts, info = parser.extract_contacts_and_images()
+        
+        if contacts:
+            success = api.import_contacts(contacts)
+            if success:
+                console.print(f"✓ Successfully imported {len(contacts)} contacts", style="green")
+                contacts_with_images = len([c for c in contacts if c.get('profile_image')])
+                if contacts_with_images > 0:
+                    console.print(f"  Including {contacts_with_images} contacts with profile images", style="green")
+            else:
+                console.print("Failed to import contacts to database", style="red")
+        else:
+            console.print("No contacts found in the file", style="yellow")
+            
+    except Exception as e:
+        console.print(f"Failed to import contacts: {e}", style="red")
+
+
 def handle_fetch_google_contacts(api: PRTAPI, config: dict) -> None:
-    """Handle fetching contacts from Google."""
+    """Handle fetching contacts from Google (legacy method - kept for reference)."""
     if not Confirm.ask("This will fetch contacts from Google. Continue?"):
         return
     
@@ -368,7 +459,7 @@ def run_interactive_cli():
             elif choice == "2":
                 handle_contacts_search(api)
             elif choice == "3":
-                handle_fetch_google_contacts(api, config)
+                handle_import_google_takeout(api)
             elif choice == "4":
                 handle_view_tags(api)
             elif choice == "5":
@@ -506,6 +597,57 @@ def test():
 
 # Add the map command
 app.command(name="map")(create_map_command(app))
+
+
+@app.command()
+def migrate():
+    """Migrate database schema to latest version."""
+    from .schema_manager import SchemaManager
+    from .config import load_config
+    from .db import Database
+    from pathlib import Path
+    
+    try:
+        config = load_config()
+        db_path = Path(config["db_path"])
+        
+        # Check if database exists
+        if not db_path.exists():
+            console.print("❌ Database not found. Run 'setup' command first.", style="red")
+            raise typer.Exit(1)
+        
+        # Connect to database
+        encrypted = config.get('db_encrypted', False)
+        encryption_key = None
+        if encrypted:
+            from .config import get_encryption_key
+            encryption_key = get_encryption_key()
+        
+        db = Database(db_path, encrypted=encrypted, encryption_key=encryption_key)
+        db.connect()
+        
+        # Run migration
+        schema_manager = SchemaManager(db)
+        info = schema_manager.get_migration_info()
+        
+        console.print(f"Current database version: {info['current_version']}", style="blue")
+        console.print(f"Target version: {info['target_version']}", style="blue")
+        
+        if not info['migration_needed']:
+            console.print("✅ Database is already up to date!", style="green")
+            return
+        
+        if not info['migration_available']:
+            console.print("❌ No migration path available for this database version.", style="red")
+            raise typer.Exit(1)
+        
+        success = schema_manager.migrate_safely()
+        if not success:
+            raise typer.Exit(1)
+            
+    except Exception as e:
+        console.print(f"Migration failed: {e}", style="red")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

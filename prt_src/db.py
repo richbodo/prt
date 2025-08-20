@@ -89,7 +89,7 @@ class Database:
         return self.session.query(Relationship).count()
 
     def insert_contacts(self, contacts: List[Dict[str, str]]):
-        """Insert contacts from parsed CSV data."""
+        """Insert contacts from parsed data (CSV or Google Takeout)."""
         from .models import Contact, Relationship
         
         for contact_data in contacts:
@@ -101,10 +101,18 @@ class Database:
             emails = contact_data.get('emails', [])
             phones = contact_data.get('phones', [])
             
+            # Handle profile image data
+            profile_image = contact_data.get('profile_image')
+            profile_image_filename = contact_data.get('profile_image_filename')
+            profile_image_mime_type = contact_data.get('profile_image_mime_type')
+            
             contact = Contact(
                 name=name,
                 email=emails[0] if emails else None,
-                phone=phones[0] if phones else None
+                phone=phones[0] if phones else None,
+                profile_image=profile_image,
+                profile_image_filename=profile_image_filename,
+                profile_image_mime_type=profile_image_mime_type
             )
             self.session.add(contact)
             self.session.flush()  # Get the contact ID

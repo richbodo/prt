@@ -5,7 +5,7 @@ These models define the database structure and are used by Alembic
 to generate and apply migrations.
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table, LargeBinary
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, UTC
@@ -21,6 +21,9 @@ class Contact(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255))
     phone = Column(String(50))
+    profile_image = Column(LargeBinary)  # Store profile image as binary data
+    profile_image_filename = Column(String(255))  # Original filename for reference
+    profile_image_mime_type = Column(String(50))  # MIME type (e.g., 'image/jpeg')
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
