@@ -9,6 +9,7 @@ import pytest
 import tempfile
 import shutil
 import sqlite3
+import sqlalchemy
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -16,7 +17,6 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# from migrations.run_migrations import MigrationRunner, MigrationTracker  # No longer needed
 from utils.setup_database import setup_database, initialize_database
 from utils.encrypt_database import (
     encrypt_database,
@@ -27,117 +27,79 @@ from utils.encrypt_database import (
 from prt_src.config import load_config, save_config, get_encryption_key
 from prt_src.db import create_database
 from prt_src.encrypted_db import create_encrypted_database
+from prt_src.schema_manager import SchemaManager
 
 
-def test_migration_tracker(tmp_path):
-    """Test migration tracking functionality."""
-    pytest.skip("Migration tracker functionality replaced by SchemaManager")
-    db_path = tmp_path / "test.db"
-    
-    # Create a test database
-    conn = sqlite3.connect(db_path)
-    conn.close()
-    
-    tracker = MigrationTracker(db_path)
-    
-    # Test initial state
-    applied = tracker.get_applied_migrations()
-    assert applied == []
-    
-    # Test marking migrations as applied
-    tracker.mark_migration_applied("test_migration_001")
-    applied = tracker.get_applied_migrations()
-    assert "test_migration_001" in applied
-    
-    # Test checking if migration is applied
-    assert tracker.is_migration_applied("test_migration_001") == True
-    assert tracker.is_migration_applied("test_migration_002") == False
+class TestSchemaManager:
+    """Tests for SchemaManager migration helpers."""
 
+    @pytest.fixture
+    def v1_db(self, tmp_path):
+        """Create a temporary database with version 1 schema."""
+        path = tmp_path / "v1.db"
+        db = create_database(path, encrypted=False)
+        db.connect()
+        db.session.execute(
+            sqlalchemy.text(
+                """
+                CREATE TABLE contacts (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    email TEXT,
+                    phone TEXT
+                )
+                """
+            )
+        )
+        db.session.commit()
+        yield db
+        db.session.close()
+        for file in path.parent.glob("*.backup"):
+            file.unlink()
+        if path.exists():
+            path.unlink()
 
-def test_migration_runner_initialization(tmp_path):
-    """Test migration runner initialization."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-    db_path = tmp_path / "test.db"
-    
-    # Create a test database
-    conn = sqlite3.connect(db_path)
-    conn.close()
-    
-    runner = MigrationRunner(db_path)
-    
-    # Test that migration history table was created
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='migration_history'")
-    assert cursor.fetchone() is not None
-    conn.close()
+    @pytest.fixture
+    def v2_db(self, tmp_path):
+        """Create a temporary database with current schema."""
+        path = tmp_path / "v2.db"
+        db = create_database(path, encrypted=False)
+        db.connect()
+        db.initialize()
+        yield db
+        db.session.close()
+        if path.exists():
+            path.unlink()
 
+    def test_get_migration_info_needs_migration(self, v1_db):
+        manager = SchemaManager(v1_db)
+        info = manager.get_migration_info()
+        assert info["current_version"] == 1
+        assert info["target_version"] == SchemaManager.CURRENT_VERSION
+        assert info["migration_needed"] is True
+        assert info["migration_available"] is True
 
-def test_migration_runner_list_migrations(tmp_path):
-    """Test that migration runner can list available migrations."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-    db_path = tmp_path / "test.db"
-    
-    # Create a test database
-    conn = sqlite3.connect(db_path)
-    conn.close()
-    
-    runner = MigrationRunner(db_path)
-    
-    # Test getting available migrations
-    migrations = runner.get_available_migrations()
-    # Should find our migration files
-    assert len(migrations) > 0
-    
-    # Check that they're sorted by number
-    migration_names = [m.stem for m in migrations]
-    assert "001_fix_contacts_schema" in migration_names
-    assert "002_fix_relationships_schema" in migration_names
+    def test_get_migration_info_up_to_date(self, v2_db):
+        manager = SchemaManager(v2_db)
+        info = manager.get_migration_info()
+        assert info["current_version"] == SchemaManager.CURRENT_VERSION
+        assert info["migration_needed"] is False
+        assert info["migration_available"] is False
 
-
-def test_migration_runner_status(tmp_path):
-    """Test migration status reporting."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-    db_path = tmp_path / "test.db"
-    
-    # Create a test database
-    conn = sqlite3.connect(db_path)
-    conn.close()
-    
-    runner = MigrationRunner(db_path)
-    
-    # Test status reporting (should not crash)
-    runner.show_status()
-    
-    # Test listing migrations (should not crash)
-    runner.list_migrations()
-
-
-def test_migration_runner_with_no_migrations(tmp_path):
-    """Test migration runner behavior when no migrations are available."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-    db_path = tmp_path / "test.db"
-    
-    # Create a test database
-    conn = sqlite3.connect(db_path)
-    conn.close()
-    
-    # Create a temporary migration directory with no migration files
-    temp_migrations_dir = tmp_path / "temp_migrations"
-    temp_migrations_dir.mkdir()
-    
-    # Temporarily modify the runner to use empty directory
-    runner = MigrationRunner(db_path)
-    original_migrations_dir = runner.migrations_dir
-    runner.migrations_dir = temp_migrations_dir
-    
-    # Test that it handles empty migration directory gracefully
-    migrations = runner.get_available_migrations()
-    assert len(migrations) == 0
-    
-    # Test that status reporting works with no migrations
-    runner.show_status()
-
+    def test_migrate_safely_upgrades_database(self, v1_db):
+        manager = SchemaManager(v1_db)
+        assert manager.get_migration_info()["migration_needed"] is True
+        result = manager.migrate_safely()
+        assert result is True
+        info = manager.get_migration_info()
+        assert info["current_version"] == SchemaManager.CURRENT_VERSION
+        assert info["migration_needed"] is False
+        # verify new columns exist
+        v1_db.session.execute(
+            sqlalchemy.text(
+                "SELECT profile_image, profile_image_filename, profile_image_mime_type FROM contacts"
+            )
+        )
 
 class TestSetupDatabase:
     """Test database setup functionality."""
