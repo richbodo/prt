@@ -1,4 +1,5 @@
 from pathlib import Path
+import pytest
 from prt_src.db import Database
 from prt_src.models import Contact, Relationship, Tag, Note
 
@@ -82,3 +83,67 @@ def test_relationship_operations(tmp_path):
     assert "colleague" in rel_info["tags"]
     assert len(rel_info["notes"]) == 1
     assert rel_info["notes"][0]["title"] == "Meeting notes"
+
+
+def test_add_tag_returns_existing_id(tmp_path):
+    """add_tag should return existing tag ID when duplicate."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    first_id = db.add_tag("friend")
+    second_id = db.add_tag("friend")
+
+    assert first_id == second_id
+    tags = db.list_tags()
+    assert len(tags) == 1
+    assert tags[0][0] == first_id
+
+
+def test_add_relationship_tag_invalid_contact(tmp_path):
+    """add_relationship_tag should raise ValueError for bad contact IDs."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    with pytest.raises(ValueError):
+        db.add_relationship_tag(999, "friend")
+
+
+def test_add_note_duplicate_handling(tmp_path):
+    """add_note should return existing note ID when title duplicates."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    first_id = db.add_note("Meeting", "Discussed project.")
+    second_id = db.add_note("Meeting", "Different content")
+
+    assert first_id == second_id
+    notes = db.list_notes()
+    assert len(notes) == 1
+    assert notes[0][0] == first_id
+    assert notes[0][2] == "Discussed project."
+
+
+def test_search_notes_by_title_case_insensitive(tmp_path):
+    """search_notes_by_title should match titles regardless of case."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    meeting_id = db.add_note("Meeting Notes", "Content")
+    db.add_note("Other", "Other content")
+    db.session.commit()
+
+    lower_results = db.search_notes_by_title("meeting")
+    upper_results = db.search_notes_by_title("MEETING")
+
+    assert len(lower_results) == 1
+    assert len(upper_results) == 1
+    assert lower_results[0][0] == meeting_id
+    assert upper_results[0][0] == meeting_id
