@@ -16,9 +16,9 @@ from unittest.mock import patch, MagicMock
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from migrations.run_migrations import MigrationRunner, MigrationTracker
-from migrations.setup_database import setup_database, initialize_database
-from migrations.encrypt_database import (
+# from migrations.run_migrations import MigrationRunner, MigrationTracker  # No longer needed
+from utils.setup_database import setup_database, initialize_database
+from utils.encrypt_database import (
     encrypt_database,
     decrypt_database,
     backup_database,
@@ -31,6 +31,7 @@ from prt_src.encrypted_db import create_encrypted_database
 
 def test_migration_tracker(tmp_path):
     """Test migration tracking functionality."""
+    pytest.skip("Migration tracker functionality replaced by SchemaManager")
     db_path = tmp_path / "test.db"
     
     # Create a test database
@@ -55,6 +56,7 @@ def test_migration_tracker(tmp_path):
 
 def test_migration_runner_initialization(tmp_path):
     """Test migration runner initialization."""
+    pytest.skip("Migration runner functionality replaced by SchemaManager")
     db_path = tmp_path / "test.db"
     
     # Create a test database
@@ -73,6 +75,7 @@ def test_migration_runner_initialization(tmp_path):
 
 def test_migration_runner_list_migrations(tmp_path):
     """Test that migration runner can list available migrations."""
+    pytest.skip("Migration runner functionality replaced by SchemaManager")
     db_path = tmp_path / "test.db"
     
     # Create a test database
@@ -94,6 +97,7 @@ def test_migration_runner_list_migrations(tmp_path):
 
 def test_migration_runner_status(tmp_path):
     """Test migration status reporting."""
+    pytest.skip("Migration runner functionality replaced by SchemaManager")
     db_path = tmp_path / "test.db"
     
     # Create a test database
@@ -111,6 +115,7 @@ def test_migration_runner_status(tmp_path):
 
 def test_migration_runner_with_no_migrations(tmp_path):
     """Test migration runner behavior when no migrations are available."""
+    pytest.skip("Migration runner functionality replaced by SchemaManager")
     db_path = tmp_path / "test.db"
     
     # Create a test database
@@ -399,7 +404,7 @@ class TestErrorHandling:
             'db_encrypted': True
         }
         
-        with patch('migrations.encrypt_database.load_config', return_value=mock_config):
+        with patch('utils.encrypt_database.load_config', return_value=mock_config):
             # Try to encrypt again
             result = encrypt_database(
                 db_path=temp_db_path,

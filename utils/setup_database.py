@@ -195,7 +195,7 @@ def encrypt(
     force: bool = typer.Option(False, "--force", help="Force encryption even if already encrypted")
 ):
     """Encrypt an existing unencrypted database."""
-    from migrations.encrypt_database import encrypt_database
+    from utils.encrypt_database import encrypt_database
     
     success = encrypt_database(
         db_path=db_path,
@@ -215,7 +215,7 @@ def encrypt(
 @app.command()
 def status():
     """Check the encryption status of the database."""
-    from migrations.encrypt_database import status as check_status
+    from utils.encrypt_database import status as check_status
     check_status()
 
 

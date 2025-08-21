@@ -33,8 +33,8 @@ from .cli_map import create_map_command
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from migrations.setup_database import setup_database, initialize_database
-from migrations.encrypt_database import encrypt_database, decrypt_database
+from utils.setup_database import setup_database, initialize_database
+from utils.encrypt_database import encrypt_database, decrypt_database
 
 app = typer.Typer(help="Personal Relationship Toolkit")
 console = Console()
