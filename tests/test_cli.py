@@ -1,71 +1,52 @@
 from pathlib import Path
+
+import pytest
+import typer
+from rich.prompt import Prompt, Confirm
 from typer.testing import CliRunner
+
 from prt_src.cli import app
 
 
-def test_cli_creates_config(tmp_path):
-    """Test that CLI can create a basic configuration."""
+# Ensure commands run without waiting for interactive input
+@pytest.fixture(autouse=True)
+def _non_interactive(monkeypatch):
+    monkeypatch.setattr(Prompt, "ask", lambda *a, **k: "y")
+    monkeypatch.setattr(Confirm, "ask", lambda *a, **k: True)
+    monkeypatch.setattr(typer, "confirm", lambda *a, **k: True)
+
+
+def test_setup_creates_config(tmp_path):
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        # Test with minimal input - just create config and exit
-        result = runner.invoke(app, ["--help"])
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        result = runner.invoke(app, ["setup"])
         assert result.exit_code == 0
+        assert "PRT setup completed successfully" in result.output
+        assert Path("prt_data/prt_config.json").exists()
 
 
-def test_cli_database_connection(tmp_path):
-    """Test CLI database connection and initialization."""
+def test_db_status_reports_ok(tmp_path):
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        # Create a minimal config
-        config_dir = Path(td) / "prt_data"
-        config_dir.mkdir()
-        config_file = config_dir / "prt_config.json"
-        config_file.write_text('''{
-            "google_api_key": "demo",
-            "openai_api_key": "demo",
-            "db_path": "prt_data/prt.db",
-            "db_username": "test",
-            "db_password": "test",
-            "db_type": "sqlite",
-            "db_host": "localhost",
-            "db_port": 5432,
-            "db_name": "prt"
-        }''')
-        
-        # Test that CLI can start without errors
-        result = runner.invoke(app, ["--help"])
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        runner.invoke(app, ["setup"])
+        result = runner.invoke(app, ["db-status"])
         assert result.exit_code == 0
+        assert "Database status" in result.output
 
 
-def test_cli_with_existing_database(tmp_path):
-    """Test CLI behavior with an existing database."""
+def test_encrypt_and_decrypt_db(tmp_path):
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        # Create config and database
-        config_dir = Path(td) / "prt_data"
-        config_dir.mkdir()
-        config_file = config_dir / "prt_config.json"
-        config_file.write_text('''{
-            "google_api_key": "demo",
-            "openai_api_key": "demo",
-            "db_path": "prt_data/prt.db",
-            "db_username": "test",
-            "db_password": "test",
-            "db_type": "sqlite",
-            "db_host": "localhost",
-            "db_port": 5432,
-            "db_name": "prt"
-        }''')
-        
-        # Create a minimal database
-        db_file = config_dir / "prt.db"
-        import sqlite3
-        conn = sqlite3.connect(db_file)
-        conn.execute("CREATE TABLE contacts (id INTEGER PRIMARY KEY, name TEXT, email TEXT)")
-        conn.execute("INSERT INTO contacts (name, email) VALUES ('Test User', 'test@example.com')")
-        conn.commit()
-        conn.close()
-        
-        # Test that CLI can connect to existing database
-        result = runner.invoke(app, ["--help"])
-        assert result.exit_code == 0
+    with runner.isolated_filesystem(temp_dir=tmp_path):
+        runner.invoke(app, ["setup"])
+        db_path = Path("prt_data/prt.db")
+
+        enc_result = runner.invoke(app, ["encrypt-db", "--no-verify"])
+        assert enc_result.exit_code == 0
+        assert "Database encryption completed successfully" in enc_result.output
+        assert db_path.with_name("prt.db.pre_encryption").exists()
+
+        dec_result = runner.invoke(app, ["decrypt-db"])
+        assert dec_result.exit_code == 0
+        assert "Database decryption completed successfully" in dec_result.output
+        assert db_path.with_name("prt.db.pre_decryption").exists()
+
