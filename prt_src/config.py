@@ -35,10 +35,31 @@ def save_config(cfg: Dict[str, Any]) -> None:
         json.dump(cfg, f, indent=2)
 
 
+def _migrate_secrets_if_needed():
+    """Migrate secrets from old /secrets/ to new /prt_data/secrets/ location."""
+    old_secrets_dir = Path.cwd() / "secrets"
+    new_secrets_dir = data_dir() / "secrets"
+    
+    if old_secrets_dir.exists() and not new_secrets_dir.exists():
+        print(f"Migrating secrets from {old_secrets_dir} to {new_secrets_dir}")
+        new_secrets_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Migrate all files from old to new location
+        for file in old_secrets_dir.iterdir():
+            if file.is_file():
+                (new_secrets_dir / file.name).write_text(file.read_text())
+                print(f"Migrated {file.name}")
+        
+        print("✅ Secret files migrated successfully!")
+        print(f"Old directory {old_secrets_dir} can be safely removed after verification")
+
+
 def get_db_credentials() -> tuple[str, str]:
     """Get database credentials from secrets file or generate new ones."""
-    secrets_dir = Path.cwd() / "secrets"
-    secrets_dir.mkdir(exist_ok=True)
+    _migrate_secrets_if_needed()
+    
+    secrets_dir = data_dir() / "secrets"
+    secrets_dir.mkdir(parents=True, exist_ok=True)
     secrets_file = secrets_dir / "db_secrets.txt"
     
     if secrets_file.exists():
@@ -62,8 +83,10 @@ def get_db_credentials() -> tuple[str, str]:
 
 def get_encryption_key() -> str:
     """Get database encryption key from secrets file or generate new one."""
-    secrets_dir = Path.cwd() / "secrets"
-    secrets_dir.mkdir(exist_ok=True)
+    _migrate_secrets_if_needed()
+    
+    secrets_dir = data_dir() / "secrets"
+    secrets_dir.mkdir(parents=True, exist_ok=True)
     encryption_file = secrets_dir / "db_encryption_key.txt"
     
     if encryption_file.exists():

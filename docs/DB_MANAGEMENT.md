@@ -69,7 +69,7 @@ python -m prt_src.cli setup --encrypted
 
 This will:
 1. Generate a secure encryption key
-2. Store the key in `secrets/db_encryption_key.txt`
+2. Store the key in `prt_data/secrets/db_encryption_key.txt`
 3. Create an encrypted database
 4. Update configuration to enable encryption
 
@@ -89,7 +89,7 @@ python -m prt_src.cli encrypt-db --db-path /path/to/database.db --no-backup
 
 ### Encryption Key Management
 
-Encryption keys are stored securely in `secrets/db_encryption_key.txt`.
+Encryption keys are stored securely in `prt_data/secrets/db_encryption_key.txt`.
 
 #### Key Backup and Recovery
 

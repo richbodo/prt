@@ -100,7 +100,7 @@ def show_encryption_warnings():
     warning_text = Text()
     warning_text.append("⚠️  ENCRYPTION WARNINGS ⚠️\n\n", style="bold red")
     warning_text.append("• Keep your encryption key safe - losing it means losing access to your data\n", style="red")
-    warning_text.append("• The encryption key is stored in secrets/db_encryption_key.txt\n", style="yellow")
+    warning_text.append("• The encryption key is stored in prt_data/secrets/db_encryption_key.txt\n", style="yellow")
     warning_text.append("• Consider backing up your encryption key to a secure location\n", style="yellow")
     warning_text.append("• Never commit encryption keys to version control\n", style="red")
     warning_text.append("• Encrypted databases may be slightly slower than unencrypted ones\n", style="yellow")

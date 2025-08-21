@@ -148,7 +148,7 @@ python migrations/encrypt_database.py verify-key --key "your_key_here"
 
 ### Key Management
 - **Automatic Generation**: Encryption keys are automatically generated
-- **Secure Storage**: Keys stored in `secrets/db_encryption_key.txt`
+- **Secure Storage**: Keys stored in `prt_data/secrets/db_encryption_key.txt`
 - **Backup Recommendation**: Users should backup keys to secure location
 - **Key Loss**: Losing the key means losing access to data
 
