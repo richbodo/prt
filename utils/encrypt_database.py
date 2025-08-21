@@ -10,18 +10,24 @@ import sys
 import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any
+
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
 from rich.text import Text
+from sqlalchemy.exc import SQLAlchemyError
 
 # Add the prt package to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from prt_src.config import get_encryption_key, load_config, save_config, is_database_encrypted
 from prt_src.db import Database, create_database
-from prt_src.encrypted_db import migrate_to_encrypted, create_encrypted_database
+from prt_src.encrypted_db import (
+    migrate_to_encrypted,
+    create_encrypted_database,
+    PYSQLCIPHER3_AVAILABLE,
+)
 
 app = typer.Typer(help="PRT Database Encryption Utility")
 console = Console()
@@ -66,12 +72,21 @@ def export_encryption_key(encryption_key: str, export_path: Optional[Path] = Non
 
 
 def verify_encryption_key(encryption_key: str, db_path: Path) -> bool:
-    """Verify that an encryption key can decrypt a database."""
-    try:
-        db = create_encrypted_database(db_path, encryption_key)
-        return db.test_encryption()
-    except Exception:
-        return False
+    """Verify that an encryption key can decrypt a database.
+
+    Any SQLCipher related errors will propagate to the caller so they can be
+    handled appropriately.
+    """
+    if not PYSQLCIPHER3_AVAILABLE:
+        # Without SQLCipher we can't truly validate the key. As a best-effort
+        # fallback, compare against the stored encryption key if available.
+        try:
+            return encryption_key == get_encryption_key()
+        except Exception:
+            return False
+
+    db = create_encrypted_database(db_path, encryption_key)
+    return db.test_encryption()
 
 
 def verify_database_integrity(db: Database) -> bool:
@@ -301,10 +316,15 @@ def decrypt_database(
     # Get encryption key if not provided
     if encryption_key is None:
         encryption_key = get_encryption_key()
-    
-    # Verify encryption key works
-    if not verify_encryption_key(encryption_key, db_path):
-        console.print("Invalid encryption key or database is not encrypted", style="red")
+
+    # Verify encryption key works. Any SQLCipher errors will propagate and be
+    # handled by the caller.
+    try:
+        if not verify_encryption_key(encryption_key, db_path):
+            console.print("Invalid encryption key or database is not encrypted", style="red")
+            return False
+    except SQLAlchemyError as e:
+        console.print(f"Invalid encryption key: {e}", style="red")
         return False
     
     # Create backup if requested
@@ -315,7 +335,7 @@ def decrypt_database(
         # Connect to encrypted database
         console.print("Connecting to encrypted database...", style="blue")
         encrypted_db = create_database(db_path, encrypted=True, encryption_key=encryption_key)
-        
+
         # Verify encrypted database
         if not verify_database_integrity(encrypted_db):
             return False

@@ -417,26 +417,23 @@ class TestErrorHandling:
         assert result is False
     
     def test_decrypt_with_wrong_key(self, temp_db_path):
-        """Test decrypting with wrong encryption key."""
-        # TODO: This test currently passes when it should fail, indicating
-        # a potential issue with encryption key validation in SQLCipher setup.
-        # This needs further investigation.
-        
+        """Decrypting with an incorrect key should fail."""
+
         # Create encrypted database with actual data
         db = create_encrypted_database(temp_db_path, "correct_key_32_bytes_long_key!")
         db.initialize()
-        
+
         # Add some test data
         from prt_src.models import Contact, Relationship
         contact = Contact(name="Test Contact", email="test@example.com")
         db.session.add(contact)
         db.session.flush()
-        
+
         relationship = Relationship(contact_id=contact.id)
         db.session.add(relationship)
         db.session.commit()
         db.session.close()
-        
+
         # Try to decrypt with wrong key
         result = decrypt_database(
             db_path=temp_db_path,
@@ -444,10 +441,8 @@ class TestErrorHandling:
             backup=False,
             quiet=True
         )
-        
-        # Currently this succeeds when it should fail - this indicates an encryption issue
-        # For now, accepting current behavior until encryption can be investigated
-        assert result is True
+
+        assert result is False
 
 
 class TestConfigurationIntegration:
