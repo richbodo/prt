@@ -44,7 +44,11 @@ def backup_database(db_path: Path, backup_suffix: str = ".pre_encryption") -> Pa
 def export_encryption_key(encryption_key: str, export_path: Optional[Path] = None) -> Path:
     """Export encryption key to a secure location."""
     if export_path is None:
-        export_path = Path.cwd() / "encryption_key_backup.txt"
+        # Use secrets directory to avoid accidentally committing keys
+        from prt_src.config import data_dir
+        secrets_dir = data_dir() / "secrets"
+        secrets_dir.mkdir(exist_ok=True)
+        export_path = secrets_dir / "encryption_key_backup.txt"
     
     console.print(f"Exporting encryption key to {export_path}", style="yellow")
     

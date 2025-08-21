@@ -202,3 +202,9 @@ prt_env/
 secrets/
 prt_data
 takeout-*.zip
+
+# Encryption key backups - NEVER commit these!
+encryption_key_backup.txt
+**/encryption_key_backup.txt
+**/*_key_backup.txt
+secrets/
