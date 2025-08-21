@@ -2,11 +2,26 @@
 
 ## QuickStart
 
-The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development
+The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development.  
 
 source ./init.sh
 
 python -m prt_src.cli run
+
+## Motivation/Purpose: 
+
+I am solving a few personal pain points with this project:
+
+1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
+2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
+3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore almost never find the people I need to find when I most need to find them, using any centralized contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be my UI for finding folks.
+4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me. 
+
+## Version History
+
+MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
+
+Note: These docs suck.  I'm not going to make them awesome until I hit a milestone where I think this could be useful to someone else, and then I'll fix docs, and look for feedback.  This app is only suitable for developers right now, if that.
 
 ## CLI Overview
 
@@ -51,20 +66,6 @@ The `run` command launches an interactive menu with these options:
 
 Use `python -m prt_src.cli map --show-params` for detailed parameter information.
 
-## Motivation: 
-
-I am solving a few personal pain points with this project:
-
-1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
-2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
-3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore almost never find the people I need to find when I most need to find them, using any centralized contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be my UI for finding folks.
-4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me.
-   
-## Version History
-
-MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
-
-Note: these docs suck.  I'm not going to make them awesome until I hit a milestone where I think this could be useful to someone else, and then I'll fix docs, and look for feedback. 
 
 ## Documentation
 
@@ -102,6 +103,21 @@ PRT stores configuration in `prt_data/prt_config.json`. Key settings:
 - `db_path`: Path to the database file
 - `db_encrypted`: Whether the database is encrypted
 - `db_username`/`db_password`: Database credentials
+
+## Where PRT stores secrets and your data
+
+The app will create three directories to store secret stuff in (all are .gitignore'd):
+
+/prt_data
+- databases
+- config
+- sensitive user data to import
+  
+/prt_env
+- this is created by pyenv - not a lot of secrets, but we handle it as secret - it just stores your local environment config
+  
+/secrets
+- encryption keys for the db and other things that need to be encrypted
 
 ## Usage
 
