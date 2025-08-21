@@ -113,11 +113,11 @@ The app will create three directories to store secret stuff in (all are .gitigno
 - config
 - sensitive user data to import
   
+/prt_data/secrets
+- encryption keys for the db and other things that need to be encrypted
+- 
 /prt_env
 - this is created by pyenv - not a lot of secrets, but we handle it as secret - it just stores your local environment config
-  
-/secrets
-- encryption keys for the db and other things that need to be encrypted
 
 ## Usage
 
