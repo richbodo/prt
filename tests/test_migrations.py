@@ -26,7 +26,7 @@ from utils.encrypt_database import (
 )
 from prt_src.config import load_config, save_config, get_encryption_key
 from prt_src.db import create_database
-from prt_src.encrypted_db import create_encrypted_database
+from prt_src.encrypted_db import create_encrypted_database, PYSQLCIPHER3_AVAILABLE
 
 
 def test_migration_tracker(tmp_path):
@@ -418,10 +418,9 @@ class TestErrorHandling:
     
     def test_decrypt_with_wrong_key(self, temp_db_path):
         """Test decrypting with wrong encryption key."""
-        # TODO: This test currently passes when it should fail, indicating
-        # a potential issue with encryption key validation in SQLCipher setup.
-        # This needs further investigation.
-        
+        if not PYSQLCIPHER3_AVAILABLE:
+            pytest.skip("pysqlcipher3 not available")
+
         # Create encrypted database with actual data
         db = create_encrypted_database(temp_db_path, "correct_key_32_bytes_long_key!")
         db.initialize()
@@ -444,10 +443,8 @@ class TestErrorHandling:
             backup=False,
             quiet=True
         )
-        
-        # Currently this succeeds when it should fail - this indicates an encryption issue
-        # For now, accepting current behavior until encryption can be investigated
-        assert result is True
+
+        assert result is False
 
 
 class TestConfigurationIntegration:

@@ -67,11 +67,8 @@ def export_encryption_key(encryption_key: str, export_path: Optional[Path] = Non
 
 def verify_encryption_key(encryption_key: str, db_path: Path) -> bool:
     """Verify that an encryption key can decrypt a database."""
-    try:
-        db = create_encrypted_database(db_path, encryption_key)
-        return db.test_encryption()
-    except Exception:
-        return False
+    db = create_encrypted_database(db_path, encryption_key)
+    return db.test_encryption()
 
 
 def verify_database_integrity(db: Database) -> bool:
@@ -303,8 +300,12 @@ def decrypt_database(
         encryption_key = get_encryption_key()
     
     # Verify encryption key works
-    if not verify_encryption_key(encryption_key, db_path):
-        console.print("Invalid encryption key or database is not encrypted", style="red")
+    try:
+        if not verify_encryption_key(encryption_key, db_path):
+            console.print("Invalid encryption key or database is not encrypted", style="red")
+            return False
+    except Exception as e:
+        console.print(f"Encryption key verification failed: {e}", style="red")
         return False
     
     # Create backup if requested
@@ -363,13 +364,13 @@ def decrypt_database(
         
     except Exception as e:
         console.print(f"Decryption failed: {e}", style="red")
-        
+
         # Clean up temporary files
         temp_decrypted_path = db_path.with_name(db_path.name + ".decrypted")
         if temp_decrypted_path.exists():
             temp_decrypted_path.unlink()
-        
-        return False
+
+        raise
 
 
 @app.command()
@@ -450,9 +451,10 @@ def verify_key(
         console.print(f"Database file not found: {db_path}", style="red")
         raise typer.Exit(1)
     
-    if verify_encryption_key(key, db_path):
+    try:
+        verify_encryption_key(key, db_path)
         console.print("✅ Encryption key is valid", style="green")
-    else:
+    except Exception:
         console.print("❌ Encryption key is invalid", style="red")
         raise typer.Exit(1)
 
