@@ -9,7 +9,7 @@ import pytest
 import tempfile
 import shutil
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from sqlalchemy import text
 
 from prt_src.encrypted_db import (
@@ -23,6 +23,14 @@ from prt_src.config import get_encryption_key, is_database_encrypted
 from prt_src.models import Contact, Relationship, Tag, Note, Person
 
 
+@pytest.fixture
+def mock_sqlcipher_unavailable(monkeypatch):
+    """Mock absence of pysqlcipher3 to test fallback paths."""
+    import prt_src.encrypted_db as enc_db
+    monkeypatch.setattr(enc_db, "PYSQLCIPHER3_AVAILABLE", False)
+
+
+@pytest.mark.usefixtures("mock_sqlcipher_unavailable")
 class TestEncryptedDatabase:
     """Test encrypted database functionality."""
     
@@ -112,6 +120,7 @@ class TestEncryptedDatabase:
         backup_path.unlink()
 
 
+@pytest.mark.usefixtures("mock_sqlcipher_unavailable")
 class TestMigration:
     """Test migration functionality."""
     
@@ -216,12 +225,10 @@ class TestErrorHandling:
         if db_path.exists():
             db_path.unlink()
     
+    @pytest.mark.skipif(not PYSQLCIPHER3_AVAILABLE, reason="pysqlcipher3 not installed")
     def test_invalid_encryption_key(self, temp_db_path):
         """Test handling of invalid encryption key."""
-        if not PYSQLCIPHER3_AVAILABLE:
-            # Skip this test when pysqlcipher3 is not available
-            pytest.skip("pysqlcipher3 not available")
-        
+
         # Create database with one key and add some data
         db1 = create_encrypted_database(temp_db_path, "key1_32_bytes_long_key_here!")
         db1.initialize()
@@ -253,12 +260,10 @@ class TestErrorHandling:
                 db = Database(temp_db_path, encrypted=True)
                 db.connect()
     
+    @pytest.mark.skipif(not PYSQLCIPHER3_AVAILABLE, reason="pysqlcipher3 not installed")
     def test_corrupt_encrypted_database(self, temp_db_path):
         """Test handling of corrupt encrypted database."""
-        if not PYSQLCIPHER3_AVAILABLE:
-            # Skip this test when pysqlcipher3 is not available
-            pytest.skip("pysqlcipher3 not available")
-        
+
         # Create a file that's not a valid encrypted database
         with open(temp_db_path, 'w') as f:
             f.write("This is not a valid database")
@@ -289,6 +294,7 @@ class TestConfiguration:
         assert callable(get_encryption_key)
 
 
+@pytest.mark.usefixtures("mock_sqlcipher_unavailable")
 class TestIntegration:
     """Integration tests for encrypted database functionality."""
     
