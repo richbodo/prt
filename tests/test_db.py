@@ -1,4 +1,7 @@
 from pathlib import Path
+
+import pytest
+
 from prt_src.db import Database
 from prt_src.models import Contact, Relationship, Tag, Note
 
@@ -82,3 +85,61 @@ def test_relationship_operations(tmp_path):
     assert "colleague" in rel_info["tags"]
     assert len(rel_info["notes"]) == 1
     assert rel_info["notes"][0]["title"] == "Meeting notes"
+
+
+def test_add_tag_returns_existing_id_on_duplicate(tmp_path):
+    """add_tag should return existing ID when tag already exists."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    first_id = db.add_tag("friend")
+    second_id = db.add_tag("friend")
+
+    assert first_id == second_id
+    assert len(db.list_tags()) == 1
+
+
+def test_add_relationship_tag_invalid_contact(tmp_path):
+    """add_relationship_tag should raise ValueError for invalid contact ID."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    with pytest.raises(ValueError):
+        db.add_relationship_tag(999, "friend")
+
+
+def test_add_note_returns_existing_id_on_duplicate(tmp_path):
+    """add_note should return existing ID when note title already exists."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    first_id = db.add_note("Meeting", "Discuss project")
+    second_id = db.add_note("Meeting", "Another content")
+
+    assert first_id == second_id
+    assert len(db.list_notes()) == 1
+
+
+def test_search_notes_by_title_case_insensitive(tmp_path):
+    """search_notes_by_title should match titles case-insensitively."""
+    db_path = tmp_path / "test.db"
+    db = Database(db_path)
+    db.connect()
+    db.initialize()
+
+    db.add_note("Project Update", "status")
+    db.add_note("Shopping List", "items")
+
+    project_results = db.search_notes_by_title("project")
+    shop_results = db.search_notes_by_title("SHOP")
+
+    assert len(project_results) == 1
+    assert project_results[0][1] == "Project Update"
+    assert len(shop_results) == 1
+    assert shop_results[0][1] == "Shopping List"
