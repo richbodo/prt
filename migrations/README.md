@@ -1,115 +1,74 @@
-# PRT Migration Management
+# PRT Database Migrations
 
-This directory contains migration scripts and tools for managing database schema changes in PRT.
+This directory contains utilities for database setup and encryption management.
 
-## Migration Types
+## Current Migration System
 
-### 1. Alembic Migrations (Recommended)
-- **Location**: `../alembic/versions/`
-- **Format**: `{revision}_{description}.py`
-- **Usage**: Use Alembic commands for schema changes
+PRT uses a **SchemaManager**-based migration system that automatically handles database schema updates. The old numbered migration files have been replaced with a more robust, automatic system.
 
-### 2. Manual Migration Scripts
-- **Location**: `migrations/` directory
-- **Format**: `{number}_{description}.py`
-- **Usage**: For complex data migrations or one-time fixes
+### How It Works
 
-## Migration History
+1. **Automatic Detection**: The system automatically detects your current database schema version
+2. **Safe Migration**: Migrations are performed with automatic backups
+3. **Recovery**: Clear recovery instructions are provided if anything goes wrong
+4. **No Manual Steps**: No need to run individual migration scripts
 
-### Alembic Migrations
-1. `d0e5116eecf5_initial_schema_contacts_relationships_` - Initial schema with contacts, relationships, tags, notes tables
+### Available Utilities
 
-### Manual Migrations
-1. `001_fix_contacts_schema.py` - Added missing columns to contacts table
-2. `002_fix_relationships_schema.py` - Migrated relationships table to new schema
-3. `003_migrate_old_schema.py` - Legacy migration from old relationship schema
-4. `004_create_initial_migration.py` - Creates initial Alembic migration
-5. `setup_database.py` - Database setup and initialization utilities
+#### Database Setup
+- **`setup_database.py`** - Database configuration and initialization
+  - `setup_database()` - Set up database configuration
+  - `initialize_database()` - Initialize database schema
+  - `get_db_credentials()` - Generate database credentials
 
-## Best Practices
+#### Database Encryption
+- **`encrypt_database.py`** - Database encryption utilities
+  - `encrypt_database()` - Encrypt an existing database
+  - `decrypt_database()` - Decrypt an encrypted database (emergency)
+  - `is_database_encrypted()` - Check encryption status
+  - `backup_database()` - Create database backups
+  - `export_encryption_key()` - Export encryption key
+  - `verify_encryption_key()` - Verify encryption key
 
-### Creating New Migrations
+### Usage
 
-#### For Schema Changes (Use Alembic)
+These utilities are automatically used by the PRT CLI:
+
 ```bash
-# Generate migration from model changes
-alembic revision --autogenerate -m "Description of changes"
+# Setup (automatic)
+python -m prt_src.cli setup
 
-# Apply migration
-alembic upgrade head
+# Encryption (via CLI)
+python -m prt_src.cli encrypt-db
+python -m prt_src.cli decrypt-db
+
+# Status check
+python -m prt_src.cli db-status
 ```
 
-#### For Data Migrations (Use Manual Scripts)
-1. Create numbered script: `migrations/004_description.py`
-2. Include backup creation
-3. Include rollback functionality
-4. Test thoroughly before running
+### Schema Versions
 
-### Migration Naming Convention
+- **Version 1**: Original schema (basic contacts and relationships)
+- **Version 2**: Added profile image support to contacts table
 
-#### Alembic Migrations
-- Use descriptive names: `add_user_preferences_table`
-- Include scope: `add_contact_phone_validation`
-- Be specific: `rename_contact_email_to_primary_email`
+### Migration Process
 
-#### Manual Migrations
-- Use numbers: `001_`, `002_`, etc.
-- Include description: `001_fix_contacts_schema.py`
-- Include date if needed: `001_2024_01_15_fix_contacts_schema.py`
-
-### Testing Migrations
-1. Always test on a copy of production data
-2. Test both upgrade and downgrade paths
-3. Verify data integrity after migration
-4. Test application functionality
-
-### Rollback Strategy
-- Alembic: `alembic downgrade -1`
-- Manual: Include rollback code in migration script
-- Always keep backups before running migrations
-
-## Current Migration Status
-
-- ✅ Initial schema created
-- ✅ Contacts table schema fixed
-- ✅ Relationships table migrated to new schema
-- ✅ All tables have proper timestamps and constraints
-
-## Running Migrations
-
-### Alembic Commands
-```bash
-# Check current status
-alembic current
-
-# Apply all pending migrations
-alembic upgrade head
-
-# Rollback one migration
-alembic downgrade -1
-
-# Show migration history
-alembic history
-```
-
-### Manual Migration Scripts
-```bash
-# Run specific migration
-python migrations/001_fix_contacts_schema.py
-
-# Run all migrations (if applicable)
-python migrations/run_all_migrations.py
-```
-
-## Troubleshooting
-
-### Common Issues
-1. **Schema mismatch**: Run `alembic stamp head` to mark current state
-2. **Migration conflicts**: Check for manual schema changes
-3. **Data loss**: Always backup before migrations
+1. **Automatic Detection**: System detects current schema version
+2. **Backup Creation**: Automatic backup before any changes
+3. **Schema Update**: Apply necessary schema changes
+4. **Verification**: Verify database integrity
+5. **Recovery**: Provide recovery instructions if needed
 
 ### Recovery
-1. Restore from backup
-2. Check migration history: `alembic history`
-3. Reset to known good state: `alembic stamp {revision}`
-4. Re-run migrations from that point
+
+If a migration fails:
+1. Your data is automatically backed up
+2. Clear recovery instructions are displayed
+3. You can restore from backup and continue using the previous version
+
+### Security
+
+- All migrations create automatic backups
+- Encryption keys are stored securely
+- Recovery instructions are provided for all operations
+- No data loss risk during migrations

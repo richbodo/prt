@@ -4,7 +4,7 @@ Tests for Ollama LLM integration.
 
 import pytest
 from unittest.mock import Mock, patch
-from prt.llm_ollama import OllamaLLM, Tool
+from prt_src.llm_ollama import OllamaLLM, Tool
 
 
 class TestOllamaLLM:

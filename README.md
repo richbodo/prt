@@ -75,9 +75,10 @@ The main interface provides these options:
 
 ## Documentation
 
-- **[Installation Guide](docs/INSTALLATION.md)**: Platform-specific installation instructions (only really tested on my macs at this point the rest are LLM-generated but not tested.)
+- **[Installation Guide](docs/INSTALLATION.md)**: Platform-specific installation instructions
 - **[Database Management](docs/DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
 - **[Encryption Implementation](docs/ENCRYPTION_IMPLEMENTATION.md)**: Technical details of the encryption implementation
+- **[Ollama Integration](docs/OLLAMA_INTEGRATION.md)**: LLM chat integration with Ollama
 
 ## Database Management
 

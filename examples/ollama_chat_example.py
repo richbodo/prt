@@ -12,9 +12,9 @@ from pathlib import Path
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from prt.config import load_config
-from prt.api import PRTAPI
-from prt.llm_ollama import OllamaLLM, chat_with_ollama
+from prt_src.config import load_config
+from prt_src.api import PRTAPI
+from prt_src.llm_ollama import OllamaLLM, chat_with_ollama
 
 
 def main():

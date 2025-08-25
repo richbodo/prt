@@ -143,7 +143,7 @@ You can modify these settings by editing the `OllamaLLM` class in `prt/llm_ollam
 If you're running Ollama on a different host or port, you can modify the base URL:
 
 ```python
-from prt.llm_ollama import OllamaLLM
+from prt_src.llm_ollama import OllamaLLM
 
 # Connect to remote Ollama instance
 llm = OllamaLLM(api, base_url="http://your-server:11434")

@@ -19,9 +19,9 @@ from rich.text import Text
 # Add the prt package to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from prt.config import get_encryption_key, load_config, save_config, is_database_encrypted
-from prt.db import Database, create_database
-from prt.encrypted_db import migrate_to_encrypted, create_encrypted_database
+from prt_src.config import get_encryption_key, load_config, save_config, is_database_encrypted
+from prt_src.db import Database, create_database
+from prt_src.encrypted_db import migrate_to_encrypted, create_encrypted_database
 
 app = typer.Typer(help="PRT Database Encryption Utility")
 console = Console()
