@@ -2,7 +2,8 @@
 
 ## QuickStart
 
-The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development.  
+The `init.sh` file installs SQLCipher and sets environment variables so the Python SQLCipher package will install and work.
+It also sets up a virtual environment for development. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`.
 
 ```bash
 source ./init.sh
@@ -75,7 +76,7 @@ The main interface provides these options:
 
 ## Documentation
 
-- **[Installation Guide](docs/INSTALLATION.md)**: Platform-specific installation instructions
+- **[Installation Guide](docs/INSTALL.md)**: Platform-specific installation instructions
 - **[Database Management](docs/DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
 - **[Encryption Implementation](docs/ENCRYPTION_IMPLEMENTATION.md)**: Technical details of the encryption implementation
 - **[Ollama Integration](docs/OLLAMA_INTEGRATION.md)**: LLM chat integration with Ollama
@@ -158,7 +159,7 @@ Available commands in interactive mode:
 **Platform-specific solutions:**
 - **macOS**: Ensure SQLCipher is installed via Homebrew, the run "source init.sh" again.
 - **Linux**: Install `libsqlcipher-dev` package
-- **Windows**: TBD - Windows support not yet implemented
+- **Windows**: Windows is not supported
 
 #### Database Connection Errors
 ```bash
