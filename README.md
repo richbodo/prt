@@ -75,7 +75,7 @@ The main interface provides these options:
 
 ## Documentation
 
-- **[Installation Guide](docs/INSTALLATION.md)**: Platform-specific installation instructions
+- **[Installation Guide](docs/INSTALL.md)**: Platform-specific installation instructions
 - **[Database Management](docs/DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
 - **[Encryption Implementation](docs/ENCRYPTION_IMPLEMENTATION.md)**: Technical details of the encryption implementation
 - **[Ollama Integration](docs/OLLAMA_INTEGRATION.md)**: LLM chat integration with Ollama
@@ -158,7 +158,7 @@ Available commands in interactive mode:
 **Platform-specific solutions:**
 - **macOS**: Ensure SQLCipher is installed via Homebrew, the run "source init.sh" again.
 - **Linux**: Install `libsqlcipher-dev` package
-- **Windows**: TBD - Windows support not yet implemented
+- **Windows**: Windows is not supported
 
 #### Database Connection Errors
 ```bash
