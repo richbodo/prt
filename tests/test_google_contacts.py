@@ -3,7 +3,7 @@ from unittest import mock
 
 import pytest
 
-from prt.google_contacts import _credentials, _secrets_file
+from prt_src.google_contacts import _credentials, _secrets_file
 
 
 class DummyCreds:

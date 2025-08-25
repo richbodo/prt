@@ -64,12 +64,12 @@ PRT supports encrypted databases using SQLCipher for enhanced security. All data
 
 ```bash
 # Set up with encryption enabled
-python -m prt.cli setup --encrypted
+python -m prt_src.cli setup --encrypted
 ```
 
 This will:
 1. Generate a secure encryption key
-2. Store the key in `secrets/db_encryption_key.txt`
+2. Store the key in `prt_data/secrets/db_encryption_key.txt`
 3. Create an encrypted database
 4. Update configuration to enable encryption
 
@@ -79,26 +79,26 @@ If you already have an unencrypted database, you can encrypt it:
 
 ```bash
 # Encrypt existing database (creates backup automatically)
-python -m prt.cli encrypt-db
+python -m prt_src.cli encrypt-db
 
 # Or with custom options
-python -m prt.cli encrypt-db --db-path /path/to/database.db --no-backup
+python -m prt_src.cli encrypt-db --db-path /path/to/database.db --no-backup
 ```
 
 **⚠️ Important**: This process creates a backup of your original database before encryption.
 
 ### Encryption Key Management
 
-Encryption keys are stored securely in `secrets/db_encryption_key.txt`.
+Encryption keys are stored securely in `prt_data/secrets/db_encryption_key.txt`.
 
 #### Key Backup and Recovery
 
 ```bash
 # Export your encryption key to a secure location
-python -m prt.cli export-key --output ~/secure_location/backup_key.txt
+python -m prt_src.cli export-key --output ~/secure_location/backup_key.txt
 
 # Verify your encryption key works
-python -m prt.cli verify-key --key-file ~/secure_location/backup_key.txt
+python -m prt_src.cli verify-key --key-file ~/secure_location/backup_key.txt
 ```
 
 #### Key Rotation
@@ -107,7 +107,7 @@ To change your encryption key:
 
 ```bash
 # Rekey the database (changes encryption key)
-python -m prt.cli rekey --new-key "your_new_encryption_key"
+python -m prt_src.cli rekey --new-key "your_new_encryption_key"
 ```
 
 **⚠️ Security Notes:**
@@ -119,13 +119,13 @@ python -m prt.cli rekey --new-key "your_new_encryption_key"
 
 ## CLI Management Tools
 
-PRT provides comprehensive CLI tools for database management. All commands are run using `python -m prt.cli <command>`.
+PRT provides comprehensive CLI tools for database management. All commands are run using `python -m prt_src.cli <command>`.
 
 ### Database Status and Health
 
 ```bash
 # Check encryption status and database health
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 ```
 
 This command shows:
@@ -138,10 +138,10 @@ This command shows:
 
 ```bash
 # Create a backup of your database
-python -m prt.cli backup-db
+python -m prt_src.cli backup-db
 
 # Create backup with custom suffix
-python -m prt.cli backup-db --suffix .$(date +%Y%m%d)
+python -m prt_src.cli backup-db --suffix .$(date +%Y%m%d)
 
 # Restore from backup (manual process)
 cp prt_data/prt.db.backup prt_data/prt.db
@@ -153,23 +153,23 @@ If you need to decrypt your database (emergency only):
 
 ```bash
 # Decrypt database (creates backup first)
-python -m prt.cli decrypt-db
+python -m prt_src.cli decrypt-db
 
 # Decrypt with custom key
-python -m prt.cli decrypt-db --key "your_encryption_key"
+python -m prt_src.cli decrypt-db --key "your_encryption_key"
 
 # Decrypt without backup (not recommended)
-python -m prt.cli decrypt-db --no-backup
+python -m prt_src.cli decrypt-db --no-backup
 ```
 
 ### Database Testing and Validation
 
 ```bash
 # Test database connection and credentials
-python -m prt.cli test
+python -m prt_src.cli test
 
 # Validate database integrity
-python -m prt.cli validate-db
+python -m prt_src.cli validate-db
 ```
 
 ## Migration Procedures
@@ -178,42 +178,76 @@ python -m prt.cli validate-db
 
 1. **Backup your data** (automatic with `encrypt-db` command):
    ```bash
-   python -m prt.cli encrypt-db
+   python -m prt_src.cli encrypt-db
    ```
 
 2. **Verify the migration**:
    ```bash
-   python -m prt.cli db-status
+   python -m prt_src.cli db-status
    ```
 
 3. **Test functionality**:
    ```bash
-   python -m prt.cli run
+   python -m prt_src.cli run
    # Try viewing contacts and other operations
    ```
 
 ### From Encrypted to Unencrypted (Emergency)
 
 ```bash
-python -m prt.cli decrypt-db
+python -m prt_src.cli decrypt-db
 ```
 
 **⚠️ Warning**: Decryption removes the security benefits of encryption. Only use this in emergency situations.
 
 ### Database Schema Migrations
 
-PRT uses Alembic for database schema migrations:
+PRT uses a simple, safe schema management system that automatically backs up your data before any changes:
 
 ```bash
-# Run pending migrations
-alembic upgrade head
+# Check current schema version and apply any needed updates
+python -m prt_src.cli migrate
 
-# Create a new migration
-alembic revision --autogenerate -m "Description of changes"
-
-# Rollback to previous version
-alembic downgrade -1
+# The system will automatically:
+# 1. Create a timestamped backup of your database
+# 2. Apply schema changes safely
+# 3. Provide recovery instructions if anything goes wrong
 ```
+
+#### How Schema Migration Works
+
+- **Version Tracking**: Each database has a schema version number
+- **Automatic Backups**: Before any migration, a timestamped backup is created
+- **Safety First**: If migration fails, you get exact instructions to recover
+- **User Control**: You can always restore from backup if needed
+
+#### Migration Process Example
+
+```
+🔄 Upgrading database schema from v1 to v2...
+📁 Backup created: prt.v1.20250820_234010.backup
+Adding profile image support to contacts...
+  ✓ Added profile_image column
+  ✓ Added profile_image_filename column
+  ✓ Added profile_image_mime_type column
+✅ Database successfully upgraded to version 2!
+```
+
+#### Recovery from Failed Migration
+
+If a migration fails, you'll see clear recovery instructions:
+
+```
+❌ Database migration failed!
+Your data is safe! A backup was created before the migration.
+
+🔧 To recover:
+1. Restore your backup: cp "prt.v1.backup" "prt_data/prt.db"
+2. Get the working version: Download PRT v1.x from GitHub releases
+3. Continue using the older version until this issue is fixed
+```
+
+This approach prioritizes **data safety** over complex migration features, perfect for a privacy-focused local application.
 
 ## Troubleshooting
 
@@ -235,10 +269,10 @@ pip install pysqlcipher3
 
 ```bash
 # Check database status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 
 # Reinitialize database if needed
-python -m prt.cli setup --force
+python -m prt_src.cli setup --force
 ```
 
 #### Encryption Key Issues
@@ -254,13 +288,13 @@ If you've lost your encryption key:
 
 ```bash
 # Check database integrity
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 
 # Restore from backup
 cp prt_data/prt.db.backup prt_data/prt.db
 
 # Reinitialize if necessary
-python -m prt.cli setup --force
+python -m prt_src.cli setup --force
 ```
 
 ### Performance Issues
@@ -275,7 +309,7 @@ Enable debug mode for detailed error information:
 
 ```bash
 # Run with debug output
-python -m prt.cli run --debug
+python -m prt_src.cli run --debug
 
 # Check logs
 tail -f prt_data/prt.log
@@ -317,10 +351,10 @@ tail -f prt_data/prt.log
 
 ```bash
 # Set up database in custom location
-python -m prt.cli setup --db-path /custom/path/database.db
+python -m prt_src.cli setup --db-path /custom/path/database.db
 
 # Use encrypted database in custom location
-python -m prt.cli setup --encrypted --db-path /secure/location/encrypted.db
+python -m prt_src.cli setup --encrypted --db-path /secure/location/encrypted.db
 ```
 
 ### Multiple Database Instances
@@ -329,10 +363,10 @@ You can manage multiple PRT databases:
 
 ```bash
 # Set up development database
-python -m prt.cli setup --db-path prt_data/dev.db
+python -m prt_src.cli setup --db-path prt_data/dev.db
 
 # Set up production database
-python -m prt.cli setup --encrypted --db-path /secure/prod.db
+python -m prt_src.cli setup --encrypted --db-path /secure/prod.db
 ```
 
 ### Integration with External Tools

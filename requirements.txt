@@ -11,4 +11,5 @@ transformers
 accelerate
 torch
 pysqlcipher3
+vobject
 requests

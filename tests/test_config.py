@@ -1,6 +1,6 @@
 import os
 import pytest
-from prt.config import save_config, load_config
+from prt_src.config import save_config, load_config
 
 
 def test_config_roundtrip(tmp_path):

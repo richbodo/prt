@@ -27,10 +27,10 @@ This document summarizes the implementation of encrypted database functionality 
 ### 3. CLI Integration
 
 - **New Commands**:
-  - `python -m prt.cli encrypt-db` - Encrypt existing database
-  - `python -m prt.cli decrypt-db` - Decrypt database (emergency)
-  - `python -m prt.cli db-status` - Check encryption status
-  - `python -m prt.cli setup --encrypted` - Setup with encryption
+  - `python -m prt_src.cli encrypt-db` - Encrypt existing database
+  - `python -m prt_src.cli decrypt-db` - Decrypt database (emergency)
+  - `python -m prt_src.cli db-status` - Check encryption status
+  - `python -m prt_src.cli setup --encrypted` - Setup with encryption
 
 - **Enhanced Commands**:
   - Updated `setup` command to support encrypted database creation
@@ -111,27 +111,27 @@ def migrate_to_encrypted(source_db, target_path, encryption_key):
 
 ```bash
 # Setup with encryption enabled
-python -m prt.cli setup --encrypted
+python -m prt_src.cli setup --encrypted
 
 # Check status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 ```
 
 ### Encrypting Existing Database
 
 ```bash
 # Encrypt existing database (creates backup automatically)
-python -m prt.cli encrypt-db
+python -m prt_src.cli encrypt-db
 
 # Check encryption status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 ```
 
 ### Emergency Decryption
 
 ```bash
 # Decrypt database (emergency only)
-python -m prt.cli decrypt-db
+python -m prt_src.cli decrypt-db
 ```
 
 ### Key Management
@@ -148,7 +148,7 @@ python migrations/encrypt_database.py verify-key --key "your_key_here"
 
 ### Key Management
 - **Automatic Generation**: Encryption keys are automatically generated
-- **Secure Storage**: Keys stored in `secrets/db_encryption_key.txt`
+- **Secure Storage**: Keys stored in `prt_data/secrets/db_encryption_key.txt`
 - **Backup Recommendation**: Users should backup keys to secure location
 - **Key Loss**: Losing the key means losing access to data
 

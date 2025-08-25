@@ -1,6 +1,6 @@
 from pathlib import Path
 from typer.testing import CliRunner
-from migrations.setup_database import setup_database, initialize_database
+from utils.setup_database import setup_database, initialize_database
 
 
 def test_setup_database_functions(tmp_path):

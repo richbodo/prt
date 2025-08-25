@@ -70,7 +70,7 @@ pip install pysqlcipher3
 
 #### 7. Set Up Database
 ```bash
-python -m prt.cli setup
+python -m prt_src.cli setup
 ```
 
 ### macOS Troubleshooting
@@ -148,7 +148,7 @@ pip install pysqlcipher3
 
 #### 6. Set Up Database
 ```bash
-python -m prt.cli setup
+python -m prt_src.cli setup
 ```
 
 ### CentOS/RHEL/Fedora Installation
@@ -334,17 +334,17 @@ pip list | grep pysqlcipher3
 
 #### 2. Test Database Setup
 ```bash
-python -m prt.cli setup
-python -m prt.cli db-status
+python -m prt_src.cli setup
+python -m prt_src.cli db-status
 ```
 
 #### 3. Test Encryption (Optional)
 ```bash
 # Create test database
-python -m prt.cli setup --encrypted
+python -m prt_src.cli setup --encrypted
 
 # Check encryption status
-python -m prt.cli db-status
+python -m prt_src.cli db-status
 ```
 
 #### 4. Run Tests
