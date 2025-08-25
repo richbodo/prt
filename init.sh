@@ -11,6 +11,9 @@ fi
 
 # Detect platform
 UNAME_OUT="$(uname -s)"
+echo "Os is: "
+echo $UNAME_OUT
+
 case "$UNAME_OUT" in
     Darwin*) OS="mac" ;;
     Linux*) OS="linux" ;;
@@ -18,23 +21,32 @@ case "$UNAME_OUT" in
 esac
 
 if [ "$OS" = "mac" ]; then
+    echo "Os is: "
+    echo $OS	
+    echo "Checking for Homebrew..."
     # macOS uses Homebrew for dependencies
     if ! command -v brew >/dev/null; then
         echo "Error: Homebrew is required but not installed. Please install Homebrew first."
         echo "Visit https://brew.sh for installation instructions."
         return 1
     fi
+    echo "Homebrew found at: $(which brew)"
 
     # Install sqlcipher if needed
+    echo "Checking if sqlcipher is already installed..."
     if ! brew list sqlcipher >/dev/null 2>&1; then
-        echo "Installing sqlcipher via Homebrew..."
+        echo "Sqlcipher not found, installing via Homebrew..."
         brew install sqlcipher || { echo "Failed to install sqlcipher"; return 1; }
+    else
+        echo "Sqlcipher is already installed via Homebrew"
     fi
 
     # Set SQLCipher environment variables from Homebrew prefix
+    echo "Setting SQLCipher environment variables..."
     export SQLCIPHER_PATH="$(brew --prefix sqlcipher)"
     export LDFLAGS="-L$SQLCIPHER_PATH/lib"
     export CPPFLAGS="-I$SQLCIPHER_PATH/include"
+    echo "SQLCIPHER_PATH set to: $SQLCIPHER_PATH"
 elif [ "$OS" = "linux" ]; then
     # Linux installation using apt for Debian-based systems
     if command -v apt-get >/dev/null; then
