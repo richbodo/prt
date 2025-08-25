@@ -24,6 +24,7 @@ MVP Alpha achieved! - really basic CLI right now, but the basics needed to be do
 - **[Installation Guide](docs/INSTALLATION.md)**: Detailed platform-specific installation instructions
 - **[Database Management](docs/DB_MANAGEMENT.md)**: Advanced database configuration, encryption, and CLI management tools
 - **[Encryption Implementation](docs/ENCRYPTION_IMPLEMENTATION.md)**: Technical details of the encryption implementation
+- **[Ollama Integration](docs/OLLAMA_INTEGRATION.md)**: Local LLM chat with GPT-OSS-20B using Ollama
 
 ## Installation
 
@@ -219,8 +220,30 @@ Available commands in interactive mode:
 - Import contacts from Google
 - Manage tags and notes
 - Start LLM chat
+- Start Ollama chat (GPT-OSS-20B)
 - Database status and backup
 - Encryption management
+
+### Ollama Chat Mode
+
+For local LLM-powered chat with tool calling:
+
+```bash
+# Interactive Ollama chat
+python -m prt.cli chat-mode --ollama
+
+# Single message with Ollama
+python -m prt.cli chat-mode --ollama --message "Find all contacts named John"
+```
+
+**Prerequisites**: Install Ollama and pull the GPT-OSS-20B model:
+```bash
+# Install Ollama from ollama.ai
+ollama pull gpt-oss:20b
+ollama serve
+```
+
+See [Ollama Integration Guide](docs/OLLAMA_INTEGRATION.md) for detailed setup and usage.
 
 ### Security Features
 

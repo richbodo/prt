@@ -27,6 +27,7 @@ from .config import (
 from .api import PRTAPI
 from .google_contacts import fetch_contacts
 from .llm import chat
+from .llm_ollama import start_ollama_chat
 
 # Import setup functions
 import sys
@@ -89,12 +90,14 @@ def show_main_menu() -> None:
     menu_text.append("6. ", style="cyan")
     menu_text.append("Start LLM Chat\n", style="white")
     menu_text.append("7. ", style="cyan")
-    menu_text.append("Database Status\n", style="white")
+    menu_text.append("Start Ollama Chat\n", style="white")
     menu_text.append("8. ", style="cyan")
-    menu_text.append("Database Backup\n", style="white")
+    menu_text.append("Database Status\n", style="white")
     menu_text.append("9. ", style="cyan")
-    menu_text.append("Encrypt Database\n", style="white")
+    menu_text.append("Database Backup\n", style="white")
     menu_text.append("10. ", style="cyan")
+    menu_text.append("Encrypt Database\n", style="white")
+    menu_text.append("11. ", style="cyan")
     menu_text.append("Decrypt Database\n", style="white")
     menu_text.append("0. ", style="red")
     menu_text.append("Exit\n", style="red")
@@ -357,7 +360,7 @@ def run_interactive_cli():
     while True:
         try:
             show_main_menu()
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
+            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"])
             
             if choice == "0":
                 console.print("Goodbye!", style="green")
@@ -375,12 +378,14 @@ def run_interactive_cli():
             elif choice == "6":
                 chat(config)
             elif choice == "7":
-                handle_database_status(api)
+                start_ollama_chat(api)
             elif choice == "8":
-                handle_database_backup(api)
+                handle_database_status(api)
             elif choice == "9":
-                handle_encrypt_database()
+                handle_database_backup(api)
             elif choice == "10":
+                handle_encrypt_database()
+            elif choice == "11":
                 handle_decrypt_database()
             
             if choice != "0":
@@ -398,6 +403,55 @@ def run_interactive_cli():
 def run(debug: Optional[bool] = True):
     """Run the interactive CLI."""
     run_interactive_cli()
+
+
+@app.command()
+def chat_mode(
+    ollama: bool = typer.Option(False, "--ollama", "-o", help="Use Ollama LLM instead of default"),
+    message: Optional[str] = typer.Option(None, "--message", "-m", help="Send a single message and exit")
+):
+    """Start chat mode with LLM integration."""
+    # Validate configuration and database
+    try:
+        config = load_config()
+    except ValueError:
+        console.print("Config file is corrupt.", style="bold red")
+        raise typer.Exit(1)
+    
+    if not config:
+        console.print("Config file not found.", style="bold red")
+        console.print("See documentation at https://github.com/richbodo/prt", style="cyan")
+        raise typer.Exit(1)
+    
+    # Initialize database if needed
+    if not initialize_database(config, quiet=True):
+        console.print("Failed to initialize database", style="bold red")
+        raise typer.Exit(1)
+    
+    # Create API instance
+    try:
+        api = PRTAPI(config)
+    except Exception as e:
+        console.print(f"Failed to initialize API: {e}", style="bold red")
+        raise typer.Exit(1)
+    
+    if ollama:
+        if message:
+            # Single message mode
+            from .llm_ollama import chat_with_ollama
+            response = chat_with_ollama(api, message)
+            console.print(response)
+        else:
+            # Interactive mode
+            start_ollama_chat(api)
+    else:
+        if message:
+            # Single message mode with default LLM
+            response = chat(message, config)
+            console.print(response)
+        else:
+            # Interactive mode with default LLM
+            chat(config)
 
 
 @app.command()
