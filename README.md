@@ -2,7 +2,8 @@
 
 ## QuickStart
 
-The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development.  
+The `init.sh` file installs SQLCipher and sets environment variables so the Python SQLCipher package will install and work.
+It also sets up a virtual environment for development. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`.
 
 ```bash
 source ./init.sh

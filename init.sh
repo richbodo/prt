@@ -9,23 +9,50 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Check if brew is installed
-if ! command -v brew &> /dev/null; then
-    echo "Error: Homebrew is required but not installed. Please install Homebrew first."
-    echo "Visit https://brew.sh for installation instructions."
-    return 1
-fi
+# Detect platform
+UNAME_OUT="$(uname -s)"
+case "$UNAME_OUT" in
+    Darwin*) OS="mac" ;;
+    Linux*) OS="linux" ;;
+    *) echo "Unsupported operating system: $UNAME_OUT"; return 1 ;;
+esac
 
-# Check if sqlcipher is installed via brew
-if ! brew list sqlcipher &> /dev/null; then
-    echo "Installing sqlcipher via Homebrew..."
-    brew install sqlcipher || { echo "Failed to install sqlcipher"; return 1; }
-fi
+if [ "$OS" = "mac" ]; then
+    # macOS uses Homebrew for dependencies
+    if ! command -v brew >/dev/null; then
+        echo "Error: Homebrew is required but not installed. Please install Homebrew first."
+        echo "Visit https://brew.sh for installation instructions."
+        return 1
+    fi
 
-# Set SQLCipher environment variables
-export SQLCIPHER_PATH=$(brew --prefix sqlcipher)
-export LDFLAGS="-L$SQLCIPHER_PATH/lib"
-export CPPFLAGS="-I$SQLCIPHER_PATH/include"
+    # Install sqlcipher if needed
+    if ! brew list sqlcipher >/dev/null 2>&1; then
+        echo "Installing sqlcipher via Homebrew..."
+        brew install sqlcipher || { echo "Failed to install sqlcipher"; return 1; }
+    fi
+
+    # Set SQLCipher environment variables from Homebrew prefix
+    export SQLCIPHER_PATH="$(brew --prefix sqlcipher)"
+    export LDFLAGS="-L$SQLCIPHER_PATH/lib"
+    export CPPFLAGS="-I$SQLCIPHER_PATH/include"
+elif [ "$OS" = "linux" ]; then
+    # Linux installation using apt for Debian-based systems
+    if command -v apt-get >/dev/null; then
+        echo "Installing system dependencies via apt..."
+        if [ "$EUID" -ne 0 ] && command -v sudo >/dev/null; then
+            sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-dev build-essential libsqlcipher-dev pkg-config || { echo "Failed to install system packages"; return 1; }
+        else
+            apt-get update && apt-get install -y python3 python3-venv python3-dev build-essential libsqlcipher-dev pkg-config || { echo "Failed to install system packages"; return 1; }
+        fi
+    else
+        echo "Error: apt-get not found. Please install required dependencies manually."
+        return 1
+    fi
+
+    # Set SQLCipher flags using pkg-config
+    export LDFLAGS="$(pkg-config --libs sqlcipher 2>/dev/null)"
+    export CPPFLAGS="$(pkg-config --cflags sqlcipher 2>/dev/null)"
+fi
 
 # Check if virtual environment exists, if not create it
 if [ ! -d "prt_env" ]; then
@@ -53,4 +80,4 @@ if [ -n "$VIRTUAL_ENV" ]; then
     echo "If you don't see (prt_env), try running: source prt_env/bin/activate"
 else
     echo "Warning: Virtual environment not properly activated"
-fi 
+fi

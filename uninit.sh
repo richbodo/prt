@@ -25,4 +25,4 @@ if [ -n "$SQLCIPHER_PATH" ]; then
     unset LDFLAGS
     unset CPPFLAGS
     echo "SQLCipher environment variables cleaned up!"
-fi 
+fi
