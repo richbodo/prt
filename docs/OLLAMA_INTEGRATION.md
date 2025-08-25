@@ -35,11 +35,13 @@ PRT now supports Ollama integration for local LLM chat with tool calling capabil
 Start an interactive chat session with Ollama:
 
 ```bash
-# Start interactive Ollama chat
-python -m prt.cli chat-mode --ollama
+# Start interactive PRT (includes Ollama chat)
+python -m prt_src.cli
 
-# Or use the short flag
-python -m prt.cli chat-mode -o
+# Then select option 6: Start LLM Chat
+
+# Or start chat mode directly
+python -m prt_src.cli chat
 ```
 
 #### Single Message Mode
@@ -47,16 +49,18 @@ python -m prt.cli chat-mode -o
 Send a single message and get a response:
 
 ```bash
-# Send a single message
-python -m prt.cli chat-mode --ollama --message "Find all contacts named John"
+# For single message queries, use the interactive mode
+python -m prt_src.cli
+# Then select option 6: Start LLM Chat
+# And ask your question directly
 
-# Or use short flags
-python -m prt.cli chat-mode -o -m "Show me all tags"
+# Or start chat mode directly for quick access
+python -m prt_src.cli chat
 ```
 
 #### Menu-Driven Interface
 
-From the main PRT menu, select option **7. Start Ollama Chat** to enter chat mode.
+From the main PRT menu, select option **6. Start LLM Chat** to enter chat mode.
 
 ### Available Tools
 

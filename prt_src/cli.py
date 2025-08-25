@@ -1,79 +1,108 @@
+"""
+PRT - Personal Relationship Toolkit CLI
+
+This is the main CLI interface for PRT. It automatically detects if setup is needed
+and provides a unified interface for all operations.
+"""
+
 import typer
-import shutil
 from pathlib import Path
 from typing import Optional
-import configparser
-
-
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
 from rich.text import Text
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
-
-from .config import (
-    load_config,
-    save_config,
-    config_path,
-    REQUIRED_FIELDS,
-    data_dir,
-    get_db_credentials,
-    is_database_encrypted,
-    get_encryption_key,
-)
 
 from .api import PRTAPI
+from .config import load_config, save_config, config_path, data_dir
+from .db import create_database
 from .google_contacts import fetch_contacts
-from .llm import chat
-from .cli_map import create_map_command
+from .llm_ollama import start_ollama_chat
+from migrations.setup_database import get_db_credentials, setup_database, initialize_database
+from migrations.encrypt_database import encrypt_database, decrypt_database, is_database_encrypted
 
-# Import setup functions
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from utils.setup_database import setup_database, initialize_database
-from utils.encrypt_database import encrypt_database, decrypt_database
-
-app = typer.Typer(help="Personal Relationship Toolkit")
+app = typer.Typer(help="Personal Relationship Toolkit (PRT)")
 console = Console()
 
+# Required configuration fields
+REQUIRED_FIELDS = ['db_username', 'db_password', 'db_path', 'google_api_key', 'openai_api_key']
 
-def test_db_credentials() -> None:
-    """Verify DB credentials from alembic.ini and report record count."""
-    parser = configparser.ConfigParser()
-    if not parser.read("alembic.ini"):
-        console.print("Alembic configuration not found.", style="bold red")
-        return
-    url = parser.get("alembic", "sqlalchemy.url", fallback="")
-    if not url:
-        console.print("Database URL not set in alembic.ini.", style="bold red")
-        return
-    url_obj = make_url(url)
+
+def check_setup_status():
+    """Check if PRT is properly set up and return status information."""
     try:
-        engine = create_engine(url)
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-            count = 0
-            try:
-                result = conn.execute(text("SELECT COUNT(*) FROM contacts"))
-                count = result.scalar() or 0
-            except Exception:
-                console.print("Contacts table not found.", style="yellow")
-        console.print(
-            f"Credentials for user '{url_obj.username}' are valid. {count} records in database.",
-            style="green",
-        )
+        config = load_config()
+        if not config:
+            return {"needs_setup": True, "reason": "No configuration file found"}
+        
+        # Check for missing required fields
+        missing = [f for f in REQUIRED_FIELDS if f not in config]
+        if missing:
+            return {"needs_setup": True, "reason": f"Missing configuration fields: {', '.join(missing)}"}
+        
+        # Check if database exists and is accessible
+        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
+        if not db_path.exists():
+            return {"needs_setup": True, "reason": "Database file not found"}
+        
+        # Try to connect to database
+        try:
+            if is_database_encrypted(config):
+                db = create_database(db_path, encrypted=True)
+            else:
+                db = create_database(db_path, encrypted=False)
+            
+            if not db.is_valid():
+                return {"needs_setup": True, "reason": "Database is corrupted or invalid"}
+                
+        except Exception as e:
+            return {"needs_setup": True, "reason": f"Database connection failed: {e}"}
+        
+        return {"needs_setup": False, "config": config, "db_path": db_path}
+        
     except Exception as e:
-        console.print(
-            f"Failed to connect with credentials for user '{url_obj.username}': {e}",
-            style="bold red",
-        )
+        return {"needs_setup": True, "reason": f"Configuration error: {e}"}
 
 
-def show_main_menu() -> None:
-    """Display the main menu with all available options."""
+def run_setup_wizard():
+    """Run the interactive setup wizard."""
+    console.print("\n" + "="*60)
+    console.print("PRT Setup Wizard", style="bold blue")
+    console.print("="*60)
+    console.print()
+    console.print("Welcome to PRT! Let's get you set up.", style="green")
+    console.print()
+    
+    try:
+        # Run the setup process
+        config = setup_database()
+        console.print("✓ Configuration created successfully", style="green")
+        
+        # Initialize the database
+        if initialize_database(config):
+            console.print("✓ Database initialized successfully", style="green")
+        else:
+            console.print("✗ Database initialization failed", style="red")
+            raise Exception("Database initialization failed")
+        
+        console.print()
+        console.print("🎉 PRT setup completed successfully!", style="bold green")
+        console.print(f"Configuration saved to: {config_path()}", style="cyan")
+        console.print(f"Database location: {config.get('db_path', 'prt_data/prt.db')}", style="cyan")
+        console.print()
+        console.print("You can now use PRT to manage your personal relationships!", style="green")
+        
+        return config
+        
+    except Exception as e:
+        console.print(f"✗ Setup failed: {e}", style="bold red")
+        console.print("Please check the error and try again.", style="yellow")
+        raise typer.Exit(1)
+
+
+def show_main_menu(api: PRTAPI):
+    """Display the main operations menu."""
     menu_text = Text()
     menu_text.append("Personal Relationship Toolkit (PRT)\n", style="bold blue")
     menu_text.append("=" * 50 + "\n", style="blue")
@@ -82,7 +111,7 @@ def show_main_menu() -> None:
     menu_text.append("2. ", style="cyan")
     menu_text.append("Search Contacts\n", style="white")
     menu_text.append("3. ", style="cyan")
-    menu_text.append("Import Google Contacts from Takeout\n", style="white")
+    menu_text.append("Import Google Contacts\n", style="white")
     menu_text.append("4. ", style="cyan")
     menu_text.append("View Tags\n", style="white")
     menu_text.append("5. ", style="cyan")
@@ -161,99 +190,8 @@ def handle_contacts_search(api: PRTAPI) -> None:
         console.print(f"Error searching contacts: {e}", style="red")
 
 
-def handle_import_google_takeout(api: PRTAPI) -> None:
-    """Handle importing contacts from Google Takeout zip file."""
-    from .google_takeout import find_takeout_files, GoogleTakeoutParser
-    from .config import data_dir
-    
-    console.print("\n" + "="*50)
-    console.print("Import Google Contacts from Takeout", style="bold blue")
-    console.print("="*50)
-    console.print()
-    
-    # Find Google Takeout zip files in prt_data directory
-    takeout_files = find_takeout_files(data_dir())
-    
-    if not takeout_files:
-        console.print("No Google Takeout zip files found in prt_data/ directory.", style="yellow")
-        console.print()
-        console.print("To import contacts with images:", style="cyan")
-        console.print("1. Go to Google Takeout (https://takeout.google.com/)", style="cyan")
-        console.print("2. Select only 'Contacts' for export", style="cyan")
-        console.print("3. Choose 'Export once' and 'ZIP' format", style="cyan")
-        console.print("4. Download the zip file", style="cyan")
-        console.print("5. Place the zip file in the prt_data/ directory", style="cyan")
-        console.print("6. Run this import command again", style="cyan")
-        return
-    
-    # Display available zip files
-    console.print("Available Google Takeout files:", style="bold blue")
-    for i, zip_file in enumerate(takeout_files, 1):
-        console.print(f"  {i}. {zip_file.name}")
-    console.print()
-    
-    # Let user select a file
-    while True:
-        try:
-            choice = int(Prompt.ask(f"Select a file (1-{len(takeout_files)})"))
-            if 1 <= choice <= len(takeout_files):
-                selected_file = takeout_files[choice - 1]
-                break
-            else:
-                console.print(f"Please enter a number between 1 and {len(takeout_files)}", style="red")
-        except ValueError:
-            console.print("Please enter a valid number", style="red")
-    
-    # Parse and validate the selected file
-    console.print(f"Analyzing {selected_file.name}...", style="blue")
-    parser = GoogleTakeoutParser(selected_file)
-    preview = parser.get_preview_info()
-    
-    if not preview['valid']:
-        console.print(f"Error: {preview['error']}", style="red")
-        return
-    
-    # Show preview information
-    console.print(f"✓ Valid Google Takeout file", style="green")
-    console.print(f"  Contacts found: {preview['contact_count']}", style="white")
-    console.print(f"  Images found: {preview['image_count']}", style="white")
-    console.print(f"  Contacts with images: {preview['contacts_with_images']}", style="white")
-    console.print()
-    
-    if preview['sample_contacts']:
-        console.print("Sample contacts:", style="bold green")
-        for contact in preview['sample_contacts']:
-            image_indicator = "📷" if contact['has_image'] else "👤"
-            console.print(f"  {image_indicator} {contact['name']}")
-        console.print()
-    
-    if not Confirm.ask("Does this look correct? Import these contacts?"):
-        console.print("Import cancelled.", style="yellow")
-        return
-    
-    # Import the contacts
-    console.print("Importing contacts...", style="blue")
-    try:
-        contacts, info = parser.extract_contacts_and_images()
-        
-        if contacts:
-            success = api.import_contacts(contacts)
-            if success:
-                console.print(f"✓ Successfully imported {len(contacts)} contacts", style="green")
-                contacts_with_images = len([c for c in contacts if c.get('profile_image')])
-                if contacts_with_images > 0:
-                    console.print(f"  Including {contacts_with_images} contacts with profile images", style="green")
-            else:
-                console.print("Failed to import contacts to database", style="red")
-        else:
-            console.print("No contacts found in the file", style="yellow")
-            
-    except Exception as e:
-        console.print(f"Failed to import contacts: {e}", style="red")
-
-
-def handle_fetch_google_contacts(api: PRTAPI, config: dict) -> None:
-    """Handle fetching contacts from Google (legacy method - kept for reference)."""
+def handle_import_google_contacts(api: PRTAPI, config: dict) -> None:
+    """Handle importing contacts from Google."""
     if not Confirm.ask("This will fetch contacts from Google. Continue?"):
         return
     
@@ -276,7 +214,7 @@ def handle_fetch_google_contacts(api: PRTAPI, config: dict) -> None:
 def handle_view_tags(api: PRTAPI) -> None:
     """Handle viewing tags."""
     try:
-        tags = api.search_tags("")  # Empty string to get all tags
+        tags = api.list_all_tags()
         if tags:
             table = Table(title="Tags", show_header=True, header_style="bold magenta")
             table.add_column("ID", style="cyan", width=8)
@@ -300,19 +238,21 @@ def handle_view_tags(api: PRTAPI) -> None:
 def handle_view_notes(api: PRTAPI) -> None:
     """Handle viewing notes."""
     try:
-        notes = api.search_notes("")  # Empty string to get all notes
+        notes = api.list_all_notes()
         if notes:
             table = Table(title="Notes", show_header=True, header_style="bold magenta")
             table.add_column("ID", style="cyan", width=8)
-            table.add_column("Title", style="green", width=40)
-            table.add_column("Content Preview", style="yellow", width=50)
+            table.add_column("Title", style="green", width=30)
+            table.add_column("Content", style="yellow", width=50)
+            table.add_column("Contact Count", style="blue", width=15)
             
             for note in notes:
                 content_preview = note["content"][:47] + "..." if len(note["content"]) > 50 else note["content"]
                 table.add_row(
                     str(note["id"]),
                     note["title"],
-                    content_preview
+                    content_preview,
+                    str(note["contact_count"])
                 )
             console.print(table)
             console.print(f"\nTotal notes: {len(notes)}", style="green")
@@ -323,38 +263,62 @@ def handle_view_notes(api: PRTAPI) -> None:
 
 
 def handle_database_status(api: PRTAPI) -> None:
-    """Handle database status display."""
+    """Handle database status check."""
     try:
-        stats = api.get_database_stats()
-        console.print("Database Status:", style="bold blue")
-        console.print(f"  Contacts: {stats['contacts']}", style="green")
-        console.print(f"  Relationships: {stats['relationships']}", style="green")
+        config = load_config()
+        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
         
-        if api.validate_database():
-            console.print("  Status: [green]OK[/green]")
+        console.print(f"Database path: {db_path}", style="blue")
+        console.print(f"Encrypted: {is_database_encrypted(config)}", style="blue")
+        
+        if db_path.exists():
+            # Try to connect and verify
+            try:
+                if is_database_encrypted(config):
+                    db = create_database(db_path, encrypted=True)
+                else:
+                    db = create_database(db_path, encrypted=False)
+                
+                if db.is_valid():
+                    console.print("Database status: [green]OK[/green]")
+                    console.print(f"Contacts: {db.count_contacts()}", style="green")
+                    console.print(f"Relationships: {db.count_relationships()}", style="green")
+                else:
+                    console.print("Database status: [red]CORRUPT[/red]")
+            except Exception as e:
+                console.print(f"Database status: [red]ERROR[/red] - {e}")
         else:
-            console.print("  Status: [red]CORRUPT[/red]")
+            console.print("Database status: [yellow]NOT FOUND[/yellow]")
+            
     except Exception as e:
-        console.print(f"Error checking database status: {e}", style="red")
+        console.print(f"Failed to check status: {e}", style="red")
 
 
 def handle_database_backup(api: PRTAPI) -> None:
     """Handle database backup."""
-    if not Confirm.ask("Create a backup of the database?"):
-        return
-    
     try:
-        backup_path = api.backup_database()
+        config = load_config()
+        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
+        
+        if not db_path.exists():
+            console.print("Database file not found.", style="red")
+            return
+        
+        # Create backup path
+        backup_path = db_path.with_suffix(f'.backup.{int(db_path.stat().st_mtime)}')
+        
+        # Copy the database file
+        import shutil
+        shutil.copy2(db_path, backup_path)
+        
         console.print(f"Database backed up to: {backup_path}", style="green")
+        
     except Exception as e:
-        console.print(f"Error creating backup: {e}", style="red")
+        console.print(f"Failed to create backup: {e}", style="red")
 
 
 def handle_encrypt_database() -> None:
     """Handle database encryption."""
-    if not Confirm.ask("This will encrypt the database. Continue?"):
-        return
-    
     try:
         success = encrypt_database()
         if success:
@@ -362,14 +326,11 @@ def handle_encrypt_database() -> None:
         else:
             console.print("Database encryption failed!", style="bold red")
     except Exception as e:
-        console.print(f"Error encrypting database: {e}", style="red")
+        console.print(f"Encryption failed: {e}", style="red")
 
 
 def handle_decrypt_database() -> None:
     """Handle database decryption."""
-    if not Confirm.ask("This will decrypt the database. Continue?"):
-        return
-    
     try:
         success = decrypt_database()
         if success:
@@ -377,66 +338,25 @@ def handle_decrypt_database() -> None:
         else:
             console.print("Database decryption failed!", style="bold red")
     except Exception as e:
-        console.print(f"Error decrypting database: {e}", style="red")
-
-
-@app.callback(invoke_without_command=True)
-def main(ctx: typer.Context):
-    """Personal Relationship Toolkit - Main entry point."""
-    if ctx.invoked_subcommand is None:
-        # No subcommand provided, run the interactive CLI
-        run_interactive_cli()
+        console.print(f"Decryption failed: {e}", style="red")
 
 
 def run_interactive_cli():
-    """Run the interactive CLI with menu-driven interface."""
-    # Validate configuration and database
-    try:
-        config = load_config()
-    except ValueError:
-        console.print("Config file is corrupt.", style="bold red")
-        config = {}
+    """Run the main interactive CLI."""
+    # Check setup status
+    status = check_setup_status()
     
-    if not config:
-        console.print("Config file not found.", style="bold red")
-        console.print("See documentation at https://github.com/richbodo/prt", style="cyan")
+    if status["needs_setup"]:
+        console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
         console.print()
-        if Confirm.ask("Create a new config file?"):
-            config = setup_database(quiet=True)
-            console.print(f"Config saved to {config_path()}", style="green")
-            console.print()
+        
+        if Confirm.ask("Would you like to run the setup wizard now?"):
+            config = run_setup_wizard()
         else:
-            raise typer.Exit()
-    
-    # Check for missing required fields and handle them automatically
-    missing = [f for f in REQUIRED_FIELDS if f not in config]
-    if missing:
-        console.print("Updating configuration with missing fields...", style="blue")
-        
-        # Handle database credentials automatically
-        if 'db_username' in missing or 'db_password' in missing:
-            db_username, db_password = get_db_credentials()
-            config['db_username'] = db_username
-            config['db_password'] = db_password
-            console.print("Database credentials updated", style="green")
-        
-        # Handle other missing fields
-        for field in missing:
-            if field not in ['db_username', 'db_password']:
-                if field == 'google_api_key':
-                    config[field] = Prompt.ask("Enter your Google API key")
-                elif field == 'openai_api_key':
-                    config[field] = Prompt.ask("Enter your OpenAI API key")
-                elif field == 'db_path':
-                    config[field] = str(data_dir() / "prt.db")
-        
-        save_config(config)
-        console.print("Configuration updated", style="green")
-    
-    # Initialize database if needed
-    if not initialize_database(config, quiet=True):
-        console.print("Failed to initialize database", style="bold red")
-        raise typer.Exit(1)
+            console.print("Setup is required to use PRT. Exiting.", style="red")
+            raise typer.Exit(1)
+    else:
+        config = status["config"]
     
     # Create API instance
     try:
@@ -448,7 +368,7 @@ def run_interactive_cli():
     # Main interactive loop
     while True:
         try:
-            show_main_menu()
+            show_main_menu(api)
             choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
             
             if choice == "0":
@@ -459,13 +379,17 @@ def run_interactive_cli():
             elif choice == "2":
                 handle_contacts_search(api)
             elif choice == "3":
-                handle_import_google_takeout(api)
+                handle_import_google_contacts(api, config)
             elif choice == "4":
                 handle_view_tags(api)
             elif choice == "5":
                 handle_view_notes(api)
             elif choice == "6":
-                chat(config)
+                try:
+                    start_ollama_chat(api)
+                except Exception as e:
+                    console.print(f"Error starting chat mode: {e}", style="red")
+                    console.print("Make sure Ollama is running and gpt-oss:20b model is available.", style="yellow")
             elif choice == "7":
                 handle_database_status(api)
             elif choice == "8":
@@ -486,10 +410,93 @@ def run_interactive_cli():
             Prompt.ask("\nPress Enter to continue")
 
 
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
+    if ctx.invoked_subcommand is None:
+        run_interactive_cli()
+
+
 @app.command()
-def run(debug: Optional[bool] = True):
+def run():
     """Run the interactive CLI."""
     run_interactive_cli()
+
+
+@app.command()
+def setup():
+    """Set up PRT configuration and database."""
+    run_setup_wizard()
+
+
+@app.command()
+def test():
+    """Test database connection and credentials."""
+    try:
+        config = load_config()
+        if not config:
+            console.print("No configuration found. Run 'setup' first.", style="red")
+            raise typer.Exit(1)
+        
+        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
+        console.print(f"Testing database connection to: {db_path}", style="blue")
+        
+        if not db_path.exists():
+            console.print("Database file not found.", style="red")
+            raise typer.Exit(1)
+        
+        # Try to connect to database
+        if is_database_encrypted(config):
+            db = create_database(db_path, encrypted=True)
+        else:
+            db = create_database(db_path, encrypted=False)
+        
+        if db.is_valid():
+            console.print("✓ Database connection successful", style="green")
+            console.print(f"  Contacts: {db.count_contacts()}", style="green")
+            console.print(f"  Relationships: {db.count_relationships()}", style="green")
+        else:
+            console.print("✗ Database is corrupted or invalid", style="red")
+            raise typer.Exit(1)
+            
+    except Exception as e:
+        console.print(f"✗ Database test failed: {e}", style="red")
+        raise typer.Exit(1)
+
+
+@app.command()
+def chat():
+    """Start LLM chat mode directly."""
+    # Check setup status
+    status = check_setup_status()
+    
+    if status["needs_setup"]:
+        console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
+        console.print()
+        
+        if Confirm.ask("Would you like to run the setup wizard now?"):
+            config = run_setup_wizard()
+        else:
+            console.print("Setup is required to use PRT chat. Exiting.", style="red")
+            raise typer.Exit(1)
+    else:
+        config = status["config"]
+    
+    # Create API instance
+    try:
+        api = PRTAPI(config)
+    except Exception as e:
+        console.print(f"Failed to initialize API: {e}", style="bold red")
+        raise typer.Exit(1)
+    
+    # Start chat mode directly
+    console.print("Starting LLM chat mode...", style="blue")
+    try:
+        start_ollama_chat(api)
+    except Exception as e:
+        console.print(f"Error starting chat mode: {e}", style="red")
+        console.print("Make sure Ollama is running and gpt-oss:20b model is available.", style="yellow")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -539,115 +546,35 @@ def decrypt_db(
 @app.command()
 def db_status():
     """Check the encryption status of the database."""
-    try:
-        config = load_config()
-        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
-        
-        console.print(f"Database path: {db_path}", style="blue")
-        console.print(f"Encrypted: {is_database_encrypted(config)}", style="blue")
-        
-        if db_path.exists():
-            # Try to connect and verify
-            try:
-                from .db import create_database
-                if is_database_encrypted(config):
-                    db = create_database(db_path, encrypted=True)
-                else:
-                    db = create_database(db_path, encrypted=False)
-                
-                if db.is_valid():
-                    console.print("Database status: [green]OK[/green]")
-                    console.print(f"Contacts: {db.count_contacts()}", style="green")
-                    console.print(f"Relationships: {db.count_relationships()}", style="green")
-                else:
-                    console.print("Database status: [red]CORRUPT[/red]")
-            except Exception as e:
-                console.print(f"Database status: [red]ERROR[/red] - {e}")
-        else:
-            console.print("Database status: [yellow]NOT FOUND[/yellow]")
-            
-    except Exception as e:
-        console.print(f"Failed to check status: {e}", style="red")
-        raise typer.Exit(1)
-
-
-@app.command()
-def setup():
-    """Set up PRT configuration and database."""
-    try:
-        cfg = setup_database()
-        console.print("PRT setup completed successfully!", style="bold green")
-        console.print(f"Configuration saved to {config_path()}", style="green")
-        
-        if initialize_database(cfg):
-            console.print("Database initialized successfully", style="green")
-        else:
-            console.print("Database initialization failed", style="red")
-            
-    except Exception as e:
-        console.print(f"Setup failed: {e}", style="red")
-        raise typer.Exit(1)
-
-
-@app.command()
-def test():
-    """Test database connection and credentials."""
-    test_db_credentials()
-
-
-# Add the map command
-app.command(name="map")(create_map_command(app))
-
-
-@app.command()
-def migrate():
-    """Migrate database schema to latest version."""
-    from .schema_manager import SchemaManager
-    from .config import load_config
-    from .db import Database
-    from pathlib import Path
+    status = check_setup_status()
     
-    try:
-        config = load_config()
-        db_path = Path(config["db_path"])
-        
-        # Check if database exists
-        if not db_path.exists():
-            console.print("❌ Database not found. Run 'setup' command first.", style="red")
-            raise typer.Exit(1)
-        
-        # Connect to database
-        encrypted = config.get('db_encrypted', False)
-        encryption_key = None
-        if encrypted:
-            from .config import get_encryption_key
-            encryption_key = get_encryption_key()
-        
-        db = Database(db_path, encrypted=encrypted, encryption_key=encryption_key)
-        db.connect()
-        
-        # Run migration
-        schema_manager = SchemaManager(db)
-        info = schema_manager.get_migration_info()
-        
-        console.print(f"Current database version: {info['current_version']}", style="blue")
-        console.print(f"Target version: {info['target_version']}", style="blue")
-        
-        if not info['migration_needed']:
-            console.print("✅ Database is already up to date!", style="green")
-            return
-        
-        if not info['migration_available']:
-            console.print("❌ No migration path available for this database version.", style="red")
-            raise typer.Exit(1)
-        
-        success = schema_manager.migrate_safely()
-        if not success:
-            raise typer.Exit(1)
-            
-    except Exception as e:
-        console.print(f"Migration failed: {e}", style="red")
+    if status["needs_setup"]:
+        console.print(f"PRT needs setup: {status['reason']}", style="yellow")
         raise typer.Exit(1)
+    
+    config = status["config"]
+    db_path = Path(config.get('db_path', 'prt_data/prt.db'))
+    
+    console.print(f"Database path: {db_path}", style="blue")
+    console.print(f"Encrypted: {is_database_encrypted(config)}", style="blue")
+    
+    if db_path.exists():
+        try:
+            if is_database_encrypted(config):
+                db = create_database(db_path, encrypted=True)
+            else:
+                db = create_database(db_path, encrypted=False)
+            
+            if db.is_valid():
+                console.print("Database status: [green]OK[/green]")
+                console.print(f"Contacts: {db.count_contacts()}", style="green")
+                console.print(f"Relationships: {db.count_relationships()}", style="green")
+            else:
+                console.print("Database status: [red]CORRUPT[/red]")
+        except Exception as e:
+            console.print(f"Database status: [red]ERROR[/red] - {e}")
+    else:
+        console.print("Database status: [yellow]NOT FOUND[/yellow]")
 
 
 if __name__ == "__main__":

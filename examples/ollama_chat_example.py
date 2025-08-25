@@ -60,7 +60,10 @@ def main():
         
         print("\n✅ Example completed successfully!")
         print("\nTo start an interactive chat session, run:")
-        print("  python -m prt.cli chat-mode --ollama")
+        print("  python -m prt_src.cli")
+        print("  # Then select option 6: Start LLM Chat")
+        print("\nOr start chat mode directly:")
+        print("  python -m prt_src.cli chat")
         
     except Exception as e:
         print(f"❌ Error: {e}")

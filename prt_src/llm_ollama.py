@@ -264,21 +264,34 @@ class OllamaLLM:
             f"- {tool.name}: {tool.description}" for tool in self.tools
         ])
         
-        return f"""You are an AI assistant for the Personal Relationship Toolkit (PRT). You help users manage their contacts, relationships, tags, and notes.
+        return f"""You are an AI assistant for the Personal Relationship Toolkit (PRT), a private contact and relationship management system.
 
-Available tools:
+Your role is to help users manage their personal contacts, relationships, tags, and notes. You have access to a private database containing the user's contact information.
+
+CONTEXT:
+- This is a personal relationship management tool
+- All data is stored locally in a private database
+- You can search, view, and manage contacts, tags, and notes
+- You should be helpful, conversational, and respect privacy
+
+AVAILABLE TOOLS:
 {tools_description}
 
-You can use these tools to help users with their requests. When a user asks you to do something, use the appropriate tool(s) to accomplish the task.
+INSTRUCTIONS:
+1. When a user asks about their contacts, relationships, tags, or notes, use the appropriate tools to get real data
+2. Always use tools to perform actions rather than making up information
+3. If a user asks a general question about PRT or how to use it, respond directly without using tools
+4. Be concise but helpful in your responses
+5. If a tool call fails, explain the issue and suggest alternatives
+6. For complex requests, break them down into multiple tool calls if needed
 
-Guidelines:
-1. Always use tools to perform actions rather than making up information
-2. Be helpful and conversational in your responses
-3. When showing results, format them clearly and concisely
-4. If you need to search for something, use the appropriate search tool first
-5. You can combine multiple tool calls to complete complex tasks
+EXAMPLES:
+- "Show me all contacts" → Use list_all_contacts tool
+- "Find contacts named John" → Use search_contacts tool with query="John"
+- "What is PRT?" → Respond directly (no tool needed)
+- "How do I add a tag?" → Respond directly with instructions
 
-Remember: You can only use the tools listed above. You cannot access the file system, run terminal commands, or modify database configuration directly."""
+Remember: You can only use the tools listed above. You cannot access files, run commands, or modify system configuration."""
     
     def _format_tool_calls(self) -> List[Dict[str, Any]]:
         """Format tools for Ollama API."""
@@ -307,22 +320,39 @@ Remember: You can only use the tools listed above. You cannot access the file sy
         }
         
         try:
-            # Send request to Ollama
+            # Send request to Ollama with shorter timeout
             response = requests.post(
                 f"{self.base_url}/chat/completions",
                 json=request_data,
-                timeout=120
+                timeout=30  # Reduced from 120 to 30 seconds
             )
             response.raise_for_status()
             
             result = response.json()
             
+            # Validate response structure
+            if not result.get("choices") or not result["choices"]:
+                return "Error: Invalid response from Ollama - no choices found"
+            
+            choice = result["choices"][0]
+            if not choice.get("message"):
+                return "Error: Invalid response from Ollama - no message found"
+            
+            message_obj = choice["message"]
+            
             # Check if the LLM wants to call a tool
-            if "tool_calls" in result.get("choices", [{}])[0].get("message", {}):
-                tool_calls = result["choices"][0]["message"]["tool_calls"]
+            if "tool_calls" in message_obj and message_obj["tool_calls"]:
+                tool_calls = message_obj["tool_calls"]
                 tool_results = []
                 
+                # Limit to prevent infinite loops
+                if len(tool_calls) > 5:
+                    return "Error: Too many tool calls requested. Please try a simpler query."
+                
                 for tool_call in tool_calls:
+                    if not tool_call.get("function"):
+                        continue
+                        
                     tool_name = tool_call["function"]["name"]
                     arguments_str = tool_call["function"].get("arguments", "{}")
                     
@@ -341,7 +371,7 @@ Remember: You can only use the tools listed above. You cannot access the file sy
                     })
                 
                 # Add assistant message with tool calls to history
-                self.conversation_history.append(result["choices"][0]["message"])
+                self.conversation_history.append(message_obj)
                 
                 # Add tool results to history
                 for tool_result in tool_results:
@@ -351,7 +381,7 @@ Remember: You can only use the tools listed above. You cannot access the file sy
                         "content": json.dumps(tool_result["result"])
                     })
                 
-                # Get final response from LLM
+                # Get final response from LLM with shorter timeout
                 final_request = {
                     "model": self.model,
                     "messages": [
@@ -363,11 +393,15 @@ Remember: You can only use the tools listed above. You cannot access the file sy
                 final_response = requests.post(
                     f"{self.base_url}/chat/completions",
                     json=final_request,
-                    timeout=120
+                    timeout=30  # Reduced timeout
                 )
                 final_response.raise_for_status()
                 
                 final_result = final_response.json()
+                
+                if not final_result.get("choices") or not final_result["choices"]:
+                    return "Error: Invalid final response from Ollama"
+                
                 assistant_message = final_result["choices"][0]["message"]["content"]
                 
                 # Add final assistant message to history
@@ -376,10 +410,14 @@ Remember: You can only use the tools listed above. You cannot access the file sy
                 return assistant_message
             else:
                 # No tool calls, just return the response
-                assistant_message = result["choices"][0]["message"]["content"]
+                assistant_message = message_obj["content"]
                 self.conversation_history.append({"role": "assistant", "content": assistant_message})
                 return assistant_message
                 
+        except requests.exceptions.Timeout:
+            return "Error: Request to Ollama timed out. Please check if Ollama is running and try again."
+        except requests.exceptions.ConnectionError:
+            return "Error: Cannot connect to Ollama. Please make sure Ollama is running on localhost:11434"
         except requests.exceptions.RequestException as e:
             return f"Error communicating with Ollama: {str(e)}"
         except Exception as e:
@@ -409,8 +447,20 @@ def start_ollama_chat(api: PRTAPI):
     llm = OllamaLLM(api)
     
     console.print("🤖 Ollama LLM Chat Mode", style="bold blue")
-    console.print("Type 'quit' to exit, 'clear' to clear history", style="cyan")
+    console.print("Type 'quit' to exit, 'clear' to clear history, 'help' for assistance", style="cyan")
     console.print("=" * 50, style="blue")
+    
+    # Test connection first
+    console.print("Testing connection to Ollama...", style="yellow")
+    try:
+        test_response = requests.get(f"{llm.base_url}/models", timeout=5)
+        if test_response.status_code == 200:
+            console.print("✓ Connected to Ollama", style="green")
+        else:
+            console.print("⚠ Warning: Ollama connection test failed", style="yellow")
+    except Exception as e:
+        console.print(f"⚠ Warning: Cannot connect to Ollama: {e}", style="yellow")
+        console.print("Make sure Ollama is running with: ollama serve", style="cyan")
     
     while True:
         try:
@@ -423,15 +473,28 @@ def start_ollama_chat(api: PRTAPI):
                 llm.clear_history()
                 console.print("Chat history cleared.", style="yellow")
                 continue
+            elif user_input.lower() == 'help':
+                console.print("\n[bold blue]Available Commands:[/bold blue]")
+                console.print("- Type your questions about contacts, tags, or notes", style="white")
+                console.print("- 'clear': Clear chat history", style="white")
+                console.print("- 'quit' or 'exit': Exit chat mode", style="white")
+                console.print("\n[bold blue]Example Questions:[/bold blue]")
+                console.print("- 'Show me all contacts'", style="white")
+                console.print("- 'Find contacts named John'", style="white")
+                console.print("- 'What tags do I have?'", style="white")
+                console.print("- 'How many contacts do I have?'", style="white")
+                continue
             elif not user_input.strip():
                 continue
             
             console.print("\n[bold blue]Assistant[/bold blue]")
+            console.print("Thinking...", style="dim")
             response = llm.chat(user_input)
             console.print(response, style="white")
             
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             console.print("\nGoodbye!", style="green")
             break
         except Exception as e:
             console.print(f"Error: {e}", style="red")
+            console.print("Try asking a simpler question or type 'help' for assistance.", style="yellow")

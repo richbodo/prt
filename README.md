@@ -4,9 +4,16 @@
 
 The init.sh file installs sqlcipher and sets some environment variables so the python sqlcipher package will install and work.  It also sets up a virtual environment for development.  
 
+```bash
 source ./init.sh
+python -m prt_src.cli
+```
 
-python -m prt_src.cli run
+PRT will automatically detect if setup is needed and guide you through the process. If you prefer to run setup manually:
+
+```bash
+python -m prt_src.cli setup
+```
 
 ## Motivation/Purpose: 
 
@@ -25,46 +32,45 @@ Note: These docs suck.  I'm not going to make them awesome until I hit a milesto
 
 ## CLI Overview
 
-PRT provides both direct commands and an interactive menu interface. Use the `map` command to visualize the complete CLI structure:
+PRT provides a unified CLI interface that automatically handles setup and operations. The main entry point is:
 
 ```bash
-# Show the CLI command hierarchy
-python -m prt_src.cli map
+python -m prt_src.cli
 ```
 
-### Direct Commands
+### Available Commands
 
 ```bash
+# Main interactive interface (default)
+python -m prt_src.cli                 # Auto-detects setup needs
+
+# Quick access to LLM chat
+python -m prt_src.cli chat            # Start LLM chat directly
+
 # Setup and configuration
-python -m prt_src.cli setup          # Initial setup
+python -m prt_src.cli setup           # Manual setup wizard
 python -m prt_src.cli db-status       # Check database status
+python -m prt_src.cli test            # Test database connection
 
 # Database operations  
 python -m prt_src.cli encrypt-db      # Encrypt database
 python -m prt_src.cli decrypt-db      # Decrypt database
-python -m prt_src.cli migrate         # Update database schema
-python -m prt_src.cli test            # Test connection
-
-# Interactive mode
-python -m prt_src.cli run             # Main interactive interface
 ```
 
 ### Interactive Menu
 
-The `run` command launches an interactive menu with these options:
+The main interface provides these options:
 - **[1] View Contacts** - Browse and view contact information
 - **[2] Search Contacts** - Search contacts by various criteria  
-- **[3] Import Google Contacts from Takeout** - Import contacts with images from Google Takeout zip file
+- **[3] Import Google Contacts** - Import contacts from Google
 - **[4] View Tags** - Browse and manage contact tags
 - **[5] View Notes** - Browse and manage contact notes
-- **[6] Start LLM Chat** - AI-powered contact queries
+- **[6] Start LLM Chat** - AI-powered contact queries with Ollama
 - **[7] Database Status** - Check database statistics
 - **[8] Database Backup** - Create database backup
 - **[9] Encrypt Database** - Enable database encryption
 - **[10] Decrypt Database** - Emergency decryption
 - **[0] Exit** - Exit the application
-
-Use `python -m prt_src.cli map --show-params` for detailed parameter information.
 
 
 ## Documentation
