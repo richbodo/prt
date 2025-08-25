@@ -60,6 +60,8 @@ code prt_data/prt_config.json
 
 PRT supports encrypted databases using SQLCipher for enhanced security. All data is encrypted with 256-bit AES encryption.
 
+NOTE: I might have to switch out sqlcipher for some much more basic encryption at rest, because there is no cross-platform, OSS db driver for sqlite that is actually installable and reliable on more than one major platform - everything I've found works well on one platform, but the maintainers do not seem to be super interested in making it work on any other platform.  So although it can be done, it's a kludge to get what we want - sqlite encryption on mac, win, lin.
+
 ### Setting up an Encrypted Database from Scratch
 
 ```bash
