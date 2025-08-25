@@ -66,11 +66,9 @@ This design supports unlimited tags and notes per relationship while remaining c
 - **Google Takeout Import**: Import contacts with images from Google Takeout zip files
 - **Safe Migration System**: Automatic backup and recovery for schema changes
 
-### Future Considerations
-- Additional contact fields (address, organization, etc.)
-- Image optimization and compression
-- Support for multiple images per contact
-- Integration with other contact sources
+### Version 3 (Support relationship types)
+
+See https://github.com/richbodo/prt/issues/38
 
 ## Migration Management
 
