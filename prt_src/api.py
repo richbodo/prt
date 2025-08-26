@@ -9,7 +9,7 @@ provides a consistent interface for all PRT functionality.
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from .db import Database
-from .config import load_config, data_dir, get_encryption_key
+from .config import load_config, data_dir
 from .schema_manager import SchemaManager
 
 
@@ -24,13 +24,8 @@ class PRTAPI:
         # Get database path from config
         db_path = Path(config["db_path"])
         
-        # Check if database should be encrypted
-        encrypted = config.get('db_encrypted', False)
-        encryption_key = None
-        if encrypted:
-            encryption_key = get_encryption_key()
-        
-        self.db = Database(db_path, encrypted=encrypted, encryption_key=encryption_key)
+        # Create database instance
+        self.db = Database(db_path)
         self.db.connect()
         
         # Initialize schema manager and check for migrations

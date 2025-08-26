@@ -16,7 +16,7 @@ from rich.console import Console
 # Add the prt package to the path
 sys.path.insert(0, str(Path(__file__).parent / "prt_src"))
 
-from prt_src.config import get_db_credentials, data_dir, load_config, save_config, get_encryption_key
+from prt_src.config import get_db_credentials, data_dir, load_config, save_config
 from prt_src.db import Database
 import shutil
 
@@ -24,14 +24,13 @@ app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()
 
 
-def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = False) -> Dict[str, Any]:
+def setup_database(force: bool = False, quiet: bool = False) -> Dict[str, Any]:
     """
     Set up database configuration and initialize database if needed.
     
     Args:
         force: Force regeneration of credentials
         quiet: Suppress output messages
-        encrypted: Whether to set up an encrypted database
         
     Returns:
         Dictionary containing the configuration
@@ -54,12 +53,7 @@ def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = F
     if not quiet:
         console.print("Database credentials generated", style="green")
     
-    # Generate encryption key if needed
-    encryption_key = None
-    if encrypted:
-        encryption_key = get_encryption_key()
-        if not quiet:
-            console.print("Encryption key generated", style="green")
+    # Encryption key generation removed as part of Issue #41
     
     # Update config with credentials
     try:
@@ -79,7 +73,7 @@ def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = F
     config['db_username'] = username
     config['db_password'] = password
     config['db_type'] = "sqlite"
-    config['db_encrypted'] = encrypted
+    config['db_encrypted'] = False  # Removed encryption as part of Issue #41
     
     # Ensure db_path is absolute and points to prt_data
     if 'db_path' in config:
@@ -111,12 +105,8 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
     if db_file.exists():
         try:
             # Try to connect to existing database
-            if config.get('db_encrypted', False):
-                from prt_src.encrypted_db import create_encrypted_database
-                db = create_encrypted_database(db_file)
-            else:
-                from prt_src.db import create_database
-                db = create_database(db_file, encrypted=False)
+            from prt_src.db import create_database
+            db = create_database(db_file)
             
             if db.is_valid():
                 if not quiet:
@@ -137,13 +127,9 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
         # Ensure directory exists
         db_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Create database based on encryption setting
-        if config.get('db_encrypted', False):
-            from prt_src.encrypted_db import create_encrypted_database
-            db = create_encrypted_database(db_file)
-        else:
-            from prt_src.db import create_database
-            db = create_database(db_file, encrypted=False)
+        # Create database
+        from prt_src.db import create_database
+        db = create_database(db_file)
         
         # Initialize schema
         db.initialize()
@@ -162,12 +148,12 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
 @app.command()
 def setup(
     force: bool = typer.Option(False, "--force", help="Force regeneration of credentials"),
-    encrypted: bool = typer.Option(False, "--encrypted", help="Set up encrypted database"),
+    # encrypted option removed as part of Issue #41
     quiet: bool = typer.Option(False, "--quiet", help="Suppress output messages")
 ):
     """Set up PRT database configuration and initialize database."""
     try:
-        config = setup_database(force=force, quiet=quiet, encrypted=encrypted)
+        config = setup_database(force=force, quiet=quiet)
         
         if not quiet:
             console.print("Database configuration set up successfully", style="green")
@@ -186,37 +172,7 @@ def setup(
         raise typer.Exit(1)
 
 
-@app.command()
-def encrypt(
-    db_path: Optional[Path] = typer.Option(None, "--db-path", "-p", help="Path to database file"),
-    key: Optional[str] = typer.Option(None, "--key", "-k", help="Encryption key (generates new one if not provided)"),
-    no_backup: bool = typer.Option(False, "--no-backup", help="Skip backup creation"),
-    no_verify: bool = typer.Option(False, "--no-verify", help="Skip verification after encryption"),
-    force: bool = typer.Option(False, "--force", help="Force encryption even if already encrypted")
-):
-    """Encrypt an existing unencrypted database."""
-    from migrations.encrypt_database import encrypt_database
-    
-    success = encrypt_database(
-        db_path=db_path,
-        encryption_key=key,
-        backup=not no_backup,
-        verify=not no_verify,
-        force=force
-    )
-    
-    if success:
-        console.print("Database encryption completed successfully!", style="bold green")
-    else:
-        console.print("Database encryption failed!", style="bold red")
-        raise typer.Exit(1)
-
-
-@app.command()
-def status():
-    """Check the encryption status of the database."""
-    from migrations.encrypt_database import status as check_status
-    check_status()
+# encrypt and status commands removed as part of Issue #41
 
 
 if __name__ == "__main__":

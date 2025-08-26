@@ -18,16 +18,17 @@ class TestPRTAPI:
         api = PRTAPI(config)
         assert api.db.path == db_path
     
-    def test_api_initialization_default(self):
-        """Test API initialization with default database path."""
-        api = PRTAPI()
-        config = load_config()
-        expected_path = Path(config["db_path"])
+    def test_api_initialization_default(self, sample_config):
+        """Test API initialization with sample config."""
+        api = PRTAPI(sample_config)
+        expected_path = Path(sample_config["db_path"])
         assert api.db.path == expected_path
     
-    def test_get_database_stats(self):
+    def test_get_database_stats(self, test_db):
         """Test getting database statistics."""
-        api = PRTAPI()
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
         stats = api.get_database_stats()
         
         assert isinstance(stats, dict)
@@ -101,10 +102,12 @@ class TestPRTAPI:
         assert isinstance(contacts, list)
         # Empty file should return empty list or handle gracefully
     
-    def test_search_contacts(self):
+    def test_search_contacts(self, test_db):
         """Test contact search functionality."""
-        api = PRTAPI()
-        results = api.search_contacts("test")
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
+        results = api.search_contacts("John")
         
         assert isinstance(results, list)
         for contact in results:
@@ -115,9 +118,11 @@ class TestPRTAPI:
             assert "phone" in contact
             assert "relationship_info" in contact
     
-    def test_list_all_contacts(self):
+    def test_list_all_contacts(self, test_db):
         """Test listing all contacts."""
-        api = PRTAPI()
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
         contacts = api.list_all_contacts()
         
         assert isinstance(contacts, list)
@@ -129,9 +134,11 @@ class TestPRTAPI:
             assert "phone" in contact
             assert "relationship_info" in contact
     
-    def test_list_all_tags(self):
+    def test_list_all_tags(self, test_db):
         """Test listing all tags."""
-        api = PRTAPI()
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
         tags = api.list_all_tags()
         
         assert isinstance(tags, list)
@@ -141,9 +148,11 @@ class TestPRTAPI:
             assert "name" in tag
             assert "contact_count" in tag
     
-    def test_list_all_notes(self):
+    def test_list_all_notes(self, test_db):
         """Test listing all notes."""
-        api = PRTAPI()
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
         notes = api.list_all_notes()
         
         assert isinstance(notes, list)

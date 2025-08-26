@@ -9,33 +9,16 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class Database:
-    def __init__(self, path: Path, encrypted: bool = False, encryption_key: Optional[str] = None):
+    def __init__(self, path: Path):
         self.path = Path(path)
         self.engine = None
         self.SessionLocal = None
         self.session = None
-        self.encrypted = encrypted
-        self.encryption_key = encryption_key
 
     def connect(self) -> None:
         """Connect to the database using SQLAlchemy."""
         # Create SQLite URL
         db_url = f"sqlite:///{self.path}"
-        
-        if self.encrypted:
-            # For encrypted databases, we need to use SQLCipher
-            try:
-                from .encrypted_db import EncryptedDatabase
-                # Create encrypted database instance
-                encrypted_db = EncryptedDatabase(self.path, self.encryption_key)
-                encrypted_db.connect()
-                # Copy the engine and session from encrypted database
-                self.engine = encrypted_db.engine
-                self.SessionLocal = encrypted_db.SessionLocal
-                self.session = encrypted_db.session
-                return
-            except ImportError:
-                raise RuntimeError("pysqlcipher3 is required for encrypted databases")
         
         # Standard SQLite connection
         self.engine = create_engine(db_url, echo=False)
@@ -238,8 +221,8 @@ class Database:
         return [(n.id, n.title, n.content) for n in notes]
 
 
-def create_database(path: Path, encrypted: bool = False, encryption_key: Optional[str] = None) -> Database:
-    """Create a database instance with optional encryption."""
-    db = Database(path, encrypted, encryption_key)
+def create_database(path: Path) -> Database:
+    """Create a database instance."""
+    db = Database(path)
     db.connect()
     return db

@@ -32,38 +32,23 @@ if [ "$OS" = "mac" ]; then
     fi
     echo "Homebrew found at: $(which brew)"
 
-    # Install sqlcipher if needed
-    echo "Checking if sqlcipher is already installed..."
-    if ! brew list sqlcipher >/dev/null 2>&1; then
-        echo "Sqlcipher not found, installing via Homebrew..."
-        brew install sqlcipher || { echo "Failed to install sqlcipher"; return 1; }
-    else
-        echo "Sqlcipher is already installed via Homebrew"
-    fi
-
-    # Set SQLCipher environment variables from Homebrew prefix
-    echo "Setting SQLCipher environment variables..."
-    export SQLCIPHER_PATH="$(brew --prefix sqlcipher)"
-    export LDFLAGS="-L$SQLCIPHER_PATH/lib"
-    export CPPFLAGS="-I$SQLCIPHER_PATH/include"
-    echo "SQLCIPHER_PATH set to: $SQLCIPHER_PATH"
+    # SQLCipher installation removed as part of Issue #41
+    echo "SQLCipher dependencies removed - using regular SQLite now"
 elif [ "$OS" = "linux" ]; then
     # Linux installation using apt for Debian-based systems
     if command -v apt-get >/dev/null; then
         echo "Installing system dependencies via apt..."
         if [ "$EUID" -ne 0 ] && command -v sudo >/dev/null; then
-            sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-dev build-essential libsqlcipher-dev pkg-config || { echo "Failed to install system packages"; return 1; }
+            sudo apt-get update && sudo apt-get install -y python3 python3-venv python3-dev build-essential pkg-config || { echo "Failed to install system packages"; return 1; }
         else
-            apt-get update && apt-get install -y python3 python3-venv python3-dev build-essential libsqlcipher-dev pkg-config || { echo "Failed to install system packages"; return 1; }
+            apt-get update && apt-get install -y python3 python3-venv python3-dev build-essential pkg-config || { echo "Failed to install system packages"; return 1; }
         fi
     else
         echo "Error: apt-get not found. Please install required dependencies manually."
         return 1
     fi
 
-    # Set SQLCipher flags using pkg-config
-    export LDFLAGS="$(pkg-config --libs sqlcipher 2>/dev/null)"
-    export CPPFLAGS="$(pkg-config --cflags sqlcipher 2>/dev/null)"
+    # SQLCipher flags removed as part of Issue #41
 fi
 
 # Check if virtual environment exists, if not create it

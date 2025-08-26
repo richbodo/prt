@@ -20,7 +20,7 @@ from .db import create_database
 from .google_contacts import fetch_contacts
 from .llm_ollama import start_ollama_chat
 from migrations.setup_database import get_db_credentials, setup_database, initialize_database
-from migrations.encrypt_database import encrypt_database, decrypt_database, is_database_encrypted
+# Encryption imports removed as part of Issue #41
 
 app = typer.Typer(help="Personal Relationship Toolkit (PRT)")
 console = Console()
@@ -48,10 +48,7 @@ def check_setup_status():
         
         # Try to connect to database
         try:
-            if is_database_encrypted(config):
-                db = create_database(db_path, encrypted=True)
-            else:
-                db = create_database(db_path, encrypted=False)
+            db = create_database(db_path)
             
             if not db.is_valid():
                 return {"needs_setup": True, "reason": "Database is corrupted or invalid"}
@@ -269,15 +266,12 @@ def handle_database_status(api: PRTAPI) -> None:
         db_path = Path(config.get('db_path', 'prt_data/prt.db'))
         
         console.print(f"Database path: {db_path}", style="blue")
-        console.print(f"Encrypted: {is_database_encrypted(config)}", style="blue")
+# Encryption status removed as part of Issue #41
         
         if db_path.exists():
             # Try to connect and verify
             try:
-                if is_database_encrypted(config):
-                    db = create_database(db_path, encrypted=True)
-                else:
-                    db = create_database(db_path, encrypted=False)
+                db = create_database(db_path)
                 
                 if db.is_valid():
                     console.print("Database status: [green]OK[/green]")
@@ -317,28 +311,7 @@ def handle_database_backup(api: PRTAPI) -> None:
         console.print(f"Failed to create backup: {e}", style="red")
 
 
-def handle_encrypt_database() -> None:
-    """Handle database encryption."""
-    try:
-        success = encrypt_database()
-        if success:
-            console.print("Database encryption completed successfully!", style="bold green")
-        else:
-            console.print("Database encryption failed!", style="bold red")
-    except Exception as e:
-        console.print(f"Encryption failed: {e}", style="red")
-
-
-def handle_decrypt_database() -> None:
-    """Handle database decryption."""
-    try:
-        success = decrypt_database()
-        if success:
-            console.print("Database decryption completed successfully!", style="bold green")
-        else:
-            console.print("Database decryption failed!", style="bold red")
-    except Exception as e:
-        console.print(f"Decryption failed: {e}", style="red")
+# Encryption handler functions removed as part of Issue #41
 
 
 def run_interactive_cli():
@@ -394,10 +367,7 @@ def run_interactive_cli():
                 handle_database_status(api)
             elif choice == "8":
                 handle_database_backup(api)
-            elif choice == "9":
-                handle_encrypt_database()
-            elif choice == "10":
-                handle_decrypt_database()
+            # Encryption menu options removed as part of Issue #41
             
             if choice != "0":
                 Prompt.ask("\nPress Enter to continue")
@@ -446,10 +416,7 @@ def test():
             raise typer.Exit(1)
         
         # Try to connect to database
-        if is_database_encrypted(config):
-            db = create_database(db_path, encrypted=True)
-        else:
-            db = create_database(db_path, encrypted=False)
+        db = create_database(db_path)
         
         if db.is_valid():
             console.print("✓ Database connection successful", style="green")
@@ -499,53 +466,12 @@ def chat():
         raise typer.Exit(1)
 
 
-@app.command()
-def encrypt_db(
-    db_path: Optional[Path] = typer.Option(None, "--db-path", "-p", help="Path to database file"),
-    key: Optional[str] = typer.Option(None, "--key", "-k", help="Encryption key (generates new one if not provided)"),
-    no_backup: bool = typer.Option(False, "--no-backup", help="Skip backup creation"),
-    no_verify: bool = typer.Option(False, "--no-verify", help="Skip verification after encryption"),
-    force: bool = typer.Option(False, "--force", help="Force encryption even if already encrypted")
-):
-    """Encrypt an existing unencrypted database."""
-    success = encrypt_database(
-        db_path=db_path,
-        encryption_key=key,
-        backup=not no_backup,
-        verify=not no_verify,
-        force=force
-    )
-    
-    if success:
-        console.print("Database encryption completed successfully!", style="bold green")
-    else:
-        console.print("Database encryption failed!", style="bold red")
-        raise typer.Exit(1)
-
-
-@app.command()
-def decrypt_db(
-    db_path: Optional[Path] = typer.Option(None, "--db-path", "-p", help="Path to database file"),
-    key: Optional[str] = typer.Option(None, "--key", "-k", help="Encryption key (loads from secrets if not provided)"),
-    no_backup: bool = typer.Option(False, "--no-backup", help="Skip backup creation")
-):
-    """Decrypt an encrypted database (emergency function)."""
-    success = decrypt_database(
-        db_path=db_path,
-        encryption_key=key,
-        backup=not no_backup
-    )
-    
-    if success:
-        console.print("Database decryption completed successfully!", style="bold green")
-    else:
-        console.print("Database decryption failed!", style="bold red")
-        raise typer.Exit(1)
+# encrypt-db and decrypt-db commands removed as part of Issue #41
 
 
 @app.command()
 def db_status():
-    """Check the encryption status of the database."""
+    """Check the database status."""
     status = check_setup_status()
     
     if status["needs_setup"]:
@@ -556,14 +482,11 @@ def db_status():
     db_path = Path(config.get('db_path', 'prt_data/prt.db'))
     
     console.print(f"Database path: {db_path}", style="blue")
-    console.print(f"Encrypted: {is_database_encrypted(config)}", style="blue")
+# Encryption status removed as part of Issue #41
     
     if db_path.exists():
         try:
-            if is_database_encrypted(config):
-                db = create_database(db_path, encrypted=True)
-            else:
-                db = create_database(db_path, encrypted=False)
+            db = create_database(db_path)
             
             if db.is_valid():
                 console.print("Database status: [green]OK[/green]")

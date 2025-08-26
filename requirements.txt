@@ -10,6 +10,6 @@ alembic
 transformers
 accelerate
 torch
-pysqlcipher3
+# pysqlcipher3  # Removed as part of Issue #41 - moving away from db-level encryption
 vobject
 requests

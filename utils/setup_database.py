@@ -16,7 +16,7 @@ from rich.console import Console
 # Add the prt package to the path
 sys.path.insert(0, str(Path(__file__).parent / "prt"))
 
-from prt_src.config import get_db_credentials, data_dir, load_config, save_config, get_encryption_key
+from prt_src.config import get_db_credentials, data_dir, load_config, save_config
 from prt_src.db import Database
 import shutil
 
