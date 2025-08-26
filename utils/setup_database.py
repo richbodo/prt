@@ -24,14 +24,13 @@ app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()
 
 
-def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = False) -> Dict[str, Any]:
+def setup_database(force: bool = False, quiet: bool = False) -> Dict[str, Any]:
     """
     Set up database configuration and initialize database if needed.
     
     Args:
         force: Force regeneration of credentials
         quiet: Suppress output messages
-        encrypted: Whether to set up an encrypted database
         
     Returns:
         Dictionary containing the configuration
@@ -44,7 +43,7 @@ def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = F
     
     # Get or generate database credentials
     if force:
-        secrets_file = Path.cwd() / "secrets" / "db_secrets.txt"
+        secrets_file = data_path / "secrets" / "db_secrets.txt"
         if secrets_file.exists():
             secrets_file.unlink()
             if not quiet:
@@ -54,12 +53,7 @@ def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = F
     if not quiet:
         console.print("Database credentials generated", style="green")
     
-    # Generate encryption key if needed
-    encryption_key = None
-    if encrypted:
-        encryption_key = get_encryption_key()
-        if not quiet:
-            console.print("Encryption key generated", style="green")
+    # Encryption key generation removed as part of Issue #41
     
     # Update config with credentials
     try:
@@ -79,7 +73,7 @@ def setup_database(force: bool = False, quiet: bool = False, encrypted: bool = F
     config['db_username'] = username
     config['db_password'] = password
     config['db_type'] = "sqlite"
-    config['db_encrypted'] = encrypted
+    config['db_encrypted'] = False  # Always false as part of Issue #41
     
     # Ensure db_path is absolute and points to prt_data
     if 'db_path' in config:
@@ -111,12 +105,8 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
     if db_file.exists():
         try:
             # Try to connect to existing database
-            if config.get('db_encrypted', False):
-                from prt_src.encrypted_db import create_encrypted_database
-                db = create_encrypted_database(db_file)
-            else:
-                from prt_src.db import create_database
-                db = create_database(db_file, encrypted=False)
+            from prt_src.db import create_database
+            db = create_database(db_file)
             
             if db.is_valid():
                 if not quiet:
@@ -137,13 +127,9 @@ def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
         # Ensure directory exists
         db_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Create database based on encryption setting
-        if config.get('db_encrypted', False):
-            from prt_src.encrypted_db import create_encrypted_database
-            db = create_encrypted_database(db_file)
-        else:
-            from prt_src.db import create_database
-            db = create_database(db_file, encrypted=False)
+        # Create database
+        from prt_src.db import create_database
+        db = create_database(db_file)
         
         # Initialize schema
         db.initialize()

@@ -4,6 +4,8 @@
 
 The current PRT database encryption strategy using SQLAlchemy + pysqlcipher3 has significant reliability and maintenance issues that require a strategic change. This document outlines the problems and the migration plan to a more sustainable solution.
 
+**🎯 FINAL DECISION (Issue #41 Complete)**: We have moved to **SQLAlchemy + Application-Level Encryption** using the `cryptography` library and OS keyrings. This provides better reliability, security, and maintainability than database-level encryption.
+
 ## Current Problems
 
 ### Issue #41: SQLAlchemy + pysqlcipher3 Compatibility Issues

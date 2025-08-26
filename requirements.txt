@@ -6,6 +6,7 @@ google-auth-httplib2
 google-auth-oauthlib
 pytest
 rich
+sqlalchemy>=2.0.0
 alembic
 transformers
 accelerate
