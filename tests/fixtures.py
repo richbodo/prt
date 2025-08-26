@@ -11,24 +11,25 @@ from pathlib import Path
 from typing import Dict, List, Any
 from datetime import datetime, UTC
 
-# Sample profile images as base64 encoded strings (small 32x32 pixel images)
-SAMPLE_IMAGES = {
-    "john_doe.png": {
-        "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-        "mime_type": "image/png",
-        "filename": "john_doe.png"
-    },
-    "jane_smith.png": {
-        "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
-        "mime_type": "image/png", 
-        "filename": "jane_smith.png"
-    },
-    "bob_wilson.jpg": {
-        "data": "/9j/4AAQSkZJRgABAQEAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A8A",
-        "mime_type": "image/jpeg",
-        "filename": "bob_wilson.jpg"
-    }
-}
+def _generate_profile_images():
+    """Generate realistic 256x256 JPEG profile images for test fixtures."""
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from utils.generate_profile_images import generate_profile_images
+        return generate_profile_images()
+    except ImportError:
+        # Fallback to simple base64 images if Pillow is not available
+        return {
+            "john_doe.jpg": {
+                "data": "/9j/4AAQSkZJRgABAQEAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A8A",
+                "mime_type": "image/jpeg",
+                "filename": "john_doe.jpg"
+            }
+        }
+
+# Generate realistic 256x256 JPEG profile images
+SAMPLE_IMAGES = _generate_profile_images()
 
 # Sample contact data
 SAMPLE_CONTACTS = [
@@ -36,13 +37,13 @@ SAMPLE_CONTACTS = [
         "name": "John Doe",
         "email": "john.doe@example.com",
         "phone": "+1-555-0101",
-        "image_key": "john_doe.png"
+        "image_key": "john_doe.jpg"
     },
     {
         "name": "Jane Smith", 
         "email": "jane.smith@email.com",
         "phone": "+1-555-0102",
-        "image_key": "jane_smith.png"
+        "image_key": "jane_smith.jpg"
     },
     {
         "name": "Bob Wilson",
@@ -54,19 +55,19 @@ SAMPLE_CONTACTS = [
         "name": "Alice Johnson",
         "email": "alice.johnson@gmail.com",
         "phone": "+1-555-0104",
-        "image_key": None
+        "image_key": "alice_johnson.jpg"
     },
     {
         "name": "Charlie Brown",
         "email": "charlie@company.org",
         "phone": "+1-555-0105", 
-        "image_key": None
+        "image_key": "charlie_brown.jpg"
     },
     {
         "name": "Diana Prince",
         "email": "diana.prince@hero.com",
         "phone": "+1-555-0106",
-        "image_key": None
+        "image_key": "diana_prince.jpg"
     }
 ]
 

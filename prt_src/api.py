@@ -349,6 +349,9 @@ class PRTAPI:
             "name": contact.name,
             "email": contact.email,
             "phone": contact.phone,
+            "profile_image": contact.profile_image,
+            "profile_image_filename": contact.profile_image_filename,
+            "profile_image_mime_type": contact.profile_image_mime_type,
             "relationship_info": self.get_relationship_info(contact.id)
         }
     
@@ -363,6 +366,9 @@ class PRTAPI:
                 "name": c.name,
                 "email": c.email,
                 "phone": c.phone,
+                "profile_image": c.profile_image,
+                "profile_image_filename": c.profile_image_filename,
+                "profile_image_mime_type": c.profile_image_mime_type,
                 "relationship_info": self.get_relationship_info(c.id)
             }
             for c in contacts

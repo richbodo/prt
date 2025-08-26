@@ -14,3 +14,4 @@ torch
 # pysqlcipher3  # Removed as part of Issue #41 - moving away from db-level encryption
 vobject
 requests
+pillow>=10.0.0

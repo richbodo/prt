@@ -2,8 +2,7 @@
 
 ## QuickStart
 
-The `init.sh` file installs SQLCipher and sets environment variables so the Python SQLCipher package will install and work.
-It also sets up a virtual environment for development. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`.
+The `init.sh` file sets up a virtual environment for development and installs required dependencies. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`.
 
 ```bash
 source ./init.sh
@@ -53,9 +52,7 @@ python -m prt_src.cli setup           # Manual setup wizard
 python -m prt_src.cli db-status       # Check database status
 python -m prt_src.cli test            # Test database connection
 
-# Database operations  
-python -m prt_src.cli encrypt-db      # Encrypt database
-python -m prt_src.cli decrypt-db      # Decrypt database
+# Database operations moved to application-level encryption (Issue #41)
 ```
 
 ### Interactive Menu
@@ -69,8 +66,6 @@ The main interface provides these options:
 - **[6] Start LLM Chat** - AI-powered contact queries with Ollama
 - **[7] Database Status** - Check database statistics
 - **[8] Database Backup** - Create database backup
-- **[9] Encrypt Database** - Enable database encryption
-- **[10] Decrypt Database** - Emergency decryption
 - **[0] Exit** - Exit the application
 
 
@@ -89,16 +84,10 @@ For advanced database configuration, encryption setup, and management tools, see
 
 ```bash
 # Set up database
-python -m prt_src.cli setup [--encrypted]
+python -m prt_src.cli setup
 
 # Check database status
 python -m prt_src.cli db-status
-
-# Encrypt existing database
-python -m prt_src.cli encrypt-db
-
-# Decrypt database (emergency)
-python -m prt_src.cli decrypt-db
 
 # Test database connection
 python -m prt_src.cli test
@@ -109,7 +98,7 @@ python -m prt_src.cli test
 PRT stores configuration in `prt_data/prt_config.json`. Key settings:
 
 - `db_path`: Path to the database file
-- `db_encrypted`: Whether the database is encrypted
+- `db_encrypted`: Always false (using application-level encryption instead)
 - `db_username`/`db_password`: Database credentials
 
 ## Where PRT stores secrets and your data
@@ -141,25 +130,24 @@ Available commands in interactive mode:
 - Manage tags and notes
 - Start LLM chat
 - Database status and backup
-- Encryption management
 
 ### Security Features
 
-- **Database Encryption**: SQLCipher encryption for security at rest
+- **Application-Level Encryption**: Coming in Issue #42 - cryptography library + OS keyrings
 - **Local Storage**: All data stored locally on your machine
 - **No Cloud Sync**: Your data never leaves your control
-- **Secure Key Management**: Automatic encryption key generation and storage
+- **Secure Key Management**: OS keyring integration for secure key storage
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### "pysqlcipher3 not found" Error or pip crashes installing pysqlcipher
+#### Virtual Environment Issues
 
-**Platform-specific solutions:**
-- **macOS**: Ensure SQLCipher is installed via Homebrew, the run "source init.sh" again.
-- **Linux**: Install `libsqlcipher-dev` package
-- **Windows**: Windows is not supported
+**If packages fail to install:**
+- Ensure you have Python 3.9+ installed
+- Run `source init.sh` to set up the virtual environment
+- **Windows**: Windows is not fully supported yet
 
 #### Database Connection Errors
 ```bash
@@ -174,18 +162,156 @@ For detailed troubleshooting and advanced database management, see [DB_MANAGEMEN
 
 ## Development
 
+### Setting Up Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/richbodo/prt.git
+cd prt
+
+# Set up virtual environment and dependencies
+source ./init.sh
+
+# Activate the environment (if not already active)
+source prt_env/bin/activate
+```
+
 ### Running Tests
 
 ```bash
 # Run all tests
-pytest
+python -m pytest tests/
 
-# Run encrypted database tests only
-pytest tests/test_encrypted_db.py
+# Run specific test modules
+python -m pytest tests/test_api.py -v
+python -m pytest tests/test_db.py -v
 
-# Run migration tests
-pytest tests/test_migrations.py
+# Run tests with coverage
+python -m pytest tests/ --tb=short -q
 ```
+
+### Working with Test Fixtures
+
+PRT includes a comprehensive test fixture system for consistent testing with realistic data.
+
+#### Creating Test Data
+
+The fixture system provides a pre-populated database with:
+- **6 sample contacts** (John Doe, Jane Smith, Bob Wilson, etc.)
+- **8 tags** (family, friend, colleague, client, etc.)
+- **6 notes** (meeting notes, birthday reminders, etc.)
+- **Realistic profile images** (256x256 JPEG images, 1.8-4.5 KB each)
+- **Relationships** connecting contacts to tags and notes
+
+#### Using Fixtures in Tests
+
+```python
+# Example test using the test_db fixture
+def test_search_functionality(test_db):
+    """Test search with populated database."""
+    db, fixtures = test_db
+    config = {"db_path": str(db.path), "db_encrypted": False}
+    api = PRTAPI(config)
+    
+    # Search will find "John Doe" in the fixture data
+    results = api.search_contacts("John")
+    assert len(results) > 0
+    assert "John Doe" in [contact["name"] for contact in results]
+```
+
+#### Creating Standalone Test Database
+
+You can create a test database for manual testing or debugging:
+
+```bash
+cd tests
+python fixtures.py
+```
+
+This creates a database at `tests/prt_data/test_fixtures.db` with all sample data loaded.
+
+#### Viewing Profile Images
+
+To extract and view the profile images from the test database:
+
+```bash
+cd utils
+python extract_profile_images.py
+# Images saved to utils/extracted_images/
+```
+
+#### Examining Test Data with SQLite
+
+Use the SQLite command line to examine test data:
+
+```bash
+# Navigate to test data directory
+cd tests/prt_data
+
+# Open the test database
+sqlite3 test_fixtures.db
+
+# Examine the data
+.tables                          # List all tables
+SELECT * FROM contacts LIMIT 5;  # View sample contacts
+SELECT * FROM tags;               # View all tags
+SELECT * FROM notes;              # View all notes
+
+# View relationships
+SELECT c.name, t.name as tag 
+FROM contacts c 
+JOIN relationships r ON c.id = r.contact_id
+JOIN relationship_tags rt ON r.id = rt.relationship_id
+JOIN tags t ON rt.tag_id = t.id;
+
+# Exit SQLite
+.quit
+```
+
+#### Available Fixtures
+
+- **`test_db`**: Full database with sample data (contacts, tags, notes, relationships)
+- **`test_db_empty`**: Empty database with tables initialized but no data
+- **`sample_config`**: Sample configuration for testing
+
+#### Adding New Fixtures
+
+To add new test data, edit `tests/fixtures.py`:
+
+```python
+# Add to SAMPLE_CONTACTS list
+SAMPLE_CONTACTS.append({
+    "name": "New Contact",
+    "email": "new@example.com",
+    "phone": "+1-555-0107",
+    "image_key": None
+})
+
+# Add to SAMPLE_RELATIONSHIPS to connect with tags/notes
+SAMPLE_RELATIONSHIPS.append({
+    "contact_name": "New Contact",
+    "tags": ["friend"],
+    "notes": ["First Meeting"]
+})
+```
+
+### Database Schema
+
+PRT uses SQLAlchemy with these main tables:
+- **contacts**: Contact information and profile images
+- **tags**: Categorical labels for contacts
+- **notes**: Text notes about contacts
+- **relationships**: Links contacts to tags and notes
+- **relationship_tags**: Many-to-many relationship table
+- **relationship_notes**: Many-to-many relationship table
+
+### Code Architecture
+
+- **`prt_src/models.py`**: SQLAlchemy models and database schema
+- **`prt_src/db.py`**: Database connection and operations
+- **`prt_src/api.py`**: Main API class for contact management
+- **`prt_src/cli.py`**: Command-line interface using Typer
+- **`tests/fixtures.py`**: Test fixture system and sample data
 
 
 
