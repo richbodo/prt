@@ -132,6 +132,9 @@ PRT stores configuration in `prt_data/prt_config.json`. Key settings:
 
 The app will create three directories to store secret stuff in (all are .gitignore'd):
 
+/prt_env
+- this is created by pyenv - not a lot of secrets, but we handle it as secret - it just stores your local environment config
+
 /prt_data
 - databases
 - config
@@ -139,9 +142,13 @@ The app will create three directories to store secret stuff in (all are .gitigno
   
 /prt_data/secrets
 - encryption keys for the db and other things that need to be encrypted
-- 
-/prt_env
-- this is created by pyenv - not a lot of secrets, but we handle it as secret - it just stores your local environment config
+
+/exports
+- any exported data from your database is stored in this directory
+
+/directories
+- directories created with the make_directory.py tool as single-page web pages
+
 
 ### Google Takeout Import Files
 
