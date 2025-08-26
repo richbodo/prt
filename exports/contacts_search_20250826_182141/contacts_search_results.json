@@ -1,0 +1,35 @@
+{
+  "export_info": {
+    "search_type": "contacts",
+    "query": "alice",
+    "timestamp": "20250826_182141",
+    "total_results": 1
+  },
+  "results": [
+    {
+      "id": 4,
+      "name": "Alice Johnson",
+      "email": "alice.johnson@gmail.com",
+      "phone": "+1-555-0104",
+      "profile_image_filename": "alice_johnson.jpg",
+      "profile_image_mime_type": "image/jpeg",
+      "relationship_info": {
+        "tags": [
+          "friend",
+          "neighbor"
+        ],
+        "notes": [
+          {
+            "title": "First Meeting",
+            "content": "Met at the coffee shop downtown. Really nice person, we talked about work and hobbies."
+          },
+          {
+            "title": "Emergency Contact",
+            "content": "Can be reached at work number during business hours. Backup emergency contact."
+          }
+        ]
+      },
+      "has_profile_image": true
+    }
+  ]
+}

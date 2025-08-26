@@ -1,0 +1,54 @@
+{
+  "export_info": {
+    "search_type": "contacts",
+    "query": "john",
+    "timestamp": "20250826_181925",
+    "total_results": 2
+  },
+  "results": [
+    {
+      "id": 4,
+      "name": "Alice Johnson",
+      "email": "alice.johnson@gmail.com",
+      "phone": "+1-555-0104",
+      "relationship_info": {
+        "tags": [
+          "friend",
+          "neighbor"
+        ],
+        "notes": [
+          {
+            "title": "First Meeting",
+            "content": "Met at the coffee shop downtown. Really nice person, we talked about work and hobbies."
+          },
+          {
+            "title": "Emergency Contact",
+            "content": "Can be reached at work number during business hours. Backup emergency contact."
+          }
+        ]
+      }
+    },
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "phone": "+1-555-0101",
+      "relationship_info": {
+        "tags": [
+          "friend",
+          "colleague"
+        ],
+        "notes": [
+          {
+            "title": "First Meeting",
+            "content": "Met at the coffee shop downtown. Really nice person, we talked about work and hobbies."
+          },
+          {
+            "title": "Personal Note",
+            "content": "Has two kids and a dog. Lives in the suburbs. Enjoys hiking on weekends."
+          }
+        ]
+      }
+    }
+  ]
+}

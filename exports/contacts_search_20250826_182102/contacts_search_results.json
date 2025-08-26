@@ -1,0 +1,14 @@
+{
+  "export_info": {
+    "search_type": "contacts",
+    "query": "alice",
+    "timestamp": "20250826_182102",
+    "total_results": 1
+  },
+  "results": [
+    {
+      "id": 4,
+      "name": "Alice Johnson",
+      "email": "alice.johnson@gmail.com",
+      "phone": "+1-555-0104",
+      "profile_image": 
