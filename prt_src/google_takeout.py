@@ -67,11 +67,10 @@ class GoogleTakeoutParser:
                 for vcf_file in vcf_files:
                     try:
                         vcf_data = zip_ref.read(vcf_file).decode('utf-8')
-                        contact_data = self._parse_vcard(vcf_data)
-                        if contact_data:
-                            contacts.append(contact_data)
+                        file_contacts = self._parse_vcard_file(vcf_data, vcf_file)
+                        contacts.extend(file_contacts)
                     except Exception as e:
-                        print(f"Error parsing VCard {vcf_file}: {e}")
+                        print(f"Error parsing VCard file {vcf_file}: {e}")
                         continue
                 
                 # Extract image files
@@ -96,7 +95,37 @@ class GoogleTakeoutParser:
             
         return contacts, images
     
-    def _parse_vcard(self, vcf_data: str) -> Optional[Dict[str, Any]]:
+    def _parse_vcard_file(self, vcf_data: str, filename: str) -> List[Dict[str, Any]]:
+        """Parse a VCard file that may contain multiple contacts."""
+        contacts = []
+        
+        try:
+            # Split on BEGIN:VCARD to handle multiple contacts
+            vcard_blocks = vcf_data.split('BEGIN:VCARD')
+            
+            for i, block in enumerate(vcard_blocks):
+                if not block.strip():
+                    continue
+                    
+                # Reconstruct the complete VCard
+                vcard_text = 'BEGIN:VCARD' + block
+                
+                try:
+                    contact_data = self._parse_single_vcard(vcard_text)
+                    if contact_data:
+                        contacts.append(contact_data)
+                except Exception as e:
+                    # Log specific contact parsing errors but continue
+                    if str(e).strip():  # Only log non-empty errors
+                        print(f"Error parsing contact {i+1} in {filename}: {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"Error parsing VCard file {filename}: {e}")
+            
+        return contacts
+    
+    def _parse_single_vcard(self, vcf_data: str) -> Optional[Dict[str, Any]]:
         """Parse a VCard string and extract contact information."""
         try:
             vcard = vobject.readOne(vcf_data)
@@ -127,27 +156,54 @@ class GoogleTakeoutParser:
                 if hasattr(name, 'family'):
                     contact['last'] = name.family or contact['last']
             
-            # Extract emails
+            # Extract emails - handle various email field formats
+            emails_found = set()  # Use set to avoid duplicates
+            
+            # Standard email fields
             if hasattr(vcard, 'email_list'):
                 for email in vcard.email_list:
                     email_value = email.value.strip()
-                    if email_value:
-                        contact['emails'].append(email_value)
+                    if email_value and '@' in email_value:
+                        emails_found.add(email_value)
             elif hasattr(vcard, 'email'):
                 email_value = vcard.email.value.strip()
-                if email_value:
-                    contact['emails'].append(email_value)
+                if email_value and '@' in email_value:
+                    emails_found.add(email_value)
+            
+            # Check for emails in item fields (common in Google contacts)
+            for attr_name in dir(vcard):
+                if attr_name.startswith('item') and hasattr(getattr(vcard, attr_name), 'value'):
+                    try:
+                        item_value = getattr(vcard, attr_name).value.strip()
+                        if '@' in item_value and '.' in item_value:
+                            emails_found.add(item_value)
+                    except:
+                        continue
+            
+            contact['emails'] = list(emails_found)
             
             # Extract phone numbers
+            phones_found = set()  # Use set to avoid duplicates
+            
             if hasattr(vcard, 'tel_list'):
                 for tel in vcard.tel_list:
                     phone_value = tel.value.strip()
                     if phone_value:
-                        contact['phones'].append(phone_value)
+                        phones_found.add(phone_value)
             elif hasattr(vcard, 'tel'):
                 phone_value = vcard.tel.value.strip()
                 if phone_value:
-                    contact['phones'].append(phone_value)
+                    phones_found.add(phone_value)
+            
+            contact['phones'] = list(phones_found)
+            
+            # Skip contacts with no useful information
+            has_name = bool(contact['first'].strip() or contact['last'].strip())
+            has_email = bool(contact['emails'])
+            has_phone = bool(contact['phones'])
+            
+            if not (has_name or has_email or has_phone):
+                return None
             
             # Extract photo if present
             if hasattr(vcard, 'photo'):
@@ -277,14 +333,114 @@ def parse_takeout_contacts(zip_path: Path) -> Tuple[List[Dict[str, Any]], Dict[s
         return [], {'error': message}
     
     # Extract contacts and images
-    contacts, images = parser.extract_contacts_and_images()
+    raw_contacts, images = parser.extract_contacts_and_images()
+    
+    # Apply naive de-duplication
+    deduplicated_contacts = deduplicate_contacts(raw_contacts)
     
     # Get summary info
     info = {
-        'contact_count': len(contacts),
+        'contact_count': len(deduplicated_contacts),
+        'raw_contact_count': len(raw_contacts),
+        'duplicates_removed': len(raw_contacts) - len(deduplicated_contacts),
         'image_count': len(images),
-        'contacts_with_images': len([c for c in contacts if c.get('profile_image')]),
+        'contacts_with_images': len([c for c in deduplicated_contacts if c.get('profile_image')]),
         'message': message
     }
     
-    return contacts, info
+    return deduplicated_contacts, info
+
+
+def deduplicate_contacts(contacts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Naive de-duplication algorithm:
+    If contacts have the same email or phone, merge them instead of creating duplicates.
+    """
+    # Tracking structures
+    email_to_contact = {}  # email -> contact_index in deduplicated list
+    phone_to_contact = {}  # phone -> contact_index in deduplicated list  
+    deduplicated = []
+    
+    for contact in contacts:
+        emails = contact.get('emails', [])
+        phones = contact.get('phones', [])
+        
+        # Check if this contact is a duplicate based on email or phone
+        existing_contact_idx = None
+        
+        # Check emails first
+        for email in emails:
+            if email and email in email_to_contact:
+                existing_contact_idx = email_to_contact[email]
+                break
+        
+        # If no email match, check phones
+        if existing_contact_idx is None:
+            for phone in phones:
+                if phone and phone in phone_to_contact:
+                    existing_contact_idx = phone_to_contact[phone]
+                    break
+        
+        if existing_contact_idx is not None:
+            # Merge with existing contact
+            existing_contact = deduplicated[existing_contact_idx]
+            merged_contact = merge_contacts(existing_contact, contact)
+            deduplicated[existing_contact_idx] = merged_contact
+            
+            # Update tracking for new emails/phones
+            for email in emails:
+                if email:
+                    email_to_contact[email] = existing_contact_idx
+            for phone in phones:
+                if phone:
+                    phone_to_contact[phone] = existing_contact_idx
+        else:
+            # New unique contact
+            new_idx = len(deduplicated)
+            deduplicated.append(contact)
+            
+            # Track this contact's emails and phones
+            for email in emails:
+                if email:
+                    email_to_contact[email] = new_idx
+            for phone in phones:
+                if phone:
+                    phone_to_contact[phone] = new_idx
+    
+    return deduplicated
+
+
+def merge_contacts(existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Merge two contacts, preserving all useful information.
+    Priority: take non-empty values from either contact.
+    """
+    merged = existing.copy()
+    
+    # Merge names - prefer non-empty values
+    if not merged.get('first', '').strip() and new.get('first', '').strip():
+        merged['first'] = new['first']
+    if not merged.get('last', '').strip() and new.get('last', '').strip():
+        merged['last'] = new['last']
+    
+    # Merge emails - combine and deduplicate
+    existing_emails = set(merged.get('emails', []))
+    new_emails = set(new.get('emails', []))
+    merged['emails'] = list(existing_emails | new_emails)
+    
+    # Merge phones - combine and deduplicate  
+    existing_phones = set(merged.get('phones', []))
+    new_phones = set(new.get('phones', []))
+    merged['phones'] = list(existing_phones | new_phones)
+    
+    # Merge profile image - prefer contact with image
+    if not merged.get('profile_image') and new.get('profile_image'):
+        merged['profile_image'] = new['profile_image']
+        merged['profile_image_filename'] = new.get('profile_image_filename')
+        merged['profile_image_mime_type'] = new.get('profile_image_mime_type')
+    
+    # Merge embedded photo URL if available
+    if not merged.get('embedded_photo') and new.get('embedded_photo'):
+        merged['embedded_photo'] = new['embedded_photo']
+    
+    return merged

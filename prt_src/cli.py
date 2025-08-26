@@ -18,6 +18,7 @@ from .api import PRTAPI
 from .config import load_config, save_config, config_path, data_dir
 from .db import create_database
 from .google_contacts import fetch_contacts
+from .google_takeout import parse_takeout_contacts, find_takeout_files
 from .llm_ollama import start_ollama_chat
 from migrations.setup_database import get_db_credentials, setup_database, initialize_database
 # Encryption imports removed as part of Issue #41
@@ -27,6 +28,87 @@ console = Console()
 
 # Required configuration fields
 REQUIRED_FIELDS = ['db_username', 'db_password', 'db_path']
+
+
+def show_empty_database_guidance():
+    """Show helpful guidance when database is empty."""
+    guidance_text = Text()
+    guidance_text.append("📭 No contacts found in your database.\n\n", style="yellow")
+    guidance_text.append("🚀 To get started with PRT:\n", style="bold blue")
+    guidance_text.append("   1. Import Google Takeout (option 3)\n", style="cyan")
+    guidance_text.append("   2. This will populate your database with contacts\n", style="cyan")
+    guidance_text.append("   3. Then you can view, search, and manage relationships\n\n", style="cyan")
+    guidance_text.append("💡 PRT works best when you have contacts to build relationships with!", style="green")
+    
+    console.print(Panel(guidance_text, title="Getting Started", border_style="yellow"))
+
+
+def handle_database_error(error, operation: str):
+    """Handle database errors with helpful messages."""
+    error_str = str(error).lower()
+    
+    if "no such table" in error_str:
+        error_text = Text()
+        error_text.append("🚨 Database Error: Tables not found\n\n", style="bold red")
+        error_text.append("It looks like your database hasn't been properly initialized.\n", style="yellow")
+        error_text.append("This can happen if:\n", style="yellow")
+        error_text.append("• You're using a new or empty database\n", style="cyan")
+        error_text.append("• The database was corrupted\n", style="cyan")
+        error_text.append("• Migration scripts haven't been run\n\n", style="cyan")
+        error_text.append("🔧 To fix this:\n", style="bold blue")
+        error_text.append("   1. Try importing Google Takeout (option 3) to initialize tables\n", style="green")
+        error_text.append("   2. Or run: python -m migrations.setup_database\n", style="green")
+        error_text.append("   3. If problems persist, restart PRT to run setup again\n", style="green")
+        
+        console.print(Panel(error_text, title="Database Setup Required", border_style="red"))
+    
+    elif "database is locked" in error_str:
+        console.print("🔒 Database is currently locked by another process.", style="red")
+        console.print("Please close any other PRT instances and try again.", style="yellow")
+    
+    elif "permission denied" in error_str or "access" in error_str:
+        console.print("🚫 Permission denied accessing database.", style="red")
+        console.print("Check file permissions on your database file.", style="yellow")
+    
+    else:
+        console.print(f"❌ Database error while {operation}:", style="red")
+        console.print(f"   {error}", style="red")
+        console.print("\n💡 If this persists, try restarting PRT or running setup again.", style="yellow")
+
+
+def check_database_health(api: PRTAPI) -> dict:
+    """Check database health and return status information."""
+    try:
+        # Try a simple query to check if tables exist and are accessible
+        contacts = api.search_contacts("")
+        contact_count = len(contacts) if contacts else 0
+        
+        # Try to get some basic stats
+        try:
+            # These might not exist if database is completely empty
+            all_contacts = api.list_all_contacts()
+            total_contacts = len(all_contacts) if all_contacts else 0
+        except:
+            total_contacts = contact_count
+        
+        return {
+            "healthy": True,
+            "contact_count": contact_count,
+            "total_contacts": total_contacts,
+            "has_data": contact_count > 0,
+            "tables_exist": True
+        }
+    except Exception as e:
+        error_str = str(e).lower()
+        return {
+            "healthy": False,
+            "error": str(e),
+            "contact_count": 0,
+            "total_contacts": 0,
+            "has_data": False,
+            "tables_exist": "no such table" not in error_str,
+            "needs_initialization": "no such table" in error_str
+        }
 
 
 def setup_debug_mode():
@@ -145,7 +227,7 @@ def show_main_menu(api: PRTAPI):
     menu_text.append("2. ", style="cyan")
     menu_text.append("Search Contacts, Tags, or Notes\n", style="white")
     menu_text.append("3. ", style="cyan")
-    menu_text.append("Import Google Contacts\n", style="white")
+    menu_text.append("Import Google Takeout\n", style="white")
     menu_text.append("4. ", style="cyan")
     menu_text.append("View Tags\n", style="white")
     menu_text.append("5. ", style="cyan")
@@ -166,7 +248,7 @@ def show_main_menu(api: PRTAPI):
 def handle_contacts_view(api: PRTAPI) -> None:
     """Handle viewing contacts."""
     try:
-        contacts = api.search_contacts("")  # Empty string to get all contacts
+        contacts = api.list_all_contacts()  # Get all contacts
         if contacts:
             table = Table(title="Contacts", show_header=True, header_style="bold magenta")
             table.add_column("ID", style="cyan", width=8)
@@ -184,13 +266,23 @@ def handle_contacts_view(api: PRTAPI) -> None:
             console.print(table)
             console.print(f"\nTotal contacts: {len(contacts)}", style="green")
         else:
-            console.print("No contacts found in database.", style="yellow")
+            show_empty_database_guidance()
     except Exception as e:
-        console.print(f"Error viewing contacts: {e}", style="red")
+        handle_database_error(e, "viewing contacts")
 
 
 def handle_contacts_search(api: PRTAPI) -> None:
     """Handle unified search for contacts, tags, or notes."""
+    # Check database health first
+    health = check_database_health(api)
+    if not health["healthy"]:
+        handle_database_error(Exception(health["error"]), "searching")
+        return
+    
+    if not health["has_data"]:
+        show_empty_database_guidance()
+        return
+    
     # Ask user what type to search
     search_type = Prompt.ask(
         "What would you like to search?", 
@@ -211,7 +303,7 @@ def handle_contacts_search(api: PRTAPI) -> None:
         elif search_type == "notes":
             handle_note_search_results(api, query)
     except Exception as e:
-        console.print(f"Error searching {search_type}: {e}", style="red")
+        handle_database_error(e, f"searching {search_type}")
 
 
 def handle_contact_search_results(api: PRTAPI, query: str) -> None:
@@ -437,18 +529,21 @@ def paginate_results(items: list, items_per_page: int = 24) -> None:
         
         # Navigation options
         nav_choices = ["q"]  # quit
-        nav_text = "[q]uit"
+        nav_options = []
         
         if current_page > 0:
             nav_choices.append("p")
-            nav_text = "[p]revious, " + nav_text
+            nav_options.append("[p]revious")
             
         if current_page < total_pages - 1:
             nav_choices.append("n")
-            nav_text = "[n]ext, " + nav_text
+            nav_options.append("[n]ext")
             
         nav_choices.append("e")  # export
-        nav_text = nav_text + ", [e]xport results"
+        nav_options.append("[e]xport results")
+        nav_options.append("[q]uit")
+        
+        nav_text = " | ".join(nav_options)
         
         choice = Prompt.ask(f"Navigation: {nav_text}", choices=nav_choices, default="q")
         
@@ -460,6 +555,70 @@ def paginate_results(items: list, items_per_page: int = 24) -> None:
             current_page -= 1
         elif choice == "e":
             return "export"  # Signal to calling function to handle export
+
+
+def offer_directory_generation(export_dir: Path) -> None:
+    """Offer to generate an interactive directory from the export."""
+    from pathlib import Path
+    import subprocess
+    import sys
+    import os
+    
+    console.print()
+    
+    # Ask user if they want to generate interactive directory
+    generate = Prompt.ask(
+        "🌐 Generate interactive directory from this export?", 
+        choices=["y", "n"], 
+        default="y"
+    )
+    
+    if generate == "y":
+        try:
+            # Create directories subdirectory in the project root
+            directories_dir = Path("directories")
+            directories_dir.mkdir(exist_ok=True)
+            
+            # Generate timestamp-based output directory name
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_dir = directories_dir / f"directory_{timestamp}"
+            
+            console.print(f"🔧 Generating interactive directory...", style="blue")
+            
+            # Run make_directory.py tool
+            tools_dir = Path(__file__).parent.parent / "tools"
+            make_directory_script = tools_dir / "make_directory.py"
+            
+            # Run the command - pass the export directory, not the JSON file
+            cmd = [
+                sys.executable, 
+                str(make_directory_script), 
+                "generate", 
+                str(export_dir), 
+                "--output", str(output_dir),
+                "--force"
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
+            
+            if result.returncode == 0:
+                # Success! Show the local file URL
+                index_file = output_dir / "index.html"
+                if index_file.exists():
+                    file_url = f"file://{index_file.absolute()}"
+                    console.print(f"✅ Interactive directory generated!", style="bold green")
+                    console.print(f"🌐 Open in browser: {file_url}", style="blue")
+                    console.print(f"📁 Directory location: {output_dir}", style="dim")
+                else:
+                    console.print(f"✅ Directory generated at: {output_dir}", style="green")
+            else:
+                console.print(f"❌ Error generating directory: {result.stderr}", style="red")
+                
+        except Exception as e:
+            console.print(f"❌ Error running make_directory tool: {e}", style="red")
+    
+    console.print()
 
 
 def export_search_results(api: PRTAPI, search_type: str, query: str, results: list) -> None:
@@ -510,6 +669,9 @@ def export_search_results(api: PRTAPI, search_type: str, query: str, results: li
     create_export_readme(export_dir, search_type, query, len(results), images_exported)
     
     console.print(f"✅ Export complete! Check: {export_dir}", style="bold green")
+    
+    # Offer to generate interactive directory
+    offer_directory_generation(export_dir)
 
 
 def clean_results_for_json(results: list) -> list:
@@ -664,8 +826,108 @@ def show_full_note(title: str, content: str) -> None:
     Prompt.ask("\nPress Enter to return to search results")
 
 
+def handle_import_google_takeout(api: PRTAPI, config: dict) -> None:
+    """Handle importing contacts from Google Takeout zip file."""
+    from rich.prompt import Prompt
+    from pathlib import Path
+    
+    console.print("📦 Google Takeout Import", style="bold blue")
+    console.print()
+    console.print("This will import contacts from a Google Takeout zip file.", style="white")
+    console.print("To get your Google Takeout:", style="yellow")
+    console.print("  1. Go to https://takeout.google.com", style="cyan")
+    console.print("  2. Select 'Contacts' only", style="cyan")
+    console.print("  3. Choose 'Export once' and download the zip file", style="cyan")
+    console.print()
+    
+    # First, try to find existing takeout files in common locations
+    search_paths = [
+        Path.home() / "Downloads",  # Most common location
+        Path.cwd(),  # Current directory
+        data_dir(),  # PRT data directory
+    ]
+    
+    existing_files = []
+    for search_path in search_paths:
+        if search_path.exists():
+            existing_files.extend(find_takeout_files(search_path))
+    
+    if existing_files:
+        console.print(f"🔍 Found {len(existing_files)} potential takeout file(s):", style="green")
+        for i, file_path in enumerate(existing_files, 1):
+            console.print(f"  {i}. {file_path.name}", style="cyan")
+        console.print(f"  {len(existing_files) + 1}. Browse for a different file", style="cyan")
+        console.print()
+        
+        choice = Prompt.ask(
+            "Select a file to import",
+            choices=[str(i) for i in range(1, len(existing_files) + 2)],
+            default="1"
+        )
+        
+        if int(choice) <= len(existing_files):
+            takeout_path = existing_files[int(choice) - 1]
+        else:
+            takeout_path = Path(Prompt.ask("Enter the full path to your Google Takeout zip file"))
+    else:
+        takeout_path = Path(Prompt.ask("Enter the full path to your Google Takeout zip file"))
+    
+    if not takeout_path.exists():
+        console.print(f"❌ File not found: {takeout_path}", style="red")
+        return
+    
+    if not takeout_path.suffix.lower() == '.zip':
+        console.print("❌ File must be a zip file", style="red")
+        return
+    
+    console.print(f"📂 Processing: {takeout_path.name}", style="blue")
+    
+    try:
+        # Parse the takeout file
+        contacts, info = parse_takeout_contacts(takeout_path)
+        
+        if 'error' in info:
+            console.print(f"❌ Error parsing takeout file: {info['error']}", style="red")
+            return
+        
+        if not contacts:
+            console.print("⚠️  No contacts found in the takeout file", style="yellow")
+            return
+        
+        # Show preview with de-duplication info
+        console.print(f"📊 Found {info['contact_count']} contacts", style="green")
+        if 'raw_contact_count' in info and info['raw_contact_count'] != info['contact_count']:
+            console.print(f"🔧 Deduplicated from {info['raw_contact_count']} raw contacts", style="blue") 
+            console.print(f"🗑️  Removed {info['duplicates_removed']} duplicates", style="blue")
+        console.print(f"🖼️  {info['contacts_with_images']} contacts have profile images", style="green")
+        console.print()
+        
+        if not Confirm.ask(f"Import {len(contacts)} contacts into your database?"):
+            console.print("Import cancelled", style="yellow")
+            return
+        
+        # Import contacts
+        console.print("💾 Importing contacts...", style="blue")
+        success = api.insert_contacts(contacts)
+        
+        if success:
+            console.print(f"✅ Successfully imported {len(contacts)} contacts!", style="bold green")
+            console.print(f"🖼️  {info['contacts_with_images']} contacts include profile images", style="green")
+            console.print()
+            console.print("🎉 You can now:", style="bold blue")
+            console.print("   • View your contacts (option 1)", style="cyan")
+            console.print("   • Search contacts and tags (option 2)", style="cyan")
+            console.print("   • Export interactive directories", style="cyan")
+        else:
+            console.print("❌ Failed to import contacts to database", style="red")
+            
+    except Exception as e:
+        console.print(f"❌ Error importing takeout file: {e}", style="red")
+        console.print("Make sure the file is a valid Google Takeout zip file", style="yellow")
+
+
 def handle_import_google_contacts(api: PRTAPI, config: dict) -> None:
-    """Handle importing contacts from Google."""
+    """Handle importing contacts from Google API (kept for compatibility but not used in CLI)."""
     if not Confirm.ask("This will fetch contacts from Google. Continue?"):
         return
     
@@ -704,9 +966,9 @@ def handle_view_tags(api: PRTAPI) -> None:
             console.print(table)
             console.print(f"\nTotal tags: {len(tags)}", style="green")
         else:
-            console.print("No tags found in database.", style="yellow")
+            show_empty_database_guidance()
     except Exception as e:
-        console.print(f"Error viewing tags: {e}", style="red")
+        handle_database_error(e, "viewing tags")
 
 
 def handle_view_notes(api: PRTAPI) -> None:
@@ -731,9 +993,9 @@ def handle_view_notes(api: PRTAPI) -> None:
             console.print(table)
             console.print(f"\nTotal notes: {len(notes)}", style="green")
         else:
-            console.print("No notes found in database.", style="yellow")
+            show_empty_database_guidance()
     except Exception as e:
-        console.print(f"Error viewing notes: {e}", style="red")
+        handle_database_error(e, "viewing notes")
 
 
 def handle_database_status(api: PRTAPI) -> None:
@@ -819,6 +1081,29 @@ def run_interactive_cli(debug: bool = False):
         console.print(f"Failed to initialize API: {e}", style="bold red")
         raise typer.Exit(1)
     
+    # Check database health on startup (only in non-debug mode)
+    if not debug:
+        health = check_database_health(api)
+        if not health["healthy"] and health.get("needs_initialization"):
+            startup_text = Text()
+            startup_text.append("🏗️  Database Initialization Required\n\n", style="bold yellow")
+            startup_text.append("Your database needs to be set up with tables.\n", style="yellow")
+            startup_text.append("This is normal for first-time use!\n\n", style="yellow")
+            startup_text.append("📋 Recommended next steps:\n", style="bold blue")
+            startup_text.append("   • Use option 3 to import Google Takeout\n", style="green")
+            startup_text.append("   • This will automatically create the required tables\n", style="green")
+            startup_text.append("   • Then you can explore all PRT features!\n", style="green")
+            
+            console.print(Panel(startup_text, title="Welcome to PRT", border_style="blue"))
+            console.print()  # Add some spacing
+        elif health["healthy"] and not health["has_data"]:
+            startup_text = Text()
+            startup_text.append("📭 Database is set up but empty\n\n", style="yellow")
+            startup_text.append("Ready to import your contacts! Use option 3 to import Google Takeout.", style="green")
+            
+            console.print(Panel(startup_text, title="Ready to Import", border_style="green"))
+            console.print()
+    
     # Main interactive loop
     while True:
         try:
@@ -833,7 +1118,7 @@ def run_interactive_cli(debug: bool = False):
             elif choice == "2":
                 handle_contacts_search(api)
             elif choice == "3":
-                handle_import_google_contacts(api, config)
+                handle_import_google_takeout(api, config)
             elif choice == "4":
                 handle_view_tags(api)
             elif choice == "5":

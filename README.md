@@ -60,7 +60,7 @@ python -m prt_src.cli test            # Test database connection
 The main interface provides these options:
 - **[1] View Contacts** - Browse and view contact information
 - **[2] Search Contacts** - Search contacts by various criteria  
-- **[3] Import Google Contacts** - Import contacts from Google
+- **[3] Import Google Takeout** - Import contacts from Google Takeout zip file
 - **[4] View Tags** - Browse and manage contact tags
 - **[5] View Notes** - Browse and manage contact notes
 - **[6] Start LLM Chat** - AI-powered contact queries with Ollama
@@ -68,6 +68,33 @@ The main interface provides these options:
 - **[8] Database Backup** - Create database backup
 - **[0] Exit** - Exit the application
 
+## Standalone Tools
+
+PRT includes standalone tools in the `tools/` directory that work with PRT exports:
+
+### make_directory.py - Contact Directory Generator
+
+Generate interactive single-page websites from PRT JSON exports showing contact relationships as navigable 2D graphs.
+
+```bash
+# Generate from any PRT export
+python tools/make_directory.py generate exports/contacts_search_20250826_191055/
+
+# Custom output directory
+python tools/make_directory.py generate exports/tags_search_20250826_191055/ --output ./my_directory
+
+# Get help
+python tools/make_directory.py --help
+```
+
+**Features:**
+- ✅ **Phase 1**: Basic HTML generation with contact cards
+- ✅ **Phase 2**: D3.js interactive graph visualization with mobile support
+- 🔄 **Phase 3**: Contact detail modals and export integration (coming soon)
+
+**Output**: Self-contained HTML websites in `directories/` folder that work offline.
+
+See `tools/README.md` for complete tool documentation and development guidelines.
 
 ## Documentation
 
@@ -116,6 +143,20 @@ The app will create three directories to store secret stuff in (all are .gitigno
 /prt_env
 - this is created by pyenv - not a lot of secrets, but we handle it as secret - it just stores your local environment config
 
+### Google Takeout Import Files
+
+PRT automatically searches for Google Takeout files in these locations:
+- **~/Downloads** - Most common location where takeout files are downloaded
+- **Current directory** - Where you run PRT from
+- **prt_data/** - PRT's data directory
+
+To get your Google Takeout:
+1. Go to [https://takeout.google.com](https://takeout.google.com)
+2. Select **"Contacts"** only (deselect everything else)
+3. Choose **"Export once"** and download the zip file
+4. The file will typically be named like `takeout-YYYYMMDD-HHMMSS.zip`
+5. Use PRT's **Import Google Takeout** option (option 3) to import
+
 ## Usage
 
 ### Interactive Mode
@@ -126,7 +167,7 @@ python -m prt_src.cli run
 
 Available commands in interactive mode:
 - View and search contacts
-- Import contacts from Google
+- Import contacts from Google Takeout
 - Manage tags and notes
 - Start LLM chat
 - Database status and backup
