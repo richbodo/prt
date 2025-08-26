@@ -485,7 +485,12 @@ def export_search_results(api: PRTAPI, search_type: str, query: str, results: li
             "search_type": search_type,
             "query": query,
             "timestamp": timestamp,
-            "total_results": len(results)
+            "total_results": len(results),
+            "search_request": {
+                "type": search_type,
+                "term": query,
+                "executed_at": timestamp
+            }
         },
         "results": clean_results
     }

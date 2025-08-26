@@ -266,6 +266,13 @@ def _validate_export_json_structure(export_data: dict, search_type: str, query: 
     assert export_info["total_results"] == expected_count, f"Total results should be {expected_count}"
     assert "timestamp" in export_info, "Export info should have timestamp"
     
+    # Validate search_request field
+    assert "search_request" in export_info, "Export info should have search_request"
+    search_request = export_info["search_request"]
+    assert search_request["type"] == search_type, f"Search request type should be '{search_type}'"
+    assert search_request["term"] == query, f"Search request term should be '{query}'"
+    assert "executed_at" in search_request, "Search request should have executed_at timestamp"
+    
     # Validate results structure
     results = export_data["results"]
     assert isinstance(results, list), "Results should be a list"
