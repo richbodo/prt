@@ -24,11 +24,6 @@ python tools/make_directory.py --help
 python tools/make_directory.py generate --help
 ```
 
-**Features**:
-- ✅ **Phase 1**: Basic HTML generation with contact cards
-- ✅ **Phase 2**: D3.js interactive graph visualization with mobile support
-- 🔄 **Phase 3 (Future)**: Contact detail modals and export integration
-
 **Input**: PRT JSON export directories (from search exports)
 **Output**: Self-contained HTML websites in `directories/` folder
 
