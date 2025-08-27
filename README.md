@@ -57,16 +57,16 @@ python -m prt_src.cli test            # Test database connection
 
 ### Interactive Menu
 
-The main interface provides these options:
-- **[1] View Contacts** - Browse and view contact information
-- **[2] Search Contacts** - Search contacts by various criteria  
-- **[3] Import Google Takeout** - Import contacts from Google Takeout zip file
-- **[4] View Tags** - Browse and manage contact tags
-- **[5] View Notes** - Browse and manage contact notes
-- **[6] Start LLM Chat** - AI-powered contact queries with Ollama
-- **[7] Database Status** - Check database statistics
-- **[8] Database Backup** - Create database backup
-- **[0] Exit** - Exit the application
+The main menu:
+
+- ** Start Chat** - AI-powered chat mode that does anything the cli and tools can do
+- ** View Contacts** - Browse contact information
+- ** Search ** - Search contacts by contact, tag, or note content - export any results list to a directory
+- ** Manage Tags** - Browse and manage contact tags
+- ** Manage Notes** - Browse and manage contact notes
+- ** Manage Database** - Check database stats and backup
+- ** Import Google Takeout** - Import contacts from Google Takeout zip file
+- ** Exit** - Exit the application
 
 ## Standalone Tools
 
@@ -86,11 +86,6 @@ python tools/make_directory.py generate exports/tags_search_20250826_191055/ --o
 # Get help
 python tools/make_directory.py --help
 ```
-
-**Features:**
-- ✅ **Phase 1**: Basic HTML generation with contact cards
-- ✅ **Phase 2**: D3.js interactive graph visualization with mobile support
-- 🔄 **Phase 3**: Contact detail modals and export integration (coming soon)
 
 **Output**: Self-contained HTML websites in `directories/` folder that work offline.
 
