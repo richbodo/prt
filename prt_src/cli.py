@@ -218,31 +218,23 @@ def run_setup_wizard():
 
 
 def show_main_menu(api: PRTAPI):
-    """Display the main operations menu."""
-    menu_text = Text()
-    menu_text.append("Personal Relationship Toolkit (PRT)\n", style="bold blue")
-    menu_text.append("=" * 50 + "\n", style="blue")
-    menu_text.append("1. ", style="cyan")
-    menu_text.append("View Contacts\n", style="white")
-    menu_text.append("2. ", style="cyan")
-    menu_text.append("Search Contacts, Tags, or Notes\n", style="white")
-    menu_text.append("3. ", style="cyan")
-    menu_text.append("Import Google Takeout\n", style="white")
-    menu_text.append("4. ", style="cyan")
-    menu_text.append("View Tags\n", style="white")
-    menu_text.append("5. ", style="cyan")
-    menu_text.append("View Notes\n", style="white")
-    menu_text.append("6. ", style="cyan")
-    menu_text.append("Start LLM Chat\n", style="white")
-    menu_text.append("7. ", style="cyan")
-    menu_text.append("Database Status\n", style="white")
-    menu_text.append("8. ", style="cyan")
-    menu_text.append("Database Backup\n", style="white")
-    menu_text.append("0. ", style="red")
-    menu_text.append("Exit\n", style="red")
-    menu_text.append("=" * 50, style="blue")
+    """Display the improved main operations menu with safe, visible colors."""
+    # Use Rich's table grid for consistent formatting and safe colors
+    table = Table.grid(padding=(0, 2))
+    table.add_column(style="bright_blue bold", width=4)  # High contrast for shortcuts
+    table.add_column(style="default")  # Default terminal color for descriptions
     
-    console.print(Panel(menu_text, title="Main Menu", border_style="blue"))
+    # Menu items with safe, high-contrast colors
+    table.add_row("c.", "[bright_green bold]Start Chat[/bright_green bold] - AI-powered chat mode that does anything the cli and tools can do and more")
+    table.add_row("v.", "[bright_cyan bold]View Contacts[/bright_cyan bold] - Browse contact information")
+    table.add_row("s.", "[bright_magenta bold]Search[/bright_magenta bold] - Search contacts by contact, tag, or note content - export any results list to a directory")
+    table.add_row("t.", "[bright_yellow bold]Manage Tags[/bright_yellow bold] - Browse and manage contact tags")
+    table.add_row("n.", "[blue bold]Manage Notes[/blue bold] - Browse and manage contact notes")
+    table.add_row("d.", "[magenta bold]Manage Database[/magenta bold] - Check database stats and backup")
+    table.add_row("i.", "[green bold]Import Google Takeout[/green bold] - Import contacts from Google Takeout zip file")
+    table.add_row("q.", "[bright_red bold]Exit[/bright_red bold] - Exit the application")
+    
+    console.print(Panel(table, title="[bright_blue bold]Personal Relationship Toolkit (PRT)[/bright_blue bold]", border_style="bright_blue"))
 
 
 def handle_contacts_view(api: PRTAPI) -> None:
@@ -270,40 +262,6 @@ def handle_contacts_view(api: PRTAPI) -> None:
     except Exception as e:
         handle_database_error(e, "viewing contacts")
 
-
-def handle_contacts_search(api: PRTAPI) -> None:
-    """Handle unified search for contacts, tags, or notes."""
-    # Check database health first
-    health = check_database_health(api)
-    if not health["healthy"]:
-        handle_database_error(Exception(health["error"]), "searching")
-        return
-    
-    if not health["has_data"]:
-        show_empty_database_guidance()
-        return
-    
-    # Ask user what type to search
-    search_type = Prompt.ask(
-        "What would you like to search?", 
-        choices=["contacts", "tags", "notes"],
-        default="contacts"
-    )
-    
-    query = Prompt.ask(f"Enter {search_type[:-1]} search term")
-    if not query.strip():
-        console.print("Search term cannot be empty.", style="yellow")
-        return
-    
-    try:
-        if search_type == "contacts":
-            handle_contact_search_results(api, query)
-        elif search_type == "tags":
-            handle_tag_search_results(api, query)
-        elif search_type == "notes":
-            handle_note_search_results(api, query)
-    except Exception as e:
-        handle_database_error(e, f"searching {search_type}")
 
 
 def handle_contact_search_results(api: PRTAPI, query: str) -> None:
@@ -527,25 +485,34 @@ def paginate_results(items: list, items_per_page: int = 24) -> None:
         # Show pagination info
         console.print(f"\nPage {current_page + 1} of {total_pages} | Showing {start_idx + 1}-{end_idx} of {len(items)} results", style="dim")
         
-        # Navigation options
-        nav_choices = ["q"]  # quit
-        nav_options = []
+        # Build navigation options dynamically
+        nav_choices = []
+        nav_descriptions = []
         
         if current_page > 0:
             nav_choices.append("p")
-            nav_options.append("[p]revious")
+            nav_descriptions.append("(p)revious")
             
         if current_page < total_pages - 1:
             nav_choices.append("n")
-            nav_options.append("[n]ext")
+            nav_descriptions.append("(n)ext")
             
         nav_choices.append("e")  # export
-        nav_options.append("[e]xport results")
-        nav_options.append("[q]uit")
+        nav_descriptions.append("(e)xport")
         
-        nav_text = " | ".join(nav_options)
+        nav_choices.append("q")  # quit  
+        nav_descriptions.append("(q)uit")
         
-        choice = Prompt.ask(f"Navigation: {nav_text}", choices=nav_choices, default="q")
+        # Create a compact, terminal-friendly prompt
+        nav_text = " | ".join(nav_descriptions)
+        prompt_text = f"Navigation: {nav_text}"
+        
+        # Use a shorter prompt if it's too long
+        if len(prompt_text) > 60:
+            nav_short = "/".join([f"{choice}" for choice in nav_choices])
+            prompt_text = f"Options [{nav_short}]"
+        
+        choice = Prompt.ask(prompt_text, choices=nav_choices, default="q")
         
         if choice == "q":
             break
@@ -1050,6 +1017,373 @@ def handle_database_backup(api: PRTAPI) -> None:
         console.print(f"Failed to create backup: {e}", style="red")
 
 
+def handle_search_menu(api: PRTAPI) -> None:
+    """Handle the search sub-menu."""
+    # Check database health first
+    health = check_database_health(api)
+    if not health["healthy"]:
+        handle_database_error(Exception(health["error"]), "searching")
+        return
+    
+    if not health["has_data"]:
+        show_empty_database_guidance()
+        return
+    
+    while True:
+        # Create search menu with safe colors
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="bright_blue bold", width=4)
+        table.add_column(style="default")
+        
+        table.add_row("1.", "[bright_cyan bold]Search Contacts[/bright_cyan bold] - Find contacts by name")
+        table.add_row("2.", "[bright_yellow bold]Search Tags[/bright_yellow bold] - Find tags and associated contacts")
+        table.add_row("3.", "[bright_magenta bold]Search Notes[/bright_magenta bold] - Find notes and associated contacts")
+        table.add_row("b.", "[bright_green bold]Back to Main Menu[/bright_green bold]")
+        
+        console.print("\n")
+        console.print(Panel(table, title="[bright_blue bold]Search Menu[/bright_blue bold]", border_style="bright_blue"))
+        
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "b"], default="1")
+        
+        if choice == "b":
+            break
+        elif choice == "1":
+            query = Prompt.ask("Enter contact search term")
+            if query.strip():
+                handle_contact_search_results(api, query)
+        elif choice == "2":
+            query = Prompt.ask("Enter tag search term")
+            if query.strip():
+                handle_tag_search_results(api, query)
+        elif choice == "3":
+            query = Prompt.ask("Enter note search term")
+            if query.strip():
+                handle_note_search_results(api, query)
+        
+        # No continuation prompt - search menu handles its own flow
+
+
+def handle_tags_menu(api: PRTAPI) -> None:
+    """Handle the tags management sub-menu."""
+    while True:
+        # Create tags menu with safe colors
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="bright_blue bold", width=4)
+        table.add_column(style="default")
+        
+        table.add_row("1.", "[bright_cyan bold]View All Tags[/bright_cyan bold] - Display all tags with contact counts")
+        table.add_row("2.", "[bright_green bold]Create New Tag[/bright_green bold] - Add a new tag to the system")
+        table.add_row("3.", "[bright_yellow bold]Search Tags[/bright_yellow bold] - Find specific tags")
+        table.add_row("4.", "[bright_red bold]Delete Tag[/bright_red bold] - Remove a tag from the system")
+        table.add_row("b.", "[bright_magenta bold]Back to Main Menu[/bright_magenta bold]")
+        
+        console.print("\n")
+        console.print(Panel(table, title="[bright_blue bold]Tag Management[/bright_blue bold]", border_style="bright_blue"))
+        
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "b"], default="1")
+        
+        if choice == "b":
+            break
+        elif choice == "1":
+            handle_view_tags(api)
+        elif choice == "2":
+            handle_create_tag(api)
+        elif choice == "3":
+            query = Prompt.ask("Enter tag search term")
+            if query.strip():
+                handle_tag_search_results(api, query)
+        elif choice == "4":
+            handle_delete_tag(api)
+        
+        # No continuation prompt - tags menu handles its own flow
+
+
+def handle_notes_menu(api: PRTAPI) -> None:
+    """Handle the notes management sub-menu."""
+    while True:
+        # Create notes menu with safe colors
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="bright_blue bold", width=4)
+        table.add_column(style="default")
+        
+        table.add_row("1.", "[bright_cyan bold]View All Notes[/bright_cyan bold] - Display all notes with previews")
+        table.add_row("2.", "[bright_green bold]Create New Note[/bright_green bold] - Add a new note to the system")
+        table.add_row("3.", "[bright_yellow bold]Search Notes[/bright_yellow bold] - Find specific notes")
+        table.add_row("4.", "[blue bold]Edit Note[/blue bold] - Modify an existing note")
+        table.add_row("5.", "[bright_red bold]Delete Note[/bright_red bold] - Remove a note from the system")
+        table.add_row("b.", "[bright_magenta bold]Back to Main Menu[/bright_magenta bold]")
+        
+        console.print("\n")
+        console.print(Panel(table, title="[bright_blue bold]Note Management[/bright_blue bold]", border_style="bright_blue"))
+        
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "5", "b"], default="1")
+        
+        if choice == "b":
+            break
+        elif choice == "1":
+            handle_view_notes(api)
+        elif choice == "2":
+            handle_create_note(api)
+        elif choice == "3":
+            query = Prompt.ask("Enter note search term")
+            if query.strip():
+                handle_note_search_results(api, query)
+        elif choice == "4":
+            handle_edit_note(api)
+        elif choice == "5":
+            handle_delete_note(api)
+        
+        # No continuation prompt - notes menu handles its own flow
+
+
+def handle_database_menu(api: PRTAPI) -> None:
+    """Handle the database management sub-menu."""
+    while True:
+        # Create database menu with safe colors
+        table = Table.grid(padding=(0, 2))
+        table.add_column(style="bright_blue bold", width=4)
+        table.add_column(style="default")
+        
+        table.add_row("1.", "[bright_cyan bold]Database Status[/bright_cyan bold] - Check database health and info")
+        table.add_row("2.", "[bright_green bold]Create Backup[/bright_green bold] - Create timestamped backup")
+        table.add_row("3.", "[bright_yellow bold]Test Connection[/bright_yellow bold] - Validate database connection")
+        table.add_row("4.", "[blue bold]View Statistics[/blue bold] - Detailed database statistics")
+        table.add_row("b.", "[bright_magenta bold]Back to Main Menu[/bright_magenta bold]")
+        
+        console.print("\n")
+        console.print(Panel(table, title="[bright_blue bold]Database Management[/bright_blue bold]", border_style="bright_blue"))
+        
+        choice = Prompt.ask("Select option", choices=["1", "2", "3", "4", "b"], default="1")
+        
+        if choice == "b":
+            break
+        elif choice == "1":
+            handle_database_status(api)
+        elif choice == "2":
+            handle_database_backup(api)
+        elif choice == "3":
+            handle_database_test(api)
+        elif choice == "4":
+            handle_database_stats(api)
+        
+        # No continuation prompt - database menu handles its own flow
+
+
+def handle_create_tag(api: PRTAPI) -> None:
+    """Handle creating a new tag."""
+    tag_name = Prompt.ask("Enter new tag name").strip()
+    if not tag_name:
+        console.print("Tag name cannot be empty.", style="red")
+        return
+    
+    try:
+        result = api.create_tag(tag_name)
+        if result:
+            console.print(f"✓ Created tag: '{tag_name}'", style="green")
+        else:
+            console.print(f"Tag '{tag_name}' already exists.", style="yellow")
+    except Exception as e:
+        console.print(f"Failed to create tag: {e}", style="red")
+
+
+def handle_delete_tag(api: PRTAPI) -> None:
+    """Handle deleting a tag."""
+    # First show available tags
+    tags = api.list_all_tags()
+    if not tags:
+        console.print("No tags available to delete.", style="yellow")
+        return
+    
+    console.print("\n[bright_blue bold]Available Tags:[/bright_blue bold]")
+    for tag in tags:
+        console.print(f"  • {tag['name']} ({tag['contact_count']} contacts)")
+    
+    tag_name = Prompt.ask("\nEnter tag name to delete").strip()
+    if not tag_name:
+        console.print("Tag name cannot be empty.", style="red")
+        return
+    
+    # Confirm deletion
+    if not Confirm.ask(f"Are you sure you want to delete tag '{tag_name}'? This will remove it from all contacts."):
+        console.print("Deletion cancelled.", style="yellow")
+        return
+    
+    try:
+        if api.delete_tag(tag_name):
+            console.print(f"✓ Deleted tag: '{tag_name}'", style="green")
+        else:
+            console.print(f"Tag '{tag_name}' not found.", style="yellow")
+    except Exception as e:
+        console.print(f"Failed to delete tag: {e}", style="red")
+
+
+def handle_create_note(api: PRTAPI) -> None:
+    """Handle creating a new note."""
+    title = Prompt.ask("Enter note title").strip()
+    if not title:
+        console.print("Note title cannot be empty.", style="red")
+        return
+    
+    content = Prompt.ask("Enter note content").strip()
+    if not content:
+        console.print("Note content cannot be empty.", style="red")
+        return
+    
+    try:
+        result = api.create_note(title, content)
+        if result:
+            console.print(f"✓ Created note: '{title}'", style="green")
+        else:
+            console.print(f"Note '{title}' already exists.", style="yellow")
+    except Exception as e:
+        console.print(f"Failed to create note: {e}", style="red")
+
+
+def handle_edit_note(api: PRTAPI) -> None:
+    """Handle editing an existing note."""
+    # First show available notes
+    notes = api.list_all_notes()
+    if not notes:
+        console.print("No notes available to edit.", style="yellow")
+        return
+    
+    console.print("\n[bright_blue bold]Available Notes:[/bright_blue bold]")
+    for note in notes:
+        preview = note['content'][:50] + "..." if len(note['content']) > 50 else note['content']
+        console.print(f"  • {note['title']}: {preview}")
+    
+    title = Prompt.ask("\nEnter note title to edit").strip()
+    if not title:
+        console.print("Note title cannot be empty.", style="red")
+        return
+    
+    # Find the existing note
+    existing_note = next((n for n in notes if n['title'] == title), None)
+    if not existing_note:
+        console.print(f"Note '{title}' not found.", style="yellow")
+        return
+    
+    console.print(f"\n[bright_blue bold]Current content:[/bright_blue bold]")
+    console.print(existing_note['content'])
+    console.print()
+    
+    new_content = Prompt.ask("Enter new content (or press Enter to keep current)", default=existing_note['content']).strip()
+    
+    if new_content == existing_note['content']:
+        console.print("No changes made.", style="yellow")
+        return
+    
+    try:
+        if api.update_note(title, new_content):
+            console.print(f"✓ Updated note: '{title}'", style="green")
+        else:
+            console.print(f"Failed to update note: '{title}'", style="red")
+    except Exception as e:
+        console.print(f"Failed to update note: {e}", style="red")
+
+
+def handle_delete_note(api: PRTAPI) -> None:
+    """Handle deleting a note."""
+    # First show available notes
+    notes = api.list_all_notes()
+    if not notes:
+        console.print("No notes available to delete.", style="yellow")
+        return
+    
+    console.print("\n[bright_blue bold]Available Notes:[/bright_blue bold]")
+    for note in notes:
+        console.print(f"  • {note['title']} ({note['contact_count']} contacts)")
+    
+    title = Prompt.ask("\nEnter note title to delete").strip()
+    if not title:
+        console.print("Note title cannot be empty.", style="red")
+        return
+    
+    # Confirm deletion
+    if not Confirm.ask(f"Are you sure you want to delete note '{title}'? This will remove it from all contacts."):
+        console.print("Deletion cancelled.", style="yellow")
+        return
+    
+    try:
+        if api.delete_note(title):
+            console.print(f"✓ Deleted note: '{title}'", style="green")
+        else:
+            console.print(f"Note '{title}' not found.", style="yellow")
+    except Exception as e:
+        console.print(f"Failed to delete note: {e}", style="red")
+
+
+def handle_database_test(api: PRTAPI) -> None:
+    """Handle database connection testing."""
+    console.print("Testing database connection...", style="blue")
+    
+    try:
+        if api.test_database_connection():
+            console.print("✓ Database connection successful", style="green")
+            
+            # Show basic stats
+            stats = api.get_database_stats()
+            console.print(f"  Contacts: {stats['contacts']}", style="green")
+            console.print(f"  Relationships: {stats['relationships']}", style="green")
+        else:
+            console.print("✗ Database connection failed", style="red")
+    except Exception as e:
+        console.print(f"✗ Database test failed: {e}", style="red")
+
+
+def handle_database_stats(api: PRTAPI) -> None:
+    """Handle detailed database statistics."""
+    try:
+        config = load_config()
+        db_path = Path(config.get('db_path', 'prt_data/prt.db'))
+        
+        console.print("\n[bright_blue bold]Database Statistics[/bright_blue bold]")
+        console.print(f"Database path: {db_path}")
+        
+        if db_path.exists():
+            # File size
+            file_size = db_path.stat().st_size
+            size_mb = file_size / (1024 * 1024)
+            console.print(f"File size: {size_mb:.2f} MB ({file_size:,} bytes)")
+            
+            # Basic stats
+            stats = api.get_database_stats()
+            console.print(f"Contacts: {stats['contacts']}")
+            console.print(f"Relationships: {stats['relationships']}")
+            
+            # Additional stats from API
+            all_tags = api.list_all_tags()
+            all_notes = api.list_all_notes()
+            console.print(f"Tags: {len(all_tags)}")
+            console.print(f"Notes: {len(all_notes)}")
+            
+            # Database health
+            if api.validate_database():
+                console.print("Database integrity: ✓ OK", style="green")
+            else:
+                console.print("Database integrity: ✗ Issues detected", style="red")
+        else:
+            console.print("Database file not found.", style="red")
+            
+    except Exception as e:
+        console.print(f"Failed to get database statistics: {e}", style="red")
+
+
+def smart_continue_prompt(operation_type: str):
+    """Smart continuation prompt - only when data would scroll off screen."""
+    # Only prompt for operations that display lots of data that user needs time to review
+    prompt_when_data_heavy = [
+        "v",         # View contacts - displays table that might be long
+        "i"          # Import - shows import results that user should review
+    ]
+    
+    # Everything else: menus, quick operations, errors - no prompting needed
+    # User can navigate at their own pace
+    if operation_type in prompt_when_data_heavy:
+        Prompt.ask("\nPress Enter to continue", default="")
+    # Default: no prompt - let user flow naturally through menus
+
+
 # Encryption handler functions removed as part of Issue #41
 
 
@@ -1104,46 +1438,46 @@ def run_interactive_cli(debug: bool = False):
             console.print(Panel(startup_text, title="Ready to Import", border_style="green"))
             console.print()
     
-    # Main interactive loop
+    # Main interactive loop with new menu structure
     while True:
         try:
             show_main_menu(api)
-            choice = Prompt.ask("Select an option", choices=["0", "1", "2", "3", "4", "5", "6", "7", "8"])
+            choice = Prompt.ask("Select an option", choices=["c", "v", "s", "t", "n", "d", "i", "q"], default="c")
             
-            if choice == "0":
+            if choice == "q":
                 console.print("Goodbye!", style="green")
                 break
-            elif choice == "1":
-                handle_contacts_view(api)
-            elif choice == "2":
-                handle_contacts_search(api)
-            elif choice == "3":
-                handle_import_google_takeout(api, config)
-            elif choice == "4":
-                handle_view_tags(api)
-            elif choice == "5":
-                handle_view_notes(api)
-            elif choice == "6":
+            elif choice == "c":
                 try:
                     start_ollama_chat(api)
+                    # Chat mode handles its own flow - no continue prompt needed
+                    continue
                 except Exception as e:
                     console.print(f"Error starting chat mode: {e}", style="red")
                     console.print("Make sure Ollama is running and gpt-oss:20b model is available.", style="yellow")
-            elif choice == "7":
-                handle_database_status(api)
-            elif choice == "8":
-                handle_database_backup(api)
-            # Encryption menu options removed as part of Issue #41
+            elif choice == "v":
+                handle_contacts_view(api)
+            elif choice == "s":
+                handle_search_menu(api)
+            elif choice == "t":
+                handle_tags_menu(api)
+            elif choice == "n":
+                handle_notes_menu(api)
+            elif choice == "d":
+                handle_database_menu(api)
+            elif choice == "i":
+                handle_import_google_takeout(api, config)
             
-            if choice != "0":
-                Prompt.ask("\nPress Enter to continue")
+            # Smart continuation - only prompt when needed
+            if choice not in ["q", "c"]:
+                smart_continue_prompt(choice)
                 
         except KeyboardInterrupt:
             console.print("\nGoodbye!", style="green")
             break
         except Exception as e:
             console.print(f"Error: {e}", style="red")
-            Prompt.ask("\nPress Enter to continue")
+            smart_continue_prompt("error")
 
 
 @app.callback(invoke_without_command=True)
