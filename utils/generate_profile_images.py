@@ -50,11 +50,8 @@ def create_initials_image(initials, bg_color, text_color, size=(256, 256)):
     img = Image.new('RGB', size, bg_color)
     draw = ImageDraw.Draw(img)
     
-    # Try to use a default font, fall back to default if not available
-    try:
-        font = ImageFont.load_default()
-    except:
-        font = ImageFont.load_default()
+    # Use default font (always available)
+    font = ImageFont.load_default()
     
     # Get text size and center it
     bbox = draw.textbbox((0, 0), initials, font=font)
