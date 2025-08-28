@@ -13,7 +13,17 @@ def test_database_initialization(tmp_path):
     cur = db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
     tables = {row[0] for row in cur.fetchall()}
     
-    expected_tables = {'contacts', 'relationships', 'tags', 'notes', 'relationship_tags', 'relationship_notes'}
+    # Updated expected tables to reflect schema v3
+    expected_tables = {
+        'contacts', 
+        'contact_metadata',  # renamed from 'relationships'
+        'tags', 
+        'notes', 
+        'metadata_tags',     # renamed from 'relationship_tags'
+        'metadata_notes',    # renamed from 'relationship_notes'
+        'relationship_types',
+        'contact_relationships'
+    }
     assert expected_tables.issubset(tables)
 
 
