@@ -215,7 +215,7 @@ class CLIMapper:
             guide_style="magenta"
         )
         
-        menu_desc = menu_branch.add(
+        menu_branch.add(
             Text(f"{menu['description']}", style="cyan italic")
         )
         
