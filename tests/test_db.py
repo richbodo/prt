@@ -1,6 +1,4 @@
-from pathlib import Path
 from prt_src.db import Database
-from prt_src.models import Contact, Relationship, Tag, Note
 
 
 def test_database_initialization(tmp_path):

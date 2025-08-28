@@ -12,10 +12,7 @@ Tests all features of the directory export tool including:
 """
 
 import json
-import os
 import pytest
-import shutil
-import tempfile
 from pathlib import Path
 from PIL import Image
 
@@ -751,7 +748,7 @@ class TestErrorHandling:
         assert generator.validate_export() is True
         
         # Should handle gracefully even with missing fields
-        result = generator.load_export_data()
+        generator.load_export_data()
         # Implementation should handle missing fields gracefully
     
     def test_empty_results(self, tmp_path):

@@ -6,13 +6,12 @@ and interactive menu hierarchy as a tree.
 """
 
 import typer
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from rich.console import Console
 from rich.tree import Tree
 from rich.text import Text
 from rich.panel import Panel
 import inspect
-from pathlib import Path
 
 console = Console()
 
@@ -215,7 +214,7 @@ class CLIMapper:
             guide_style="magenta"
         )
         
-        menu_desc = menu_branch.add(
+        menu_branch.add(
             Text(f"{menu['description']}", style="cyan italic")
         )
         

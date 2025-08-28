@@ -7,7 +7,6 @@ and provides a unified interface for all operations.
 
 import typer
 from pathlib import Path
-from typing import Optional
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -15,12 +14,12 @@ from rich.prompt import Prompt, Confirm
 from rich.text import Text
 
 from .api import PRTAPI
-from .config import load_config, save_config, config_path, data_dir
+from .config import load_config, config_path, data_dir
 from .db import create_database
 from .google_contacts import fetch_contacts
 from .google_takeout import parse_takeout_contacts, find_takeout_files
 from .llm_ollama import start_ollama_chat
-from migrations.setup_database import get_db_credentials, setup_database, initialize_database
+from migrations.setup_database import setup_database, initialize_database
 # Encryption imports removed as part of Issue #41
 
 app = typer.Typer(help="Personal Relationship Toolkit (PRT)")
@@ -113,8 +112,6 @@ def check_database_health(api: PRTAPI) -> dict:
 
 def setup_debug_mode():
     """Set up debug mode with fixture data."""
-    import tempfile
-    from pathlib import Path
     from tests.fixtures import setup_test_database
     
     # Create a temporary database in the data directory
@@ -529,7 +526,6 @@ def offer_directory_generation(export_dir: Path) -> None:
     from pathlib import Path
     import subprocess
     import sys
-    import os
     
     console.print()
     
@@ -591,7 +587,6 @@ def offer_directory_generation(export_dir: Path) -> None:
 def export_search_results(api: PRTAPI, search_type: str, query: str, results: list) -> None:
     """Export search results to JSON with timestamped folder and optional profile images."""
     import json
-    import os
     from datetime import datetime
     from pathlib import Path
     
@@ -781,7 +776,6 @@ def export_contact_profile_images(api: PRTAPI, contacts: list, export_dir: Path,
 
 def show_full_note(title: str, content: str) -> None:
     """Show full note content with scrolling capability."""
-    from rich.pager import Pager
     from rich.text import Text
     
     note_text = Text()

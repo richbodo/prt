@@ -1,23 +1,9 @@
 from pathlib import Path
-from typer.testing import CliRunner
 from utils.setup_database import setup_database, initialize_database
 
 
-def test_setup_database_functions(tmp_path):
+def test_setup_database_functions():
     """Test setup database functions work correctly."""
-    # Test setup_database function
-    config = {
-        "google_api_key": "demo",
-        "openai_api_key": "demo",
-        "db_path": str(tmp_path / "prt.db"),
-        "db_username": "test",
-        "db_password": "test",
-        "db_type": "sqlite",
-        "db_host": "localhost",
-        "db_port": 5432,
-        "db_name": "prt"
-    }
-    
     # Test that setup_database returns config
     result = setup_database(quiet=True)
     assert isinstance(result, dict)

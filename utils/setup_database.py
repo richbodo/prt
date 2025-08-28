@@ -17,8 +17,6 @@ from rich.console import Console
 sys.path.insert(0, str(Path(__file__).parent / "prt"))
 
 from prt_src.config import get_db_credentials, data_dir, load_config, save_config
-from prt_src.db import Database
-import shutil
 
 app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()

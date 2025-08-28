@@ -8,8 +8,7 @@ and profile images.
 
 import base64
 from pathlib import Path
-from typing import Dict, List, Any
-from datetime import datetime, UTC
+from typing import Dict, Any
 
 def _generate_profile_images():
     """Generate realistic 256x256 JPEG profile images for test fixtures."""
