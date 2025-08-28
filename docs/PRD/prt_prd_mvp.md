@@ -19,7 +19,7 @@ The MVP aims to provide a privacy-first relationship manager that helps a single
 ## Never Do
 - Store data remotely
 - Edit contacts - we only edit relationship data
-  
+
 ## Technical Considerations
 - **Typer** for building the CLI experience
 - **SQLCipher** or the **cryptography** library to secure the SQLite database
@@ -34,5 +34,5 @@ The MVP aims to provide a privacy-first relationship manager that helps a single
 
 ## Success Criteria
 - The author successfully uses the tool for day‑to‑day relationship tagging and recall
-- Contact data remains private and encrypted 
+- Contact data remains private and encrypted
 - Basic import from Google Contacts works

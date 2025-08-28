@@ -13,7 +13,7 @@ This directory contains standalone tools that work with PRT exports and data.
 # Basic usage
 python tools/make_directory.py generate exports/contacts_search_20250826_191055/
 
-# Custom output directory  
+# Custom output directory
 python tools/make_directory.py generate exports/tags_search_20250826_191055/ --output ./my_directory
 
 # Force overwrite existing directory
@@ -27,7 +27,7 @@ python tools/make_directory.py generate --help
 **Input**: PRT JSON export directories (from search exports)
 **Output**: Self-contained HTML websites in `directories/` folder
 
-**Requirements**: 
+**Requirements**:
 - Python 3.8+
 - Dependencies: `typer`, `rich`, `jinja2`, `pillow`
 

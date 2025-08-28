@@ -156,7 +156,7 @@ llm = OllamaLLM(api, base_url="http://your-server:11434")
 #### "Connection refused" Error
 
 **Problem**: Cannot connect to Ollama service
-**Solution**: 
+**Solution**:
 1. Ensure Ollama is running: `ollama serve`
 2. Check if the service is accessible: `curl http://localhost:11434/v1/models`
 3. Verify the base URL in your configuration
@@ -264,7 +264,7 @@ Tool(
 You can modify the system prompt in the `_create_system_prompt()` method to:
 
 - **Add specific instructions** for the LLM
-- **Modify behavior guidelines** 
+- **Modify behavior guidelines**
 - **Include context about your data**
 - **Set response formatting preferences**
 

@@ -5,108 +5,110 @@ This module provides a command-line interface specifically designed for LLM use.
 It allows direct function calls with arguments rather than interactive prompts.
 """
 
-import sys
 import json
-from typing import List, Dict, Any, Optional
+import sys
+
 from .api import PRTAPI
 
 
 class PRTLLMCommands:
     """Command interface for LLM use."""
-    
+
     def __init__(self):
         self.api = PRTAPI()
-    
+
     def search_contacts(self, query: str) -> str:
         """Search contacts and return JSON result."""
         contacts = self.api.search_contacts(query)
         return json.dumps(contacts, indent=2)
-    
+
     def search_tags(self, query: str) -> str:
         """Search tags and return JSON result."""
         tags = self.api.search_tags(query)
         return json.dumps(tags, indent=2)
-    
+
     def search_notes(self, query: str) -> str:
         """Search notes and return JSON result."""
         notes = self.api.search_notes(query)
         return json.dumps(notes, indent=2)
-    
+
     def get_contacts_by_tag(self, tag_name: str) -> str:
         """Get contacts by tag and return JSON result."""
         contacts = self.api.get_contacts_by_tag(tag_name)
         return json.dumps(contacts, indent=2)
-    
+
     def get_contacts_by_note(self, note_title: str) -> str:
         """Get contacts by note and return JSON result."""
         contacts = self.api.get_contacts_by_note(note_title)
         return json.dumps(contacts, indent=2)
-    
+
     def get_contact_details(self, contact_id: int) -> str:
         """Get contact details and return JSON result."""
         contact = self.api.get_contact_details(contact_id)
         return json.dumps(contact, indent=2) if contact else "Contact not found"
-    
+
     def list_all_contacts(self) -> str:
         """List all contacts and return JSON result."""
         contacts = self.api.list_all_contacts()
         return json.dumps(contacts, indent=2)
-    
+
     def list_all_tags(self) -> str:
         """List all tags and return JSON result."""
         tags = self.api.list_all_tags()
         return json.dumps(tags, indent=2)
-    
+
     def list_all_notes(self) -> str:
         """List all notes and return JSON result."""
         notes = self.api.list_all_notes()
         return json.dumps(notes, indent=2)
-    
+
     def add_tag_to_contact(self, contact_id: int, tag_name: str) -> str:
         """Add tag to contact and return result."""
         success = self.api.add_tag_to_contact(contact_id, tag_name)
         return f"Success: {success}"
-    
+
     def remove_tag_from_contact(self, contact_id: int, tag_name: str) -> str:
         """Remove tag from contact and return result."""
         success = self.api.remove_tag_from_contact(contact_id, tag_name)
         return f"Success: {success}"
-    
-    def add_note_to_contact(self, contact_id: int, note_title: str, note_content: str) -> str:
+
+    def add_note_to_contact(
+        self, contact_id: int, note_title: str, note_content: str
+    ) -> str:
         """Add note to contact and return result."""
         success = self.api.add_note_to_contact(contact_id, note_title, note_content)
         return f"Success: {success}"
-    
+
     def remove_note_from_contact(self, contact_id: int, note_title: str) -> str:
         """Remove note from contact and return result."""
         success = self.api.remove_note_from_contact(contact_id, note_title)
         return f"Success: {success}"
-    
+
     def create_tag(self, name: str) -> str:
         """Create a new tag and return JSON result."""
         tag = self.api.create_tag(name)
         return json.dumps(tag, indent=2) if tag else "Tag already exists"
-    
+
     def delete_tag(self, name: str) -> str:
         """Delete a tag and return result."""
         success = self.api.delete_tag(name)
         return f"Success: {success}"
-    
+
     def create_note(self, title: str, content: str) -> str:
         """Create a new note and return JSON result."""
         note = self.api.create_note(title, content)
         return json.dumps(note, indent=2) if note else "Note already exists"
-    
+
     def update_note(self, title: str, content: str) -> str:
         """Update a note and return result."""
         success = self.api.update_note(title, content)
         return f"Success: {success}"
-    
+
     def delete_note(self, title: str) -> str:
         """Delete a note and return result."""
         success = self.api.delete_note(title)
         return f"Success: {success}"
-    
+
     def get_help(self) -> str:
         """Return help information for all available commands."""
         help_text = """
@@ -149,11 +151,11 @@ def main():
         print("Usage: python -m prt_src.llm_commands <command> [args...]")
         print("Use 'help' command to see available commands")
         sys.exit(1)
-    
+
     commands = PRTLLMCommands()
     command = sys.argv[1]
     args = sys.argv[2:]
-    
+
     try:
         if command == "help":
             print(commands.get_help())
@@ -205,7 +207,9 @@ def main():
             print(commands.remove_tag_from_contact(int(args[0]), args[1]))
         elif command == "add_note_to_contact":
             if len(args) < 3:
-                print("Usage: add_note_to_contact <contact_id> <note_title> <note_content>")
+                print(
+                    "Usage: add_note_to_contact <contact_id> <note_title> <note_content>"
+                )
                 sys.exit(1)
             print(commands.add_note_to_contact(int(args[0]), args[1], args[2]))
         elif command == "remove_note_from_contact":
@@ -242,7 +246,7 @@ def main():
             print(f"Unknown command: {command}")
             print("Use 'help' command to see available commands")
             sys.exit(1)
-    
+
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

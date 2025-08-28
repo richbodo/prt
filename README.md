@@ -26,14 +26,14 @@ pre-commit run --files <file1> <file2>
 
 Run these commands before committing to ensure consistent code style.
 
-## Motivation/Purpose: 
+## Motivation/Purpose:
 
 I am solving a few personal pain points with this project:
 
 1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
 2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
 3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore almost never find the people I need to find when I most need to find them, using any centralized contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be my UI for finding folks.
-4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me. 
+4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me.
 
 ## Version History
 
@@ -145,7 +145,7 @@ The app will create three directories to store secret stuff in (all are .gitigno
 - databases
 - config
 - sensitive user data to import
-  
+
 /prt_data/secrets
 - encryption keys for the db and other things that need to be encrypted
 
@@ -266,7 +266,7 @@ def test_search_functionality(test_db):
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
     api = PRTAPI(config)
-    
+
     # Search will find "John Doe" in the fixture data
     results = api.search_contacts("John")
     assert len(results) > 0
@@ -312,8 +312,8 @@ SELECT * FROM tags;               # View all tags
 SELECT * FROM notes;              # View all notes
 
 # View relationships
-SELECT c.name, t.name as tag 
-FROM contacts c 
+SELECT c.name, t.name as tag
+FROM contacts c
 JOIN relationships r ON c.id = r.contact_id
 JOIN relationship_tags rt ON r.id = rt.relationship_id
 JOIN tags t ON rt.tag_id = t.id;
@@ -366,6 +366,3 @@ PRT uses SQLAlchemy with these main tables:
 - **`prt_src/api.py`**: Main API class for contact management
 - **`prt_src/cli.py`**: Command-line interface using Typer
 - **`tests/fixtures.py`**: Test fixture system and sample data
-
-
-

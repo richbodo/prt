@@ -22,7 +22,7 @@ esac
 
 if [ "$OS" = "mac" ]; then
     echo "Os is: "
-    echo $OS	
+    echo $OS
     echo "Checking for Homebrew..."
     # macOS uses Homebrew for dependencies
     if ! command -v brew >/dev/null; then
@@ -55,7 +55,7 @@ fi
 if [ ! -d "prt_env" ]; then
     echo "Creating new virtual environment: prt_env"
     python3 -m venv prt_env || { echo "Failed to create virtual environment"; exit 1; }
-    
+
     # Activate and install requirements
     source prt_env/bin/activate || { echo "Failed to activate virtual environment"; return 1; }
     # Verify we're in the virtual environment before installing

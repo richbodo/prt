@@ -66,13 +66,13 @@ This document summarizes the implementation of encrypted database functionality 
 class EncryptedDatabase(Database):
     def __init__(self, path: Path, encryption_key: Optional[str] = None):
         # Initialize with encryption support
-    
+
     def connect(self) -> None:
         # Connect with SQLCipher encryption
-    
+
     def test_encryption(self) -> bool:
         # Verify encryption is working
-    
+
     def rekey(self, new_key: str) -> bool:
         # Change encryption key
 ```

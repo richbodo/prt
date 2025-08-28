@@ -2,7 +2,7 @@
 """Summarize Google Contacts CSV exports.
 
 This script reads an exported Google Contacts CSV file, counts the
-number of contacts, and prints the total number of contacts along with 
+number of contacts, and prints the total number of contacts along with
 each contact's name and associated email addresses and phone numbers.
 
 Usage:

@@ -114,7 +114,7 @@ db = SqlCipherDatabase('my_app.db', passphrase='my-secret-key')
 class User(Model):
     name = CharField()
     email = CharField()
-    
+
     class Meta:
         database = db
 

@@ -1,8 +1,8 @@
 # PRT Development Roadmap
 
-This document outlines the development roadmap for the Personal Relationship Toolkit (PRT).  Not exactly doing these in order, but there is a [Project](https://github.com/users/richbodo/projects/2) that shows what is being worked on, more or less. 
+This document outlines the development roadmap for the Personal Relationship Toolkit (PRT).  Not exactly doing these in order, but there is a [Project](https://github.com/users/richbodo/projects/2) that shows what is being worked on, more or less.
 
-## Phase 1: Database Encryption 
+## Phase 1: Database Encryption
 ### Tasks
 - [x] **Implement database encryption** at rest
 - [ ] **Add key management**
@@ -28,7 +28,7 @@ This document outlines the development roadmap for the Personal Relationship Too
 - [ ] Discuss: Specific needs you have - identify groups of contact relationships, start building communications plans.
 - [ ] Discuss: In your day to day life, how can you take notes that we can discuss, so we can keep growing your relationship graph, and your knowledge of your relationships and your communities.  How can we make it trivial to find what you need and participate.
 
-## Phase 5: Message Analysis 
+## Phase 5: Message Analysis
 ### Tasks
 - [ ] **Pull recent messages from some messaging tool (IMAP?  Chat?)**
 - [ ] **Recency analysis for community messaging**

@@ -1,6 +1,4 @@
-from pathlib import Path
 from prt_src.db import Database
-from prt_src.models import Contact, Relationship, Tag, Note
 
 
 def test_database_initialization(tmp_path):
@@ -12,10 +10,18 @@ def test_database_initialization(tmp_path):
 
     # Check that tables exist
     from sqlalchemy import text
+
     cur = db.session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
     tables = {row[0] for row in cur.fetchall()}
-    
-    expected_tables = {'contacts', 'relationships', 'tags', 'notes', 'relationship_tags', 'relationship_notes'}
+
+    expected_tables = {
+        "contacts",
+        "relationships",
+        "tags",
+        "notes",
+        "relationship_tags",
+        "relationship_notes",
+    }
     assert expected_tables.issubset(tables)
 
 
@@ -29,25 +35,25 @@ def test_contact_operations(tmp_path):
     # Test contact insertion
     contacts_data = [
         {
-            'first': 'Alice',
-            'last': 'Example',
-            'emails': ['alice@example.com'],
-            'phones': ['+1234567890']
+            "first": "Alice",
+            "last": "Example",
+            "emails": ["alice@example.com"],
+            "phones": ["+1234567890"],
         },
         {
-            'first': 'Bob',
-            'last': 'Test',
-            'emails': ['bob@test.com'],
-            'phones': ['+0987654321']
-        }
+            "first": "Bob",
+            "last": "Test",
+            "emails": ["bob@test.com"],
+            "phones": ["+0987654321"],
+        },
     ]
-    
+
     db.insert_contacts(contacts_data)
-    
+
     # Verify contacts were inserted
     contact_count = db.count_contacts()
     assert contact_count == 2
-    
+
     # Verify relationships were created
     relationship_count = db.count_relationships()
     assert relationship_count == 2
@@ -61,21 +67,23 @@ def test_relationship_operations(tmp_path):
     db.initialize()
 
     # Insert a contact first
-    contacts_data = [{'first': 'Test', 'last': 'User', 'emails': ['test@example.com']}]
+    contacts_data = [{"first": "Test", "last": "User", "emails": ["test@example.com"]}]
     db.insert_contacts(contacts_data)
-    
+
     # Get the contact ID
     contacts = db.list_contacts()
     assert len(contacts) == 1
     contact_id = contacts[0][0]
-    
+
     # Test adding tags
     db.add_relationship_tag(contact_id, "friend")
     db.add_relationship_tag(contact_id, "colleague")
-    
+
     # Test adding notes
-    db.add_relationship_note(contact_id, "Meeting notes", "Had a great meeting about the project")
-    
+    db.add_relationship_note(
+        contact_id, "Meeting notes", "Had a great meeting about the project"
+    )
+
     # Verify relationship info
     rel_info = db.get_relationship_info(contact_id)
     assert "friend" in rel_info["tags"]

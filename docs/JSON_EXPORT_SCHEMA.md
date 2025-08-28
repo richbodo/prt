@@ -18,7 +18,7 @@ PRT exports search results in a consistent JSON format with associated profile i
 {
   "export_info": {
     "search_type": "contacts|tags|notes",
-    "query": "search_term", 
+    "query": "search_term",
     "timestamp": "20250826_182923",
     "total_results": 5,
     "search_request": {
@@ -276,6 +276,6 @@ Currently, this is the initial schema version. Future changes will:
 
 ---
 
-**Last Updated**: August 26, 2025  
-**Schema Version**: 1.0  
+**Last Updated**: August 26, 2025
+**Schema Version**: 1.0
 **Related Issues**: #19 (Search Export), #40 (Directory Creator)

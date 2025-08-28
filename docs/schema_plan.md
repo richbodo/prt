@@ -35,9 +35,9 @@ The PRT schema extends Google Contacts by adding dedicated tables to track relat
 
 ```
 Contact: John Doe
-Relationship: 
+Relationship:
   Tags: friend, colleague, mentor
-  Notes: 
+  Notes:
     - "College memories" - Met at college in 2010
     - "Career advice" - Great advice on career decisions
 

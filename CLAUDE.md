@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 [byterover-mcp]
 
-# important 
-always use byterover-retrieve-knowledge tool to get the related context before any tasks 
+# important
+always use byterover-retrieve-knowledge tool to get the related context before any tasks
 always use byterover-store-knowledge to store all the critical informations after sucessful tasks
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
@@ -79,7 +79,7 @@ cd tests && python fixtures.py
 # Interactive mode (default)
 python -m prt_src.cli
 
-# Direct chat mode  
+# Direct chat mode
 python -m prt_src.cli chat
 
 # Setup wizard
@@ -147,7 +147,7 @@ def test_functionality(test_db):
 
 ### Core Source Files
 - `prt_src/cli.py`: Main CLI interface with all interactive menus
-- `prt_src/api.py`: Clean API layer for all operations  
+- `prt_src/api.py`: Clean API layer for all operations
 - `prt_src/models.py`: SQLAlchemy ORM models
 - `prt_src/db.py`: Database connection and operations
 - `prt_src/google_takeout.py`: Google Takeout import logic
@@ -183,7 +183,7 @@ The project uses a simple schema management system in `prt_src/schema_manager.py
 
 When creating commit messages:
 - Write clear, descriptive commit messages that explain the changes and their purpose
-- **Do NOT include**: 
+- **Do NOT include**:
   - "🤖 Generated with [Claude Code]" lines
   - "Co-Authored-By: Claude" lines
   - Any AI authorship attribution

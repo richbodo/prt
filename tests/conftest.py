@@ -1,6 +1,8 @@
 import sys
-import pytest
 from pathlib import Path
+
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from prt_src.db import create_database
@@ -16,7 +18,7 @@ def test_db(tmp_path):
     return db, fixtures
 
 
-@pytest.fixture 
+@pytest.fixture
 def test_db_empty(tmp_path):
     """Create an empty test database."""
     db_path = tmp_path / "empty_test.db"
@@ -34,5 +36,5 @@ def sample_config(tmp_path):
         "db_encrypted": False,
         "db_type": "sqlite",
         "db_username": "test",
-        "db_password": "test"
+        "db_password": "test",
     }
