@@ -88,7 +88,8 @@ def check_database_health(api: PRTAPI) -> dict:
             # These might not exist if database is completely empty
             all_contacts = api.list_all_contacts()
             total_contacts = len(all_contacts) if all_contacts else 0
-        except:
+        except Exception as e:
+            console.print(f"Warning: failed to list all contacts: {e}", style="yellow")
             total_contacts = contact_count
         
         return {
