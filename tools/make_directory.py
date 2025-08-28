@@ -91,8 +91,10 @@ class DirectoryGenerator:
         if search_type == "contacts":
             # Direct contact search results - results are contact objects
             for result in self.export_data["results"]:
-                if "id" in result:  # Verify it's a contact object
+                if "id" in result:  # Direct contact object
                     contacts.append(result)
+                elif "contact" in result and "id" in result["contact"]:  # Nested contact object
+                    contacts.append(result["contact"])
             
         elif search_type == "tags":
             # Extract contacts from tag results

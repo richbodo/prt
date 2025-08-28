@@ -119,7 +119,7 @@ def _test_contact_search_export(api: PRTAPI, fixtures: dict):
     assert len(contacts) > 0, "Should find at least one contact"
     
     # Export the results
-    export_search_results(api, "contacts", "John", contacts)
+    export_search_results(api, "contacts", "John", contacts, interactive=False)
     
     # Find the export directory
     export_dirs = [d for d in Path(".").glob("exports/contacts_search_*")]
@@ -165,7 +165,7 @@ def _test_tag_search_export(api: PRTAPI, fixtures: dict):
         })
     
     # Export the results
-    export_search_results(api, "tags", "friend", export_data)
+    export_search_results(api, "tags", "friend", export_data, interactive=False)
     
     # Find the export directory
     export_dirs = [d for d in Path(".").glob("exports/tags_search_*")]
@@ -212,7 +212,7 @@ def _test_note_search_export(api: PRTAPI, fixtures: dict):
             })
         
         # Export the results
-        export_search_results(api, "notes", "meeting", export_data)
+        export_search_results(api, "notes", "meeting", export_data, interactive=False)
         
         # Find the export directory
         export_dirs = [d for d in Path(".").glob("exports/notes_search_*")]

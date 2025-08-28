@@ -585,7 +585,7 @@ def offer_directory_generation(export_dir: Path) -> None:
     console.print()
 
 
-def export_search_results(api: PRTAPI, search_type: str, query: str, results: list) -> None:
+def export_search_results(api: PRTAPI, search_type: str, query: str, results: list, *, interactive: bool = True) -> Path:
     """Export search results to JSON with timestamped folder and optional profile images."""
     import json
     from datetime import datetime
@@ -633,8 +633,11 @@ def export_search_results(api: PRTAPI, search_type: str, query: str, results: li
     
     console.print(f"✅ Export complete! Check: {export_dir}", style="bold green")
     
-    # Offer to generate interactive directory
-    offer_directory_generation(export_dir)
+    # Offer to generate interactive directory (only in interactive mode)
+    if interactive:
+        offer_directory_generation(export_dir)
+    
+    return export_dir
 
 
 def clean_results_for_json(results: list) -> list:

@@ -65,8 +65,16 @@ class TestOllamaLLM:
     
     def test_system_prompt_creation(self):
         """Test system prompt creation."""
-        pytest.skip("System prompt format changed - needs update for 'AVAILABLE TOOLS' vs 'Available tools'")
+        mock_api = Mock()
+        llm = OllamaLLM(mock_api)
+        
+        prompt = llm._create_system_prompt()
+        
+        # Check that the prompt contains expected sections
+        assert "Personal Relationship Toolkit" in prompt
+        assert "AVAILABLE TOOLS:" in prompt
         assert "search_contacts" in prompt  # At least one tool should be mentioned
+        assert "INSTRUCTIONS:" in prompt
     
     def test_format_tool_calls(self):
         """Test formatting tools for Ollama API."""

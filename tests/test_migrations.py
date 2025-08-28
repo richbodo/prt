@@ -18,29 +18,7 @@ from utils.setup_database import setup_database, initialize_database
 from prt_src.db import create_database
 
 
-def test_migration_tracker(tmp_path):
-    """Test migration tracking functionality."""
-    pytest.skip("Migration tracker functionality replaced by SchemaManager")
 
-
-def test_migration_runner_initialization(tmp_path):
-    """Test migration runner initialization."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-
-
-def test_migration_runner_list_migrations(tmp_path):
-    """Test that migration runner can list available migrations."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-
-
-def test_migration_runner_status(tmp_path):
-    """Test migration status reporting."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
-
-
-def test_migration_runner_with_no_migrations(tmp_path):
-    """Test migration runner behavior when no migrations are available."""
-    pytest.skip("Migration runner functionality replaced by SchemaManager")
 
 
 class TestSetupDatabase:
