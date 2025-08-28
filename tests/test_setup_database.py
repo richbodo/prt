@@ -2,9 +2,11 @@ from pathlib import Path
 from utils.setup_database import setup_database, initialize_database
 
 
-def test_setup_database_functions(tmp_path):
+def test_setup_database_functions():
     """Test setup database functions work correctly."""
-    # Test setup_database function
+
+    # Test that setup_database returns config
+
     result = setup_database(quiet=True)
     assert isinstance(result, dict)
     assert "db_path" in result

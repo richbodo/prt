@@ -7,7 +7,6 @@ It allows direct function calls with arguments rather than interactive prompts.
 
 import sys
 import json
-from typing import List, Dict, Any, Optional
 from .api import PRTAPI
 
 

@@ -8,10 +8,8 @@ with automatic backups and clear recovery instructions for users.
 import shutil
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
 from rich.console import Console
 from rich.panel import Panel
-import sqlalchemy
 from sqlalchemy import text
 
 console = Console()

@@ -75,6 +75,17 @@ fi
 if [ -n "$VIRTUAL_ENV" ]; then
     echo "Virtual environment activated! You should see (prt_env) in your prompt."
     echo "If you don't see (prt_env), try running: source prt_env/bin/activate"
+
+    # Install development requirements (including pre-commit)
+    if [ -f "requirements-dev.txt" ]; then
+        pip install -v -r requirements-dev.txt || { echo "Failed to install development requirements"; return 1; }
+        pre-commit install || { echo "Failed to install pre-commit hooks"; return 1; }
+
+        # Optionally run pre-commit across the codebase to establish a baseline
+        if [ "${RUN_PRE_COMMIT:-0}" = "1" ]; then
+            pre-commit run --all-files || { echo "pre-commit run failed"; return 1; }
+        fi
+    fi
 else
     echo "Warning: Virtual environment not properly activated"
 fi
