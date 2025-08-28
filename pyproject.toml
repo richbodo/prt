@@ -3,7 +3,8 @@ line-length = 88
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]
 
 [tool.isort]
 profile = "black"
