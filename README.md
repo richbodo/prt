@@ -15,6 +15,17 @@ PRT will automatically detect if setup is needed and guide you through the proce
 python -m prt_src.cli setup
 ```
 
+## Development Workflow
+
+This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files.
+
+```bash
+pre-commit install
+pre-commit run --files <file1> <file2>
+```
+
+Run these commands before committing to ensure consistent code style.
+
 ## Motivation/Purpose: 
 
 I am solving a few personal pain points with this project:
