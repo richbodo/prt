@@ -10,7 +10,7 @@ from prt_src.api import PRTAPI
 def test_cli_creates_config(tmp_path):
     """Test that CLI can create a basic configuration."""
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
+    with runner.isolated_filesystem(temp_dir=tmp_path):
         # Test with minimal input - just create config and exit
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
