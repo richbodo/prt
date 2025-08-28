@@ -53,7 +53,12 @@ cd prt
 source ./init.sh
 ```
 
-#### 6. Install pysqlcipher3
+#### 6. Install Development Tools
+```bash
+pip install -r requirements-dev.txt
+```
+
+#### 7. Install pysqlcipher3
 ```bash
 # Get SQLCipher installation path
 SQLCIPHER_PATH=$(brew --prefix sqlcipher)
@@ -66,7 +71,7 @@ export LDFLAGS="-L$SQLCIPHER_PATH/lib"
 pip install pysqlcipher3
 ```
 
-#### 7. Set Up Database
+#### 8. Set Up Database
 ```bash
 python -m prt_src.cli setup
 ```
@@ -98,6 +103,7 @@ Tested on Ubuntu 22.04+. Other Debian-based distributions should work with minor
 4. **Install Python dependencies**
    ```bash
    python -m pip install -r requirements.txt
+   python -m pip install -r requirements-dev.txt
    ```
 
 5. **Install pysqlcipher3 linked against SQLCipher**
