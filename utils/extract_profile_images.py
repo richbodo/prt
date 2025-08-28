@@ -59,7 +59,7 @@ if __name__ == "__main__":
     
     if not db_path.exists():
         print(f"Database not found: {db_path}")
-        print(f"Run 'cd tests && python fixtures.py' to create test database.")
+        print("Run 'cd tests && python fixtures.py' to create test database.")
         sys.exit(1)
     
     print(f"Extracting images from: {db_path}")

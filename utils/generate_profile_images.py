@@ -164,4 +164,4 @@ if __name__ == "__main__":
     
     # Save to disk for inspection
     save_images_to_disk(profiles)
-    print(f"\nImages saved to 'profile_images/' directory for inspection.")
+    print("\nImages saved to 'profile_images/' directory for inspection.")
