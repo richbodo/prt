@@ -53,6 +53,7 @@ def create_initials_image(initials, bg_color, text_color, size=(256, 256)):
     # Try to use a default font, fall back to default if not available
     try:
         # Use a default font
+
         font = ImageFont.load_default()
     except:
         font = ImageFont.load_default()
@@ -165,4 +166,4 @@ if __name__ == "__main__":
     
     # Save to disk for inspection
     save_images_to_disk(profiles)
-    print(f"\nImages saved to 'profile_images/' directory for inspection.")
+    print("\nImages saved to 'profile_images/' directory for inspection.")

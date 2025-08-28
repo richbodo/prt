@@ -4,7 +4,9 @@ from utils.setup_database import setup_database, initialize_database
 
 def test_setup_database_functions():
     """Test setup database functions work correctly."""
+
     # Test that setup_database returns config
+
     result = setup_database(quiet=True)
     assert isinstance(result, dict)
     assert "db_path" in result
@@ -26,7 +28,7 @@ def test_initialize_database(tmp_path):
     
     # Test that initialize_database works
     success = initialize_database(config, quiet=True)
-    assert success == True
+    assert success
     
     # Check that database file was created
     db_file = Path(config["db_path"])

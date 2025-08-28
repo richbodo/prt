@@ -834,9 +834,9 @@ class DirectoryGenerator:
         # Success!
         success_text = Text()
         success_text.append("✅ Contact directory generated successfully!\n\n", style="bold green")
-        success_text.append(f"📁 Output: ", style="bold")
+        success_text.append("📁 Output: ", style="bold")
         success_text.append(f"{self.output_path.absolute()}\n", style="blue")
-        success_text.append(f"🌐 Open: ", style="bold")
+        success_text.append("🌐 Open: ", style="bold")
         success_text.append(f"file://{self.output_path.absolute()}/index.html\n", style="blue")
         
         console.print(Panel(success_text, title="Generation Complete", border_style="green"))
