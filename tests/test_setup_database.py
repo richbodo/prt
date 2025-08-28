@@ -26,7 +26,7 @@ def test_initialize_database(tmp_path):
     
     # Test that initialize_database works
     success = initialize_database(config, quiet=True)
-    assert success == True
+    assert success
     
     # Check that database file was created
     db_file = Path(config["db_path"])
