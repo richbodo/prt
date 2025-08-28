@@ -52,6 +52,8 @@ def create_initials_image(initials, bg_color, text_color, size=(256, 256)):
     
     # Try to use a default font, fall back to default if not available
     try:
+        # Use a default font
+
         font = ImageFont.load_default()
     except Exception as e:
         print(f"Failed to load font, using default: {e}")

@@ -10,7 +10,6 @@ import vobject
 import mimetypes
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-import re
 
 
 class GoogleTakeoutParser:

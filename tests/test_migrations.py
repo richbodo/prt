@@ -7,7 +7,6 @@ Encryption-related tests removed as part of Issue #41.
 
 import pytest
 import tempfile
-import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +15,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.setup_database import setup_database, initialize_database
-from prt_src.config import load_config, save_config
 from prt_src.db import create_database
 
 

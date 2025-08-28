@@ -2,10 +2,8 @@
 Tests for the PRT API layer.
 """
 
-import pytest
 from pathlib import Path
 from prt_src.api import PRTAPI
-from prt_src.config import load_config
 
 
 class TestPRTAPI:
