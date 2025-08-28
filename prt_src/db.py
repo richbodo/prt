@@ -1,10 +1,9 @@
-import sqlite3
 import shutil
 import json
 from pathlib import Path
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -138,7 +137,7 @@ class Database:
 
     def add_relationship_tag(self, contact_id: int, tag_name: str):
         """Add a tag to a contact's relationship."""
-        from .models import Contact, Tag, Relationship
+        from .models import Contact, Tag
         
         # Get or create the tag
         tag_id = self.add_tag(tag_name)

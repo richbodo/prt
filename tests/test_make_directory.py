@@ -12,10 +12,7 @@ Tests all features of the directory export tool including:
 """
 
 import json
-import os
 import pytest
-import shutil
-import tempfile
 from pathlib import Path
 from PIL import Image
 

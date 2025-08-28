@@ -6,7 +6,7 @@ the CLI interface and AI chat mode. It abstracts database operations and
 provides a consistent interface for all PRT functionality.
 """
 
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from .db import Database
 from .config import load_config, data_dir
@@ -133,7 +133,7 @@ class PRTAPI:
     
     def get_contacts_by_tag(self, tag_name: str) -> List[Dict[str, Any]]:
         """Get all contacts that have a specific tag."""
-        from .models import Tag, Contact
+        from .models import Tag
         
         tag = self.db.session.query(Tag).filter(Tag.name == tag_name).first()
         if not tag:
@@ -157,7 +157,7 @@ class PRTAPI:
     
     def get_contacts_by_note(self, note_title: str) -> List[Dict[str, Any]]:
         """Get all contacts that have a specific note."""
-        from .models import Note, Contact
+        from .models import Note
         
         note = self.db.session.query(Note).filter(Note.title == note_title).first()
         if not note:

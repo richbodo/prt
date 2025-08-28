@@ -6,13 +6,12 @@ and interactive menu hierarchy as a tree.
 """
 
 import typer
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from rich.console import Console
 from rich.tree import Tree
 from rich.text import Text
 from rich.panel import Panel
 import inspect
-from pathlib import Path
 
 console = Console()
 
