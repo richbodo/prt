@@ -55,7 +55,8 @@ def create_initials_image(initials, bg_color, text_color, size=(256, 256)):
         # Use a larger font size for 256x256 images
         font_size = size[0] // 4
         font = ImageFont.load_default()
-    except:
+    except Exception as e:
+        print(f"Failed to load font, using default: {e}")
         font = ImageFont.load_default()
     
     # Get text size and center it
