@@ -1,2 +1,4 @@
-# Development requirements
 pre-commit
+ruff
+black
+
