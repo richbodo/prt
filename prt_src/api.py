@@ -414,3 +414,186 @@ class PRTAPI:
         """Get list of available CSV files in data directory."""
         data_dir_path = self.get_data_directory()
         return list(data_dir_path.glob("*.csv"))
+    
+    # ========== New Relationship Type Management API Methods ==========
+    
+    def list_all_relationship_types(self) -> List[Dict[str, Any]]:
+        """List all available relationship types."""
+        types = self.db.list_relationship_types()
+        
+        # Add usage count for each type
+        from .models import ContactRelationship
+        for rel_type in types:
+            count = self.db.session.query(ContactRelationship).filter(
+                ContactRelationship.type_id == rel_type["id"]
+            ).count()
+            rel_type["usage_count"] = count
+        
+        return types
+    
+    def create_relationship_type(self, type_key: str, description: str,
+                                inverse_key: str, is_symmetrical: bool = False) -> bool:
+        """Create a new relationship type."""
+        try:
+            self.db.create_relationship_type(type_key, description, inverse_key, is_symmetrical)
+            return True
+        except Exception as e:
+            print(f"Error creating relationship type: {e}")
+            return False
+    
+    def delete_relationship_type(self, type_key: str) -> bool:
+        """Delete a relationship type if not in use."""
+        from .models import RelationshipType, ContactRelationship
+        
+        try:
+            # Check if type exists
+            rel_type = self.db.session.query(RelationshipType).filter(
+                RelationshipType.type_key == type_key
+            ).first()
+            if not rel_type:
+                return False
+            
+            # Check if it's in use
+            count = self.db.session.query(ContactRelationship).filter(
+                ContactRelationship.type_id == rel_type.id
+            ).count()
+            if count > 0:
+                print(f"Cannot delete relationship type '{type_key}' - it's used by {count} relationships")
+                return False
+            
+            # Delete the type
+            self.db.session.delete(rel_type)
+            self.db.session.commit()
+            return True
+        except Exception as e:
+            print(f"Error deleting relationship type: {e}")
+            self.db.session.rollback()
+            return False
+    
+    def add_contact_relationship(self, from_contact_name: str, to_contact_name: str,
+                                type_key: str, start_date=None, end_date=None) -> bool:
+        """Add a relationship between two contacts by name."""
+        try:
+            # Find contacts by name
+            from_contacts = self.search_contacts(from_contact_name)
+            to_contacts = self.search_contacts(to_contact_name)
+            
+            if not from_contacts:
+                print(f"Contact '{from_contact_name}' not found")
+                return False
+            if not to_contacts:
+                print(f"Contact '{to_contact_name}' not found")
+                return False
+            
+            # Use the first match for each
+            from_id = from_contacts[0]["id"]
+            to_id = to_contacts[0]["id"]
+            
+            self.db.create_contact_relationship(from_id, to_id, type_key, start_date, end_date)
+            return True
+        except Exception as e:
+            print(f"Error adding relationship: {e}")
+            return False
+    
+    def remove_contact_relationship(self, from_contact_name: str, to_contact_name: str,
+                                   type_key: str) -> bool:
+        """Remove a relationship between two contacts."""
+        try:
+            # Find contacts by name
+            from_contacts = self.search_contacts(from_contact_name)
+            to_contacts = self.search_contacts(to_contact_name)
+            
+            if not from_contacts or not to_contacts:
+                return False
+            
+            from_id = from_contacts[0]["id"]
+            to_id = to_contacts[0]["id"]
+            
+            self.db.delete_contact_relationship(from_id, to_id, type_key)
+            return True
+        except Exception as e:
+            print(f"Error removing relationship: {e}")
+            return False
+    
+    def get_contact_relationships(self, contact_name: str, type_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all relationships for a contact."""
+        contacts = self.search_contacts(contact_name)
+        if not contacts:
+            return []
+        
+        relationships = self.db.get_contact_relationships(contacts[0]["id"])
+        
+        # Apply type filter if specified
+        if type_filter:
+            relationships = [r for r in relationships if r["type"] == type_filter]
+        
+        return relationships
+    
+    def get_family_tree(self, contact_name: str) -> Dict[str, Any]:
+        """Get family tree structure for a contact."""
+        contacts = self.search_contacts(contact_name)
+        if not contacts:
+            return {}
+        
+        contact_id = contacts[0]["id"]
+        relationships = self.db.get_contact_relationships(contact_id)
+        
+        # Build family tree structure
+        family = {
+            "contact": contacts[0],
+            "parents": [],
+            "children": [],
+            "siblings": [],
+            "spouse": None
+        }
+        
+        for rel in relationships:
+            if rel["type"] == "parent_of":
+                family["children"].append(rel)
+            elif rel["type"] == "child_of":
+                family["parents"].append(rel)
+            elif rel["type"] == "sibling_of":
+                family["siblings"].append(rel)
+            elif rel["type"] == "spouse_of":
+                family["spouse"] = rel
+        
+        return family
+    
+    def get_relationship_graph(self) -> Dict[str, Any]:
+        """Get all relationships in a graph structure."""
+        from .models import ContactRelationship, RelationshipType, Contact
+        
+        # Get all relationships
+        relationships = self.db.session.query(
+            ContactRelationship, RelationshipType, 
+            Contact, Contact
+        ).join(
+            RelationshipType, ContactRelationship.type_id == RelationshipType.id
+        ).join(
+            Contact, ContactRelationship.from_contact_id == Contact.id
+        ).join(
+            Contact, ContactRelationship.to_contact_id == Contact.id, isouter=True
+        ).all()
+        
+        # Build graph structure
+        nodes = set()
+        edges = []
+        
+        for rel, rel_type, from_contact, to_contact in relationships:
+            if from_contact:
+                nodes.add((from_contact.id, from_contact.name))
+            if to_contact:
+                nodes.add((to_contact.id, to_contact.name))
+                
+            if from_contact and to_contact:
+                edges.append({
+                    "from": from_contact.id,
+                    "to": to_contact.id,
+                    "type": rel_type.type_key,
+                    "description": rel_type.description
+                })
+        
+        return {
+            "nodes": [{"id": id, "name": name} for id, name in nodes],
+            "edges": edges
+        }

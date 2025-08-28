@@ -5,7 +5,7 @@ These models define the database structure and are used by Alembic
 to generate and apply migrations.
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table, LargeBinary
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Table, LargeBinary, Date, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, UTC
@@ -27,15 +27,86 @@ class Contact(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
-    # One-to-one relationship with Relationship
-    relationship = relationship("Relationship", back_populates="contact", uselist=False)
+    # Relationships - updated to support both metadata and contact relationships
+    metadata_rel = relationship("ContactMetadata", back_populates="contact", uselist=False, 
+                                cascade="all, delete-orphan")
+    
+    # Contact-to-contact relationships
+    relationships_from = relationship("ContactRelationship", 
+                                     foreign_keys="ContactRelationship.from_contact_id",
+                                     back_populates="from_contact",
+                                     cascade="all, delete-orphan")
+    relationships_to = relationship("ContactRelationship",
+                                   foreign_keys="ContactRelationship.to_contact_id", 
+                                   back_populates="to_contact",
+                                   cascade="all, delete-orphan")
+    
+    # For backward compatibility
+    @property
+    def relationship(self):
+        """Backward compatibility property for old code expecting 'relationship'."""
+        return self.metadata_rel
     
     def __repr__(self):
         return f"<Contact(id={self.id}, name='{self.name}', email='{self.email}')>"
 
 
+class RelationshipType(Base):
+    """Defines types of relationships between contacts (e.g., parent_of, friend_of)."""
+    __tablename__ = 'relationship_types'
+    
+    id = Column(Integer, primary_key=True)
+    type_key = Column(String(50), nullable=False, unique=True)  # e.g., 'parent_of'
+    description = Column(String(255))  # e.g., 'Is the parent of'
+    inverse_type_key = Column(String(50), ForeignKey('relationship_types.type_key'))  # e.g., 'child_of'
+    is_symmetrical = Column(Integer, default=0)  # Boolean: 0=false, 1=true
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    
+    # Self-referential relationship for inverse type
+    inverse_type = relationship("RelationshipType", remote_side=[type_key], 
+                               foreign_keys=[inverse_type_key])
+    
+    # Relationships using this type
+    contact_relationships = relationship("ContactRelationship", back_populates="relationship_type",
+                                        cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<RelationshipType(id={self.id}, type_key='{self.type_key}', is_symmetrical={self.is_symmetrical})>"
+
+
+class ContactRelationship(Base):
+    """Represents a relationship between two contacts with a specific type."""
+    __tablename__ = 'contact_relationships'
+    
+    id = Column(Integer, primary_key=True)
+    from_contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False)
+    to_contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False)
+    type_id = Column(Integer, ForeignKey('relationship_types.id'), nullable=False)
+    start_date = Column(Date)  # Optional start date of relationship
+    end_date = Column(Date)    # Optional end date of relationship
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    
+    # Ensure unique combinations of from_contact, to_contact, and type
+    __table_args__ = (
+        UniqueConstraint('from_contact_id', 'to_contact_id', 'type_id', 
+                         name='unique_contact_relationship'),
+    )
+    
+    # Relationships
+    from_contact = relationship("Contact", foreign_keys=[from_contact_id], 
+                               back_populates="relationships_from")
+    to_contact = relationship("Contact", foreign_keys=[to_contact_id], 
+                             back_populates="relationships_to")
+    relationship_type = relationship("RelationshipType", back_populates="contact_relationships")
+    
+    def __repr__(self):
+        return f"<ContactRelationship(from={self.from_contact_id}, to={self.to_contact_id}, type={self.type_id})>"
+
+
 class Tag(Base):
-    """Editable list of tag names that can be applied to relationships."""
+    """Editable list of tag names that can be applied to contact metadata."""
     __tablename__ = 'tags'
     
     id = Column(Integer, primary_key=True)
@@ -43,15 +114,21 @@ class Tag(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
-    # Many-to-many relationship with Relationship via relationship_tags
-    relationships = relationship("Relationship", secondary="relationship_tags", back_populates="tags")
+    # Many-to-many relationship with ContactMetadata via metadata_tags
+    metadata_entries = relationship("ContactMetadata", secondary="metadata_tags", back_populates="tags")
+    
+    # For backward compatibility
+    @property
+    def relationships(self):
+        """Backward compatibility property."""
+        return self.metadata_entries
     
     def __repr__(self):
         return f"<Tag(id={self.id}, name='{self.name}')>"
 
 
 class Note(Base):
-    """Free-form notes with titles that can be associated with relationships."""
+    """Free-form notes with titles that can be associated with contact metadata."""
     __tablename__ = 'notes'
     
     id = Column(Integer, primary_key=True)
@@ -60,16 +137,22 @@ class Note(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
-    # Many-to-many relationship with Relationship via relationship_notes
-    relationships = relationship("Relationship", secondary="relationship_notes", back_populates="notes")
+    # Many-to-many relationship with ContactMetadata via metadata_notes
+    metadata_entries = relationship("ContactMetadata", secondary="metadata_notes", back_populates="notes")
+    
+    # For backward compatibility
+    @property
+    def relationships(self):
+        """Backward compatibility property."""
+        return self.metadata_entries
     
     def __repr__(self):
         return f"<Note(id={self.id}, title='{self.title}')>"
 
 
-class Relationship(Base):
-    """Links a contact to multiple tags and notes."""
-    __tablename__ = 'relationships'
+class ContactMetadata(Base):
+    """Links a contact to multiple tags and notes (formerly Relationship)."""
+    __tablename__ = 'contact_metadata'
     
     id = Column(Integer, primary_key=True)
     contact_id = Column(Integer, ForeignKey('contacts.id'), nullable=False, unique=True)
@@ -77,35 +160,43 @@ class Relationship(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
     # One-to-one relationship with Contact
-    contact = relationship("Contact", back_populates="relationship")
+    contact = relationship("Contact", back_populates="metadata_rel")
     
-    # Many-to-many relationship with Tag via relationship_tags
-    tags = relationship("Tag", secondary="relationship_tags", back_populates="relationships")
+    # Many-to-many relationship with Tag via metadata_tags
+    tags = relationship("Tag", secondary="metadata_tags", back_populates="metadata_entries")
     
-    # Many-to-many relationship with Note via relationship_notes
-    notes = relationship("Note", secondary="relationship_notes", back_populates="relationships")
+    # Many-to-many relationship with Note via metadata_notes
+    notes = relationship("Note", secondary="metadata_notes", back_populates="metadata_entries")
     
     def __repr__(self):
-        return f"<Relationship(id={self.id}, contact_id={self.contact_id})>"
+        return f"<ContactMetadata(id={self.id}, contact_id={self.contact_id})>"
 
 
-# Many-to-many join table between relationships and tags
-relationship_tags = Table(
-    'relationship_tags',
+# Backward compatibility alias
+Relationship = ContactMetadata
+
+
+# Many-to-many join table between contact_metadata and tags
+metadata_tags = Table(
+    'metadata_tags',
     Base.metadata,
-    Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
+    Column('metadata_id', Integer, ForeignKey('contact_metadata.id'), primary_key=True),
     Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True),
     Column('created_at', DateTime, default=lambda: datetime.now(UTC))
 )
 
-# Many-to-many join table between relationships and notes
-relationship_notes = Table(
-    'relationship_notes',
+# Many-to-many join table between contact_metadata and notes
+metadata_notes = Table(
+    'metadata_notes',
     Base.metadata,
-    Column('relationship_id', Integer, ForeignKey('relationships.id'), primary_key=True),
+    Column('metadata_id', Integer, ForeignKey('contact_metadata.id'), primary_key=True),
     Column('note_id', Integer, ForeignKey('notes.id'), primary_key=True),
     Column('created_at', DateTime, default=lambda: datetime.now(UTC))
 )
+
+# Backward compatibility aliases for join tables
+relationship_tags = metadata_tags
+relationship_notes = metadata_notes
 
 
 class Person(Base):

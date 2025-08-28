@@ -99,9 +99,10 @@ class Database:
             self.session.add(contact)
             self.session.flush()  # Get the contact ID
             
-            # Create a relationship for this contact
-            relationship = Relationship(contact_id=contact.id)
-            self.session.add(relationship)
+            # Create metadata entry for this contact (formerly called relationship)
+            from .models import ContactMetadata
+            metadata = ContactMetadata(contact_id=contact.id)
+            self.session.add(metadata)
         
         self.session.commit()
 
@@ -218,6 +219,205 @@ class Database:
             Note.title.ilike(f"%{title_search}%")
         ).order_by(Note.title).all()
         return [(n.id, n.title, n.content) for n in notes]
+    
+    # ========== New Relationship Type Management Functions ==========
+    
+    def create_relationship_type(self, type_key: str, description: str, 
+                                inverse_key: str, is_symmetrical: bool = False) -> int:
+        """Create a new relationship type with its inverse."""
+        from .models import RelationshipType
+        
+        # Check if type already exists
+        existing = self.session.query(RelationshipType).filter(
+            RelationshipType.type_key == type_key
+        ).first()
+        if existing:
+            return existing.id
+            
+        # Create the relationship type
+        rel_type = RelationshipType(
+            type_key=type_key,
+            description=description,
+            inverse_type_key=inverse_key,
+            is_symmetrical=1 if is_symmetrical else 0
+        )
+        self.session.add(rel_type)
+        self.session.flush()
+        return rel_type.id
+    
+    def list_relationship_types(self) -> List[Dict[str, Any]]:
+        """List all relationship types with their properties."""
+        from .models import RelationshipType
+        
+        types = self.session.query(RelationshipType).order_by(RelationshipType.type_key).all()
+        return [
+            {
+                "id": t.id,
+                "type_key": t.type_key,
+                "description": t.description,
+                "inverse_type_key": t.inverse_type_key,
+                "is_symmetrical": bool(t.is_symmetrical)
+            }
+            for t in types
+        ]
+    
+    def create_contact_relationship(self, from_contact_id: int, to_contact_id: int, 
+                                  type_key: str, start_date=None, end_date=None):
+        """Create a relationship between two contacts."""
+        from .models import ContactRelationship, RelationshipType
+        
+        # Get the relationship type
+        rel_type = self.session.query(RelationshipType).filter(
+            RelationshipType.type_key == type_key
+        ).first()
+        if not rel_type:
+            raise ValueError(f"Relationship type '{type_key}' not found")
+            
+        # Check if relationship already exists
+        existing = self.session.query(ContactRelationship).filter(
+            ContactRelationship.from_contact_id == from_contact_id,
+            ContactRelationship.to_contact_id == to_contact_id,
+            ContactRelationship.type_id == rel_type.id
+        ).first()
+        if existing:
+            return  # Relationship already exists
+            
+        # Create the relationship
+        relationship = ContactRelationship(
+            from_contact_id=from_contact_id,
+            to_contact_id=to_contact_id,
+            type_id=rel_type.id,
+            start_date=start_date,
+            end_date=end_date
+        )
+        self.session.add(relationship)
+        
+        # For non-symmetrical relationships, create the inverse
+        if not rel_type.is_symmetrical and rel_type.inverse_type_key:
+            # Get inverse type
+            inverse_type = self.session.query(RelationshipType).filter(
+                RelationshipType.type_key == rel_type.inverse_type_key
+            ).first()
+            if inverse_type:
+                # Check if inverse doesn't already exist
+                existing_inverse = self.session.query(ContactRelationship).filter(
+                    ContactRelationship.from_contact_id == to_contact_id,
+                    ContactRelationship.to_contact_id == from_contact_id,
+                    ContactRelationship.type_id == inverse_type.id
+                ).first()
+                if not existing_inverse:
+                    inverse_relationship = ContactRelationship(
+                        from_contact_id=to_contact_id,
+                        to_contact_id=from_contact_id,
+                        type_id=inverse_type.id,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    self.session.add(inverse_relationship)
+        
+        self.session.commit()
+    
+    def get_contact_relationships(self, contact_id: int) -> List[Dict[str, Any]]:
+        """Get all relationships for a contact."""
+        from .models import ContactRelationship, RelationshipType, Contact
+        
+        # Get relationships where contact is 'from'
+        relationships_from = self.session.query(
+            ContactRelationship, RelationshipType, Contact
+        ).join(
+            RelationshipType, ContactRelationship.type_id == RelationshipType.id
+        ).join(
+            Contact, ContactRelationship.to_contact_id == Contact.id
+        ).filter(
+            ContactRelationship.from_contact_id == contact_id
+        ).all()
+        
+        # Get relationships where contact is 'to' (for symmetrical relationships)
+        relationships_to = self.session.query(
+            ContactRelationship, RelationshipType, Contact
+        ).join(
+            RelationshipType, ContactRelationship.type_id == RelationshipType.id
+        ).join(
+            Contact, ContactRelationship.from_contact_id == Contact.id
+        ).filter(
+            ContactRelationship.to_contact_id == contact_id,
+            RelationshipType.is_symmetrical == 1  # Only include symmetrical
+        ).all()
+        
+        results = []
+        
+        # Process 'from' relationships
+        for rel, rel_type, other_contact in relationships_from:
+            results.append({
+                "relationship_id": rel.id,
+                "type": rel_type.type_key,
+                "description": rel_type.description,
+                "other_contact_id": other_contact.id,
+                "other_contact_name": other_contact.name,
+                "other_contact_email": other_contact.email,
+                "direction": "from",
+                "start_date": rel.start_date,
+                "end_date": rel.end_date
+            })
+        
+        # Process 'to' relationships (only symmetrical)
+        for rel, rel_type, other_contact in relationships_to:
+            # Skip if we already have this relationship from the other direction
+            if not any(r["other_contact_id"] == other_contact.id and 
+                      r["type"] == rel_type.type_key for r in results):
+                results.append({
+                    "relationship_id": rel.id,
+                    "type": rel_type.type_key,
+                    "description": rel_type.description,
+                    "other_contact_id": other_contact.id,
+                    "other_contact_name": other_contact.name,
+                    "other_contact_email": other_contact.email,
+                    "direction": "to",
+                    "start_date": rel.start_date,
+                    "end_date": rel.end_date
+                })
+        
+        return sorted(results, key=lambda x: (x["type"], x["other_contact_name"]))
+    
+    def delete_contact_relationship(self, from_contact_id: int, to_contact_id: int, type_key: str):
+        """Delete a relationship between two contacts (and its inverse if applicable)."""
+        from .models import ContactRelationship, RelationshipType
+        
+        # Get the relationship type
+        rel_type = self.session.query(RelationshipType).filter(
+            RelationshipType.type_key == type_key
+        ).first()
+        if not rel_type:
+            raise ValueError(f"Relationship type '{type_key}' not found")
+        
+        # Delete the primary relationship
+        self.session.query(ContactRelationship).filter(
+            ContactRelationship.from_contact_id == from_contact_id,
+            ContactRelationship.to_contact_id == to_contact_id,
+            ContactRelationship.type_id == rel_type.id
+        ).delete()
+        
+        # For non-symmetrical relationships, also delete the inverse
+        if not rel_type.is_symmetrical and rel_type.inverse_type_key:
+            inverse_type = self.session.query(RelationshipType).filter(
+                RelationshipType.type_key == rel_type.inverse_type_key
+            ).first()
+            if inverse_type:
+                self.session.query(ContactRelationship).filter(
+                    ContactRelationship.from_contact_id == to_contact_id,
+                    ContactRelationship.to_contact_id == from_contact_id,
+                    ContactRelationship.type_id == inverse_type.id
+                ).delete()
+        
+        # For symmetrical relationships, delete both directions
+        if rel_type.is_symmetrical:
+            self.session.query(ContactRelationship).filter(
+                ContactRelationship.from_contact_id == to_contact_id,
+                ContactRelationship.to_contact_id == from_contact_id,
+                ContactRelationship.type_id == rel_type.id
+            ).delete()
+        
+        self.session.commit()
 
 
 def create_database(path: Path) -> Database:
