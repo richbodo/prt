@@ -37,6 +37,12 @@ DEFAULT_PAGE_SIZE = 20  # Default number of items per page
 MAX_DISPLAY_CONTACTS = 30  # Maximum contacts to show without pagination
 TABLE_WIDTH_LIMIT = 120  # Maximum table width
 
+# Security constants
+MAX_CSV_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+MAX_CSV_IMPORT_ROWS = 10000  # Maximum relationships to import
+EXPORT_FILE_PERMISSIONS = 0o600  # rw-------
+EXPORT_DIR_PERMISSIONS = 0o750  # rwxr-x---
+
 
 def show_empty_database_guidance():
     """Show helpful guidance when database is empty."""
@@ -1806,6 +1812,11 @@ def handle_find_connection_path(api: PRTAPI) -> None:
 
 def handle_export_relationships(api: PRTAPI) -> None:
     """Export all relationships to file."""
+    import os
+    import re
+    from datetime import datetime
+    from pathlib import Path
+
     try:
         console.print("\n[bright_blue bold]Export Relationships[/bright_blue bold]")
 
@@ -1824,27 +1835,53 @@ def handle_export_relationships(api: PRTAPI) -> None:
             console.print("No relationships to export.", style="yellow")
             return
 
-        # Create exports directory if it doesn't exist
-        from pathlib import Path
-
+        # Create exports directory if it doesn't exist with secure permissions
         export_dir = Path("exports")
-        export_dir.mkdir(exist_ok=True)
+        export_dir.mkdir(exist_ok=True, mode=EXPORT_DIR_PERMISSIONS)
+
+        # Validate export directory is not a symlink (prevent directory traversal)
+        if export_dir.is_symlink():
+            console.print("Error: Export directory cannot be a symbolic link.", style="red")
+            return
+
+        # Ensure export directory is within current working directory
+        try:
+            export_dir = export_dir.resolve()
+            cwd = Path.cwd()
+            export_dir.relative_to(cwd)  # Will raise ValueError if not relative
+        except ValueError:
+            console.print("Error: Export directory must be within current directory.", style="red")
+            return
+
+        # Sanitize filename - remove any path components and dangerous characters
+        safe_filename = re.sub(r"[^a-zA-Z0-9._-]", "_", filename)
 
         # Add timestamp to filename
-        from datetime import datetime
-
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        export_path = export_dir / f"{timestamp}_{filename}"
+        export_filename = f"{timestamp}_{safe_filename}"
+        export_path = export_dir / export_filename
 
-        # Write file
+        # Final path validation
+        if export_path.is_symlink():
+            console.print("Error: Cannot write to symbolic link.", style="red")
+            return
+
+        # Write file with explicit permissions
         if format_choice == "csv":
+            # Create file with restricted permissions first
+            export_path.touch(mode=EXPORT_FILE_PERMISSIONS)
             with open(export_path, "w", encoding="utf-8") as f:
                 f.write(data)
         else:
             import json
 
+            # Create file with restricted permissions first
+            export_path.touch(mode=EXPORT_FILE_PERMISSIONS)
             with open(export_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # Ensure file permissions are set correctly (in case umask overrode)
+        os.chmod(export_path, EXPORT_FILE_PERMISSIONS)
 
         # Show summary
         if format_choice == "json":
@@ -1964,35 +2001,157 @@ def _handle_bulk_same_type(api: PRTAPI) -> None:
 
 
 def _handle_import_relationships_csv(api: PRTAPI) -> None:
-    """Import relationships from CSV file."""
+    """Import relationships from CSV file with security validations."""
     from pathlib import Path
 
-    csv_path = Prompt.ask("Enter path to CSV file")
-    csv_file = Path(csv_path)
+    # Use global security constants
 
+    csv_path = Prompt.ask("Enter path to CSV file")
+
+    try:
+        csv_file = Path(csv_path).resolve()  # Resolve to absolute path
+    except (OSError, RuntimeError) as e:
+        console.print(f"Invalid file path: {e}", style="red")
+        return
+
+    # Security validations
     if not csv_file.exists():
         console.print(f"File not found: {csv_path}", style="red")
         return
 
+    if not csv_file.is_file():
+        console.print(
+            "Error: Path must be a regular file, not a directory or special file.", style="red"
+        )
+        return
+
+    if csv_file.is_symlink():
+        console.print("Error: Cannot read from symbolic links for security reasons.", style="red")
+        return
+
+    # Check file size
+    file_size = csv_file.stat().st_size
+    if file_size > MAX_CSV_FILE_SIZE:
+        console.print(
+            f"Error: File too large ({file_size:,} bytes). Maximum size is {MAX_CSV_FILE_SIZE:,} bytes.",
+            style="red",
+        )
+        return
+
+    if file_size == 0:
+        console.print("Error: File is empty.", style="red")
+        return
+
     try:
         import csv
+        import re
 
         relationships = []
+        row_count = 0
+        errors = []
+
+        # Validate allowed characters in type_key
+        type_key_pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+        # Get valid relationship types for validation
+        valid_types = {rt["type_key"] for rt in api.db.list_relationship_types()}
+
+        # Get valid contact IDs for validation
+        valid_contact_ids = {c["id"] for c in api.list_all_contacts()}
 
         with open(csv_file, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                relationships.append(
-                    {
-                        "from_contact_id": int(row["from_id"]),
-                        "to_contact_id": int(row["to_id"]),
-                        "type_key": row["type"],
-                    }
-                )
+            # Use csv.Sniffer to detect dialect, but limit sample size
+            sample = f.read(8192)  # Read first 8KB for dialect detection
+            f.seek(0)
 
-        console.print(f"Found {len(relationships)} relationships in CSV", style="green")
+            try:
+                dialect = csv.Sniffer().sniff(sample)
+                reader = csv.DictReader(f, dialect=dialect)
+            except csv.Error:
+                # Fall back to default dialect if detection fails
+                reader = csv.DictReader(f)
 
-        if Confirm.ask("Import these relationships?"):
+            # Validate required columns
+            if reader.fieldnames:
+                required_fields = {"from_id", "to_id", "type"}
+                missing_fields = required_fields - set(reader.fieldnames)
+                if missing_fields:
+                    console.print(
+                        f"Error: CSV missing required columns: {missing_fields}", style="red"
+                    )
+                    return
+
+            for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is line 1)
+                row_count += 1
+
+                # Enforce row limit
+                if row_count > MAX_CSV_IMPORT_ROWS:
+                    console.print(
+                        f"Warning: Reached maximum row limit ({MAX_CSV_IMPORT_ROWS}). Stopping import.",
+                        style="yellow",
+                    )
+                    break
+
+                try:
+                    # Validate and sanitize from_id
+                    from_id = int(row.get("from_id", "").strip())
+                    if from_id not in valid_contact_ids:
+                        errors.append(f"Row {row_num}: Invalid from_id {from_id}")
+                        continue
+
+                    # Validate and sanitize to_id
+                    to_id = int(row.get("to_id", "").strip())
+                    if to_id not in valid_contact_ids:
+                        errors.append(f"Row {row_num}: Invalid to_id {to_id}")
+                        continue
+
+                    # Validate same contact check
+                    if from_id == to_id:
+                        errors.append(f"Row {row_num}: Cannot create self-relationship")
+                        continue
+
+                    # Validate and sanitize type_key
+                    type_key = row.get("type", "").strip()
+                    if not type_key_pattern.match(type_key):
+                        errors.append(f"Row {row_num}: Invalid characters in type '{type_key}'")
+                        continue
+
+                    if type_key not in valid_types:
+                        errors.append(f"Row {row_num}: Unknown relationship type '{type_key}'")
+                        continue
+
+                    relationships.append(
+                        {
+                            "from_contact_id": from_id,
+                            "to_contact_id": to_id,
+                            "type_key": type_key,
+                        }
+                    )
+
+                except (ValueError, KeyError) as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+
+        if not relationships:
+            console.print("No valid relationships found in CSV.", style="yellow")
+            if errors:
+                console.print(f"\nErrors found ({len(errors)} total):", style="red")
+                for error in errors[:10]:  # Show first 10 errors
+                    console.print(f"  - {error}", style="red")
+                if len(errors) > 10:
+                    console.print(f"  ... and {len(errors) - 10} more errors", style="red")
+            return
+
+        console.print(f"Found {len(relationships)} valid relationships in CSV", style="green")
+        if errors:
+            console.print(f"Skipped {len(errors)} invalid rows", style="yellow")
+            if Confirm.ask("Show error details?"):
+                for error in errors[:20]:  # Show first 20 errors
+                    console.print(f"  - {error}", style="yellow")
+                if len(errors) > 20:
+                    console.print(f"  ... and {len(errors) - 20} more errors", style="yellow")
+
+        if Confirm.ask(f"Import {len(relationships)} valid relationships?"):
             result = api.db.bulk_create_relationships(relationships)
 
             console.print(f"\n✅ Created: {result['created']} relationships", style="green")
@@ -2001,8 +2160,14 @@ def _handle_import_relationships_csv(api: PRTAPI) -> None:
             if result["errors"]:
                 console.print(f"❌ Errors: {len(result['errors'])}", style="red")
 
+    except PermissionError:
+        console.print(f"Error: Permission denied reading file: {csv_path}", style="red")
+    except UnicodeDecodeError:
+        console.print(f"Error: File is not valid UTF-8 text: {csv_path}", style="red")
+    except csv.Error as e:
+        console.print(f"Error parsing CSV: {e}", style="red")
     except Exception as e:
-        console.print(f"Error reading CSV: {e}", style="red")
+        console.print(f"Unexpected error reading CSV: {e}", style="red")
 
 
 def _handle_group_relationships(api: PRTAPI) -> None:
