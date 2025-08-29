@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from prt_src.core.search_cache.contact_cache import ContactSearchCache
 from prt_src.core.search_index.indexer import EntityType, SearchIndexer, SearchResult
+from prt_src.logging_config import get_logger
 
 
 class SearchPriority(IntEnum):
@@ -83,6 +84,7 @@ class UnifiedSearchAPI:
             enable_cache: Whether to use contact cache
         """
         self.db = db
+        self.logger = get_logger(__name__)
         self.max_results = max_results
         self.enable_cache = enable_cache
 
@@ -352,7 +354,7 @@ class UnifiedSearchAPI:
         except Exception as e:
             # Log error and return empty results rather than failing the entire search
             # In production, you'd want to log this error
-            print(f"Warning: Cache search failed: {e}")
+            self.logger.warning(f"Cache search failed: {e}", exc_info=True)
             return results
 
         for contact in cached_contacts:
@@ -391,7 +393,7 @@ class UnifiedSearchAPI:
         except Exception as e:
             # Log error and return empty results rather than failing the entire search
             # In production, you'd want to log this error
-            print(f"Warning: FTS search failed: {e}")
+            self.logger.warning(f"FTS search failed: {e}", exc_info=True)
             return []
 
         results = []

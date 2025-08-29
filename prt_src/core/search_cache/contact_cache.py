@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import pygtrie
 from lru import LRU
 
+from prt_src.logging_config import get_logger
+
 
 @dataclass
 class CachedContact:
@@ -86,6 +88,7 @@ class ContactSearchCache:
         """
         self.max_cache_size = max_cache_size
         self.max_autocomplete_results = max_autocomplete_results
+        self.logger = get_logger(__name__)
 
         # LRU cache for frequently accessed contacts
         self._lru_cache = LRU(max_cache_size)
@@ -339,7 +342,7 @@ class ContactSearchCache:
         self._stats["last_warm"] = time.time()
         warm_time = time.time() - start_time
 
-        print(f"Cache warmed with {len(contacts)} contacts in {warm_time:.2f}s")
+        self.logger.info(f"Cache warmed with {len(contacts)} contacts in {warm_time:.2f}s")
 
     def clear_cache(self) -> None:
         """Clear all cached data."""

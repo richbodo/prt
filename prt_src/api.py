@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from .config import data_dir, load_config
 from .db import Database
+from .logging_config import get_logger
 from .schema_manager import SchemaManager
 
 
@@ -19,6 +20,8 @@ class PRTAPI:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize PRT API with configuration."""
+        self.logger = get_logger(__name__)
+
         if config is None:
             config = load_config()
 
@@ -42,9 +45,7 @@ class PRTAPI:
             console.print("\n🔄 Database schema update needed...", style="blue")
             success = self.schema_manager.migrate_safely()
             if not success:
-                raise RuntimeError(
-                    "Database migration failed. See instructions above to recover."
-                )
+                raise RuntimeError("Database migration failed. See instructions above to recover.")
 
     # Database management operations
     def get_database_stats(self) -> Dict[str, int]:
@@ -62,9 +63,7 @@ class PRTAPI:
         """Create database backup."""
         return self.db.backup(suffix)
 
-    def create_backup_with_comment(
-        self, comment: str = None, auto: bool = False
-    ) -> Dict[str, Any]:
+    def create_backup_with_comment(self, comment: str = None, auto: bool = False) -> Dict[str, Any]:
         """Create a tracked backup with optional comment.
 
         Args:
@@ -79,9 +78,7 @@ class PRTAPI:
         elif not comment and auto:
             from datetime import datetime
 
-            comment = (
-                f"Automatic backup at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            )
+            comment = f"Automatic backup at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         return self.db.create_backup_with_metadata(comment, is_auto=auto)
 
@@ -179,16 +176,10 @@ class PRTAPI:
         from .models import Tag
 
         tags = (
-            self.db.session.query(Tag)
-            .filter(Tag.name.ilike(f"%{query}%"))
-            .order_by(Tag.name)
-            .all()
+            self.db.session.query(Tag).filter(Tag.name.ilike(f"%{query}%")).order_by(Tag.name).all()
         )
 
-        return [
-            {"id": t.id, "name": t.name, "contact_count": len(t.relationships)}
-            for t in tags
-        ]
+        return [{"id": t.id, "name": t.name, "contact_count": len(t.relationships)} for t in tags]
 
     def search_notes(self, query: str) -> List[Dict[str, Any]]:
         """Search notes by title or content (case-insensitive partial match)."""
@@ -196,9 +187,7 @@ class PRTAPI:
 
         notes = (
             self.db.session.query(Note)
-            .filter(
-                (Note.title.ilike(f"%{query}%")) | (Note.content.ilike(f"%{query}%"))
-            )
+            .filter((Note.title.ilike(f"%{query}%")) | (Note.content.ilike(f"%{query}%")))
             .order_by(Note.title)
             .all()
         )
@@ -282,9 +271,7 @@ class PRTAPI:
         """Remove a tag from a contact's relationship."""
         from .models import Contact, Tag
 
-        contact = (
-            self.db.session.query(Contact).filter(Contact.id == contact_id).first()
-        )
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
         if not contact or not contact.relationship:
             return False
 
@@ -296,9 +283,7 @@ class PRTAPI:
         self.db.session.commit()
         return True
 
-    def add_note_to_contact(
-        self, contact_id: int, note_title: str, note_content: str
-    ) -> bool:
+    def add_note_to_contact(self, contact_id: int, note_title: str, note_content: str) -> bool:
         """Add a note to a contact's relationship."""
         try:
             self.db.add_relationship_note(contact_id, note_title, note_content)
@@ -310,9 +295,7 @@ class PRTAPI:
         """Remove a note from a contact's relationship."""
         from .models import Contact, Note
 
-        contact = (
-            self.db.session.query(Contact).filter(Contact.id == contact_id).first()
-        )
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
         if not contact or not contact.relationship:
             return False
 
@@ -330,10 +313,7 @@ class PRTAPI:
         from .models import Tag
 
         tags = self.db.session.query(Tag).order_by(Tag.name).all()
-        return [
-            {"id": t.id, "name": t.name, "contact_count": len(t.relationships)}
-            for t in tags
-        ]
+        return [{"id": t.id, "name": t.name, "contact_count": len(t.relationships)} for t in tags]
 
     def create_tag(self, name: str) -> Optional[Dict[str, Any]]:
         """Create a new tag."""
@@ -433,9 +413,7 @@ class PRTAPI:
         """Get detailed information about a specific contact."""
         from .models import Contact
 
-        contact = (
-            self.db.session.query(Contact).filter(Contact.id == contact_id).first()
-        )
+        contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
         if not contact:
             return None
 
@@ -475,7 +453,7 @@ class PRTAPI:
             self.db.insert_contacts(contacts)
             return True
         except Exception as e:
-            print(f"Error importing contacts: {e}")
+            self.logger.error(f"Error importing contacts: {e}", exc_info=True)
             return False
 
     def insert_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
@@ -484,7 +462,7 @@ class PRTAPI:
             self.db.insert_contacts(contacts)
             return True
         except Exception as e:
-            print(f"Error inserting contacts: {e}")
+            self.logger.error(f"Error inserting contacts: {e}", exc_info=True)
             return False
 
     def parse_csv_contacts(self, csv_path: str) -> List[Dict[str, Any]]:
@@ -494,7 +472,7 @@ class PRTAPI:
 
             return parse_contacts(csv_path)
         except Exception as e:
-            print(f"Error parsing CSV file: {e}")
+            self.logger.error(f"Error parsing CSV file: {e}", exc_info=True)
             return []
 
     def get_csv_files(self) -> List[Path]:
@@ -530,12 +508,10 @@ class PRTAPI:
     ) -> bool:
         """Create a new relationship type."""
         try:
-            self.db.create_relationship_type(
-                type_key, description, inverse_key, is_symmetrical
-            )
+            self.db.create_relationship_type(type_key, description, inverse_key, is_symmetrical)
             return True
         except Exception as e:
-            print(f"Error creating relationship type: {e}")
+            self.logger.error(f"Error creating relationship type: {e}", exc_info=True)
             return False
 
     def delete_relationship_type(self, type_key: str) -> bool:
@@ -569,7 +545,7 @@ class PRTAPI:
             self.db.session.commit()
             return True
         except Exception as e:
-            print(f"Error deleting relationship type: {e}")
+            self.logger.error(f"Error deleting relationship type: {e}", exc_info=True)
             self.db.session.rollback()
             return False
 
@@ -598,12 +574,10 @@ class PRTAPI:
             from_id = from_contacts[0]["id"]
             to_id = to_contacts[0]["id"]
 
-            self.db.create_contact_relationship(
-                from_id, to_id, type_key, start_date, end_date
-            )
+            self.db.create_contact_relationship(from_id, to_id, type_key, start_date, end_date)
             return True
         except Exception as e:
-            print(f"Error adding relationship: {e}")
+            self.logger.error(f"Error adding relationship: {e}", exc_info=True)
             return False
 
     def remove_contact_relationship(
@@ -624,7 +598,7 @@ class PRTAPI:
             self.db.delete_contact_relationship(from_id, to_id, type_key)
             return True
         except Exception as e:
-            print(f"Error removing relationship: {e}")
+            self.logger.error(f"Error removing relationship: {e}", exc_info=True)
             return False
 
     def get_contact_relationships(
@@ -679,14 +653,10 @@ class PRTAPI:
 
         # Get all relationships
         relationships = (
-            self.db.session.query(
-                ContactRelationship, RelationshipType, Contact, Contact
-            )
+            self.db.session.query(ContactRelationship, RelationshipType, Contact, Contact)
             .join(RelationshipType, ContactRelationship.type_id == RelationshipType.id)
             .join(Contact, ContactRelationship.from_contact_id == Contact.id)
-            .join(
-                Contact, ContactRelationship.to_contact_id == Contact.id, isouter=True
-            )
+            .join(Contact, ContactRelationship.to_contact_id == Contact.id, isouter=True)
             .all()
         )
 
