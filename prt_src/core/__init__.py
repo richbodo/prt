@@ -10,6 +10,7 @@ from .database import DatabaseOperations
 from .operations import Operations
 from .relationships import RelationshipOperations
 from .search import SearchOperations
+from .search_unified import UnifiedSearchAPI
 
 __all__ = [
     "Operations",
@@ -17,4 +18,5 @@ __all__ = [
     "RelationshipOperations",
     "SearchOperations",
     "DatabaseOperations",
+    "UnifiedSearchAPI",
 ]
