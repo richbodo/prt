@@ -1,11 +1,13 @@
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import and_, case, create_engine, func, or_, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import aliased, sessionmaker
+
+from .models import Contact, ContactRelationship, RelationshipType
 
 
 class Database:
@@ -22,9 +24,7 @@ class Database:
 
         # Standard SQLite connection
         self.engine = create_engine(db_url, echo=False)
-        self.SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
-        )
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.session = self.SessionLocal()
 
     def is_valid(self) -> bool:
@@ -154,9 +154,7 @@ class Database:
         from .models import BackupMetadata
 
         backups = (
-            self.session.query(BackupMetadata)
-            .order_by(BackupMetadata.created_at.desc())
-            .all()
+            self.session.query(BackupMetadata).order_by(BackupMetadata.created_at.desc()).all()
         )
 
         result = []
@@ -195,11 +193,7 @@ class Database:
         """
         from .models import BackupMetadata
 
-        backup = (
-            self.session.query(BackupMetadata)
-            .filter(BackupMetadata.id == backup_id)
-            .first()
-        )
+        backup = self.session.query(BackupMetadata).filter(BackupMetadata.id == backup_id).first()
 
         if not backup:
             raise ValueError(f"Backup with ID {backup_id} not found")
@@ -390,9 +384,7 @@ class Database:
         self.session.flush()  # Get the note ID
         return note.id
 
-    def add_relationship_note(
-        self, contact_id: int, note_title: str, note_content: str
-    ):
+    def add_relationship_note(self, contact_id: int, note_title: str, note_content: str):
         """Add a note to a contact's relationship."""
         from .models import Contact, Note
 
@@ -488,11 +480,7 @@ class Database:
         """List all relationship types with their properties."""
         from .models import RelationshipType
 
-        types = (
-            self.session.query(RelationshipType)
-            .order_by(RelationshipType.type_key)
-            .all()
-        )
+        types = self.session.query(RelationshipType).order_by(RelationshipType.type_key).all()
         return [
             {
                 "id": t.id,
@@ -625,8 +613,7 @@ class Database:
         for rel, rel_type, other_contact in relationships_to:
             # Skip if we already have this relationship from the other direction
             if not any(
-                r["other_contact_id"] == other_contact.id
-                and r["type"] == rel_type.type_key
+                r["other_contact_id"] == other_contact.id and r["type"] == rel_type.type_key
                 for r in results
             ):
                 results.append(
@@ -645,9 +632,7 @@ class Database:
 
         return sorted(results, key=lambda x: (x["type"], x["other_contact_name"]))
 
-    def delete_contact_relationship(
-        self, from_contact_id: int, to_contact_id: int, type_key: str
-    ):
+    def delete_contact_relationship(self, from_contact_id: int, to_contact_id: int, type_key: str):
         """Delete a relationship between two contacts (and its inverse if applicable)."""
         from .models import ContactRelationship, RelationshipType
 
@@ -690,6 +675,405 @@ class Database:
             ).delete()
 
         self.session.commit()
+
+    # Advanced Relationship Analytics and Queries (Issue #64 Part 3)
+
+    def get_relationship_analytics(self) -> Dict[str, Any]:
+        """Get comprehensive relationship analytics for the database."""
+        try:
+            # Total relationships
+            total_relationships = self.session.query(ContactRelationship).count()
+
+            # Most connected contacts (by relationship count)
+            most_connected = (
+                self.session.query(
+                    Contact.id,
+                    Contact.name,
+                    Contact.email,
+                    func.count(ContactRelationship.id).label("relationship_count"),
+                )
+                .outerjoin(
+                    ContactRelationship,
+                    or_(
+                        Contact.id == ContactRelationship.from_contact_id,
+                        Contact.id == ContactRelationship.to_contact_id,
+                    ),
+                )
+                .group_by(Contact.id)
+                .order_by(func.count(ContactRelationship.id).desc())
+                .limit(10)
+                .all()
+            )
+
+            # Relationship type distribution
+            type_distribution = (
+                self.session.query(
+                    RelationshipType.type_key,
+                    RelationshipType.description,
+                    func.count(ContactRelationship.id).label("count"),
+                )
+                .join(ContactRelationship)
+                .group_by(RelationshipType.id)
+                .all()
+            )
+
+            # Isolated contacts (no relationships)
+            isolated_count = (
+                self.session.query(Contact)
+                .outerjoin(
+                    ContactRelationship,
+                    or_(
+                        Contact.id == ContactRelationship.from_contact_id,
+                        Contact.id == ContactRelationship.to_contact_id,
+                    ),
+                )
+                .filter(ContactRelationship.id.is_(None))
+                .count()
+            )
+
+            # Average relationships per contact
+            total_contacts = self.session.query(Contact).count()
+            avg_relationships = (
+                (total_relationships * 2) / total_contacts if total_contacts > 0 else 0
+            )
+
+            return {
+                "total_relationships": total_relationships,
+                "total_contacts": total_contacts,
+                "average_relationships_per_contact": round(avg_relationships, 2),
+                "isolated_contacts": isolated_count,
+                "most_connected": [
+                    {
+                        "id": c.id,
+                        "name": c.name,
+                        "email": c.email,
+                        "relationship_count": c.relationship_count,
+                    }
+                    for c in most_connected
+                ],
+                "type_distribution": [
+                    {"type": t.type_key, "description": t.description, "count": t.count}
+                    for t in type_distribution
+                ],
+            }
+        except Exception as e:
+            print(f"Error getting relationship analytics: {e}")
+            return {}
+
+    def find_mutual_connections(self, contact1_id: int, contact2_id: int) -> List[Dict[str, Any]]:
+        """Find mutual connections between two contacts."""
+        try:
+            # Get all connections for contact1
+            contact1_connections = (
+                self.session.query(Contact.id)
+                .join(
+                    ContactRelationship,
+                    or_(
+                        and_(
+                            ContactRelationship.from_contact_id == contact1_id,
+                            ContactRelationship.to_contact_id == Contact.id,
+                        ),
+                        and_(
+                            ContactRelationship.to_contact_id == contact1_id,
+                            ContactRelationship.from_contact_id == Contact.id,
+                        ),
+                    ),
+                )
+                .distinct()
+            )
+
+            # Get all connections for contact2
+            contact2_connections = (
+                self.session.query(Contact.id)
+                .join(
+                    ContactRelationship,
+                    or_(
+                        and_(
+                            ContactRelationship.from_contact_id == contact2_id,
+                            ContactRelationship.to_contact_id == Contact.id,
+                        ),
+                        and_(
+                            ContactRelationship.to_contact_id == contact2_id,
+                            ContactRelationship.from_contact_id == Contact.id,
+                        ),
+                    ),
+                )
+                .distinct()
+            )
+
+            # Find intersection
+            mutual = (
+                self.session.query(Contact)
+                .filter(Contact.id.in_(contact1_connections), Contact.id.in_(contact2_connections))
+                .all()
+            )
+
+            return [
+                {"id": c.id, "name": c.name, "email": c.email, "phone": c.phone} for c in mutual
+            ]
+        except Exception as e:
+            print(f"Error finding mutual connections: {e}")
+            return []
+
+    def find_relationship_path(self, from_id: int, to_id: int, max_depth: int = 6) -> List[int]:
+        """Find the shortest relationship path between two contacts (BFS)."""
+        try:
+            if from_id == to_id:
+                return [from_id]
+
+            visited = set()
+            queue = [(from_id, [from_id])]
+
+            while queue and len(visited) < max_depth * 100:  # Safety limit
+                current_id, path = queue.pop(0)
+
+                if current_id in visited:
+                    continue
+
+                visited.add(current_id)
+
+                # Get all connections for current contact
+                connections = (
+                    self.session.query(
+                        case(
+                            (
+                                ContactRelationship.from_contact_id == current_id,
+                                ContactRelationship.to_contact_id,
+                            ),
+                            else_=ContactRelationship.from_contact_id,
+                        ).label("connected_id")
+                    )
+                    .filter(
+                        or_(
+                            ContactRelationship.from_contact_id == current_id,
+                            ContactRelationship.to_contact_id == current_id,
+                        )
+                    )
+                    .all()
+                )
+
+                for conn in connections:
+                    next_id = conn.connected_id
+
+                    if next_id == to_id:
+                        return path + [next_id]
+
+                    if next_id not in visited and len(path) < max_depth:
+                        queue.append((next_id, path + [next_id]))
+
+            return []  # No path found
+        except Exception as e:
+            print(f"Error finding relationship path: {e}")
+            return []
+
+    def bulk_create_relationships(self, relationships: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create multiple relationships in a single transaction."""
+        try:
+            created = 0
+            skipped = 0
+            errors = []
+
+            for rel in relationships:
+                try:
+                    from_id = rel["from_contact_id"]
+                    to_id = rel["to_contact_id"]
+                    type_key = rel["type_key"]
+                    start_date = rel.get("start_date")
+
+                    # Check if relationship already exists
+                    rel_type = (
+                        self.session.query(RelationshipType)
+                        .filter(RelationshipType.type_key == type_key)
+                        .first()
+                    )
+
+                    if not rel_type:
+                        errors.append(f"Unknown relationship type: {type_key}")
+                        continue
+
+                    existing = (
+                        self.session.query(ContactRelationship)
+                        .filter(
+                            ContactRelationship.from_contact_id == from_id,
+                            ContactRelationship.to_contact_id == to_id,
+                            ContactRelationship.type_id == rel_type.id,
+                        )
+                        .first()
+                    )
+
+                    if existing:
+                        skipped += 1
+                        continue
+
+                    # Create the relationship
+                    self.create_contact_relationship(
+                        from_id, to_id, type_key, start_date=start_date
+                    )
+                    created += 1
+
+                except Exception as e:
+                    errors.append(str(e))
+
+            self.session.commit()
+
+            return {
+                "created": created,
+                "skipped": skipped,
+                "errors": errors,
+                "total": len(relationships),
+            }
+        except Exception as e:
+            self.session.rollback()
+            return {"created": 0, "skipped": 0, "errors": [str(e)], "total": len(relationships)}
+
+    def export_relationships(self, format: str = "json") -> Union[str, List[Dict[str, Any]]]:
+        """Export all relationships in specified format."""
+        try:
+            # Create alias for the second contact join
+            aliased_contact = aliased(Contact)
+
+            relationships = (
+                self.session.query(
+                    ContactRelationship,
+                    RelationshipType,
+                    Contact.name.label("from_name"),
+                    Contact.email.label("from_email"),
+                    aliased_contact.name.label("to_name"),
+                    aliased_contact.email.label("to_email"),
+                )
+                .join(RelationshipType)
+                .join(Contact, Contact.id == ContactRelationship.from_contact_id)
+                .join(aliased_contact, aliased_contact.id == ContactRelationship.to_contact_id)
+                .all()
+            )
+
+            data = []
+            for rel, rel_type, from_name, from_email, to_name, to_email in relationships:
+                data.append(
+                    {
+                        "from_contact": {
+                            "id": rel.from_contact_id,
+                            "name": from_name,
+                            "email": from_email,
+                        },
+                        "to_contact": {"id": rel.to_contact_id, "name": to_name, "email": to_email},
+                        "relationship": {
+                            "type": rel_type.type_key,
+                            "description": rel_type.description,
+                            "is_symmetrical": rel_type.is_symmetrical,
+                            "start_date": str(rel.start_date) if rel.start_date else None,
+                            "end_date": str(rel.end_date) if rel.end_date else None,
+                        },
+                    }
+                )
+
+            if format == "csv":
+                import csv
+                import io
+
+                output = io.StringIO()
+                if data:
+                    writer = csv.writer(output)
+                    writer.writerow(
+                        [
+                            "From ID",
+                            "From Name",
+                            "From Email",
+                            "To ID",
+                            "To Name",
+                            "To Email",
+                            "Type",
+                            "Description",
+                            "Symmetrical",
+                            "Start Date",
+                            "End Date",
+                        ]
+                    )
+
+                    for item in data:
+                        writer.writerow(
+                            [
+                                item["from_contact"]["id"],
+                                item["from_contact"]["name"],
+                                item["from_contact"]["email"],
+                                item["to_contact"]["id"],
+                                item["to_contact"]["name"],
+                                item["to_contact"]["email"],
+                                item["relationship"]["type"],
+                                item["relationship"]["description"],
+                                item["relationship"]["is_symmetrical"],
+                                item["relationship"]["start_date"],
+                                item["relationship"]["end_date"],
+                            ]
+                        )
+
+                return output.getvalue()
+            else:
+                return data
+
+        except Exception as e:
+            print(f"Error exporting relationships: {e}")
+            return [] if format == "json" else ""
+
+    def get_network_degrees(self, contact_id: int, degrees: int = 2) -> Dict[str, List[Dict]]:
+        """Get network connections up to N degrees of separation."""
+        try:
+            result = {}
+            visited = set()
+            current_level = [contact_id]
+
+            for degree in range(1, degrees + 1):
+                next_level = set()
+                degree_contacts = []
+
+                for current_id in current_level:
+                    if current_id in visited:
+                        continue
+                    visited.add(current_id)
+
+                    # Get connections
+                    connections = (
+                        self.session.query(Contact)
+                        .join(
+                            ContactRelationship,
+                            or_(
+                                and_(
+                                    ContactRelationship.from_contact_id == current_id,
+                                    ContactRelationship.to_contact_id == Contact.id,
+                                ),
+                                and_(
+                                    ContactRelationship.to_contact_id == current_id,
+                                    ContactRelationship.from_contact_id == Contact.id,
+                                ),
+                            ),
+                        )
+                        .filter(Contact.id.notin_(visited))
+                        .distinct()
+                        .all()
+                    )
+
+                    for conn in connections:
+                        next_level.add(conn.id)
+                        degree_contacts.append(
+                            {
+                                "id": conn.id,
+                                "name": conn.name,
+                                "email": conn.email,
+                                "connected_through": current_id,
+                            }
+                        )
+
+                if degree_contacts:
+                    result[f"degree_{degree}"] = degree_contacts
+                current_level = list(next_level)
+
+                if not current_level:
+                    break
+
+            return result
+        except Exception as e:
+            print(f"Error getting network degrees: {e}")
+            return {}
 
 
 def create_database(path: Path) -> Database:
