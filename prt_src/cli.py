@@ -5,6 +5,7 @@ This is the main CLI interface for PRT. It automatically detects if setup is nee
 and provides a unified interface for all operations.
 """
 
+from datetime import date
 from pathlib import Path
 
 import typer
@@ -30,6 +31,11 @@ console = Console()
 
 # Required configuration fields
 REQUIRED_FIELDS = ["db_username", "db_password", "db_path"]
+
+# Configuration constants for relationship management
+DEFAULT_PAGE_SIZE = 20  # Default number of items per page
+MAX_DISPLAY_CONTACTS = 30  # Maximum contacts to show without pagination
+TABLE_WIDTH_LIMIT = 120  # Maximum table width
 
 
 def show_empty_database_guidance():
@@ -1137,6 +1143,139 @@ def handle_search_menu(api: PRTAPI) -> None:
         # No continuation prompt - search menu handles its own flow
 
 
+# Helper functions for relationship management
+def _get_valid_date(prompt_text: str) -> date | None:
+    """Get a valid date from user input with retry logic."""
+    from datetime import datetime
+
+    while True:
+        date_str = Prompt.ask(prompt_text)
+        if not date_str:  # Empty input means skip
+            return None
+
+        try:
+            return datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            console.print("Invalid date format. Please use YYYY-MM-DD format.", style="red")
+            if not Confirm.ask("Try again?", default=True):
+                return None
+
+
+def _validate_contact_id(contact_id: int, contacts: list) -> bool:
+    """Verify that a contact ID exists in the contact list."""
+    return any(c["id"] == contact_id for c in contacts)
+
+
+def _display_contacts_paginated(contacts: list, title: str = "Select a Contact") -> None:
+    """Display contacts with pagination support."""
+    total_contacts = len(contacts)
+    page_size = DEFAULT_PAGE_SIZE
+    current_page = 0
+    total_pages = (total_contacts + page_size - 1) // page_size
+
+    while True:
+        # Calculate page boundaries
+        start_idx = current_page * page_size
+        end_idx = min(start_idx + page_size, total_contacts)
+
+        # Create table for current page
+        table = Table(
+            title=f"{title} (Page {current_page + 1}/{total_pages})",
+            show_header=True,
+            header_style="bold magenta",
+        )
+        table.add_column("ID", style="cyan", width=8)
+        table.add_column("Name", style="green", width=30)
+        table.add_column("Email", style="yellow", width=40)
+
+        for contact in contacts[start_idx:end_idx]:
+            table.add_row(str(contact["id"]), contact["name"] or "N/A", contact["email"] or "N/A")
+
+        console.print(table)
+        console.print(f"[dim]Showing contacts {start_idx + 1}-{end_idx} of {total_contacts}[/dim]")
+
+        # Navigation options
+        nav_choices = []
+        nav_prompt = "Options: "
+
+        if current_page > 0:
+            nav_choices.append("p")
+            nav_prompt += "[p]revious, "
+        if current_page < total_pages - 1:
+            nav_choices.append("n")
+            nav_prompt += "[n]ext, "
+        nav_choices.extend(["s", "q"])
+        nav_prompt += "[s]elect ID, [q]uit"
+
+        choice = Prompt.ask(nav_prompt, choices=nav_choices, default="s")
+
+        if choice == "p" and current_page > 0:
+            current_page -= 1
+        elif choice == "n" and current_page < total_pages - 1:
+            current_page += 1
+        elif choice == "s" or choice == "q":
+            break
+
+    return choice == "s"  # Return True if user wants to select
+
+
+def _select_contact_with_search(contacts: list, prompt_text: str) -> int | None:
+    """Select a contact with search and pagination support."""
+    # Option to search first
+    search_term = Prompt.ask("Search contacts (press Enter to see all)", default="")
+
+    if search_term:
+        # Filter contacts based on search
+        search_lower = search_term.lower()
+        filtered = [
+            c
+            for c in contacts
+            if (
+                c.get("name", "").lower().find(search_lower) >= 0
+                or c.get("email", "").lower().find(search_lower) >= 0
+            )
+        ]
+
+        if not filtered:
+            console.print(f"No contacts found matching '{search_term}'", style="yellow")
+            return None
+
+        contacts = filtered
+        console.print(f"Found {len(contacts)} matching contacts", style="green")
+
+    # Display with pagination if needed
+    if len(contacts) > MAX_DISPLAY_CONTACTS:
+        if not _display_contacts_paginated(contacts, prompt_text):
+            return None
+    else:
+        # Display all contacts
+        table = Table(title=prompt_text, show_header=True, header_style="bold magenta")
+        table.add_column("ID", style="cyan", width=8)
+        table.add_column("Name", style="green", width=30)
+        table.add_column("Email", style="yellow", width=40)
+
+        for contact in contacts:
+            table.add_row(str(contact["id"]), contact["name"] or "N/A", contact["email"] or "N/A")
+        console.print(table)
+
+    # Get contact ID with validation
+    while True:
+        contact_id_str = Prompt.ask("Enter contact ID (or 'q' to quit)")
+        if contact_id_str.lower() == "q":
+            return None
+
+        try:
+            contact_id = int(contact_id_str)
+            if _validate_contact_id(contact_id, contacts):
+                return contact_id
+            else:
+                console.print(
+                    f"Contact ID {contact_id} not found. Please select a valid ID.", style="red"
+                )
+        except ValueError:
+            console.print("Invalid input. Please enter a number or 'q' to quit.", style="red")
+
+
 def handle_relationships_menu(api: PRTAPI) -> None:
     """Handle the relationship management sub-menu."""
     while True:
@@ -1195,25 +1334,9 @@ def handle_view_relationships(api: PRTAPI) -> None:
             console.print("No contacts found in database.", style="yellow")
             return
 
-        # Display contacts for selection
-        table = Table(title="Select a Contact", show_header=True, header_style="bold magenta")
-        table.add_column("ID", style="cyan", width=8)
-        table.add_column("Name", style="green", width=30)
-        table.add_column("Email", style="yellow", width=40)
-
-        for contact in contacts[:20]:  # Show first 20 for quick selection
-            table.add_row(str(contact["id"]), contact["name"] or "N/A", contact["email"] or "N/A")
-
-        console.print(table)
-        if len(contacts) > 20:
-            console.print(f"[dim]Showing first 20 of {len(contacts)} contacts[/dim]")
-
-        # Get contact ID
-        contact_id = Prompt.ask("Enter contact ID to view relationships")
-        try:
-            contact_id = int(contact_id)
-        except ValueError:
-            console.print("Invalid contact ID", style="red")
+        # Use the new search and select helper
+        contact_id = _select_contact_with_search(contacts, "Select a Contact to View Relationships")
+        if contact_id is None:
             return
 
         # Get relationships for this contact
@@ -1280,55 +1403,40 @@ def handle_add_relationship(api: PRTAPI) -> None:
             console.print("Need at least 2 contacts to create a relationship.", style="yellow")
             return
 
-        # Display contacts for selection
-        contact_table = Table(
-            title="Select Contacts", show_header=True, header_style="bold magenta"
-        )
-        contact_table.add_column("ID", style="cyan", width=8)
-        contact_table.add_column("Name", style="green", width=30)
-        contact_table.add_column("Email", style="yellow", width=40)
-
-        for contact in contacts[:30]:  # Show first 30 for selection
-            contact_table.add_row(
-                str(contact["id"]), contact["name"] or "N/A", contact["email"] or "N/A"
-            )
-
-        console.print(contact_table)
-        if len(contacts) > 30:
-            console.print(f"[dim]Showing first 30 of {len(contacts)} contacts[/dim]")
-
-        # Get from contact
-        from_id = Prompt.ask("Enter ID of first contact")
-        try:
-            from_id = int(from_id)
-        except ValueError:
-            console.print("Invalid contact ID", style="red")
+        # Get first contact with search and validation
+        console.print("\nSelect the first contact:", style="cyan")
+        from_id = _select_contact_with_search(contacts, "Select First Contact")
+        if from_id is None:
             return
 
-        # Get to contact
-        to_id = Prompt.ask("Enter ID of second contact")
-        try:
-            to_id = int(to_id)
-        except ValueError:
-            console.print("Invalid contact ID", style="red")
+        # Get second contact with search and validation
+        console.print("\nSelect the second contact:", style="cyan")
+        to_id = _select_contact_with_search(contacts, "Select Second Contact")
+        if to_id is None:
             return
 
         if from_id == to_id:
             console.print("Cannot create relationship with same contact", style="red")
             return
 
-        # Optional: Get dates
-        start_date_str = Prompt.ask(
-            "Enter start date (YYYY-MM-DD) or press Enter to skip", default=""
+        # Check if relationship already exists
+        existing_relationships = api.db.get_contact_relationships(from_id)
+        duplicate_exists = any(
+            rel["other_contact_id"] == to_id and rel["type"] == rel_type
+            for rel in existing_relationships
         )
-        start_date = None
-        if start_date_str:
-            try:
-                from datetime import datetime
 
-                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            except ValueError:
-                console.print("Invalid date format, skipping start date", style="yellow")
+        if duplicate_exists:
+            console.print(
+                f"⚠️  A '{rel_type}' relationship already exists between these contacts.",
+                style="yellow",
+            )
+            if not Confirm.ask("Do you want to continue anyway?", default=False):
+                console.print("Relationship creation cancelled.", style="yellow")
+                return
+
+        # Get start date with validation and retry
+        start_date = _get_valid_date("Enter start date (YYYY-MM-DD) or press Enter to skip")
 
         # Create the relationship
         api.db.create_contact_relationship(from_id, to_id, rel_type, start_date=start_date)
@@ -1399,24 +1507,9 @@ def handle_delete_relationship(api: PRTAPI) -> None:
             console.print("No contacts found in database.", style="yellow")
             return
 
-        # Display contacts
-        table = Table(title="Select a Contact", show_header=True, header_style="bold magenta")
-        table.add_column("ID", style="cyan", width=8)
-        table.add_column("Name", style="green", width=30)
-        table.add_column("Email", style="yellow", width=40)
-
-        for contact in contacts[:20]:
-            table.add_row(str(contact["id"]), contact["name"] or "N/A", contact["email"] or "N/A")
-
-        console.print(table)
-        if len(contacts) > 20:
-            console.print(f"[dim]Showing first 20 of {len(contacts)} contacts[/dim]")
-
-        contact_id = Prompt.ask("Enter contact ID")
-        try:
-            contact_id = int(contact_id)
-        except ValueError:
-            console.print("Invalid contact ID", style="red")
+        # Use search and select helper
+        contact_id = _select_contact_with_search(contacts, "Select a Contact to View Relationships")
+        if contact_id is None:
             return
 
         # Get relationships
