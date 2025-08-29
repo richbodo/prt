@@ -92,7 +92,9 @@ class TestViewRelationships:
     def test_view_relationships_success(self, mock_api, mock_console):
         """Test successfully viewing relationships."""
         with patch("prt_src.cli.console", mock_console):
-            with patch("prt_src.cli.Prompt.ask", return_value="1"):
+            with patch("prt_src.cli.Prompt.ask") as mock_prompt:
+                # Mock the search prompt (empty to see all) then contact ID selection
+                mock_prompt.side_effect = ["", "1"]
                 handle_view_relationships(mock_api)
 
                 # Verify API calls
@@ -115,18 +117,24 @@ class TestViewRelationships:
     def test_view_relationships_invalid_id(self, mock_api, mock_console):
         """Test viewing relationships with invalid contact ID."""
         with patch("prt_src.cli.console", mock_console):
-            with patch("prt_src.cli.Prompt.ask", return_value="invalid"):
+            with patch("prt_src.cli.Prompt.ask") as mock_prompt:
+                # Mock search (empty to see all) then invalid contact ID
+                mock_prompt.side_effect = ["", "invalid"]
                 handle_view_relationships(mock_api)
 
-                # Should show error message
-                mock_console.print.assert_any_call("Invalid contact ID", style="red")
+                # Should show error message about invalid input
+                mock_console.print.assert_any_call(
+                    "Invalid input. Please enter a number or 'q' to quit.", style="red"
+                )
 
     def test_view_relationships_no_relationships(self, mock_api, mock_console):
         """Test viewing when contact has no relationships."""
         mock_api.db.get_contact_relationships.return_value = []
 
         with patch("prt_src.cli.console", mock_console):
-            with patch("prt_src.cli.Prompt.ask", return_value="1"):
+            with patch("prt_src.cli.Prompt.ask") as mock_prompt:
+                # Mock search (empty to see all) then contact ID selection
+                mock_prompt.side_effect = ["", "1"]
                 handle_view_relationships(mock_api)
 
                 # Should show no relationships message
@@ -142,22 +150,25 @@ class TestAddRelationship:
         """Test successfully adding a relationship."""
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
-                mock_prompt.side_effect = [
-                    "parent_of",  # relationship type
-                    "1",  # from contact ID
-                    "2",  # to contact ID
-                    "",  # no start date
-                ]
+                with patch("prt_src.cli.Confirm.ask", return_value=True):
+                    mock_prompt.side_effect = [
+                        "parent_of",  # relationship type
+                        "",  # search for first contact (empty to see all)
+                        "1",  # from contact ID
+                        "",  # search for second contact (empty to see all)
+                        "2",  # to contact ID
+                        "",  # no start date
+                    ]
 
-                handle_add_relationship(mock_api)
+                    handle_add_relationship(mock_api)
 
-                # Verify relationship was created
-                mock_api.db.create_contact_relationship.assert_called_once_with(
-                    1, 2, "parent_of", start_date=None
-                )
+                    # Verify relationship was created
+                    mock_api.db.create_contact_relationship.assert_called_once_with(
+                        1, 2, "parent_of", start_date=None
+                    )
 
-                # Verify success message
-                assert mock_console.print.called
+                    # Verify success message
+                    assert mock_console.print.called
 
     def test_add_relationship_same_contact(self, mock_api, mock_console):
         """Test error when trying to relate contact to itself."""
@@ -165,7 +176,9 @@ class TestAddRelationship:
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 mock_prompt.side_effect = [
                     "friend_of",  # relationship type
+                    "",  # search for first contact (empty to see all)
                     "1",  # from contact ID
+                    "",  # search for second contact (empty to see all)
                     "1",  # same contact ID
                 ]
 
@@ -202,7 +215,9 @@ class TestAddRelationship:
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 mock_prompt.side_effect = [
                     "coworker",  # relationship type
+                    "",  # search for first contact (empty to see all)
                     "1",  # from contact ID
+                    "",  # search for second contact (empty to see all)
                     "3",  # to contact ID
                     "2024-01-01",  # start date
                 ]
@@ -250,6 +265,7 @@ class TestDeleteRelationship:
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 with patch("prt_src.cli.Confirm.ask", return_value=True):
                     mock_prompt.side_effect = [
+                        "",  # search for contact (empty to see all)
                         "1",  # contact ID
                         "1",  # relationship number to delete
                     ]
@@ -271,7 +287,11 @@ class TestDeleteRelationship:
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 with patch("prt_src.cli.Confirm.ask", return_value=False):
-                    mock_prompt.side_effect = ["1", "1"]  # contact ID  # relationship number
+                    mock_prompt.side_effect = [
+                        "",  # search for contact (empty to see all)
+                        "1",  # contact ID
+                        "1",  # relationship number
+                    ]
 
                     handle_delete_relationship(mock_api)
 
@@ -285,7 +305,11 @@ class TestDeleteRelationship:
         """Test invalid relationship selection."""
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
-                mock_prompt.side_effect = ["1", "99"]  # contact ID  # invalid relationship number
+                mock_prompt.side_effect = [
+                    "",  # search for contact (empty to see all)
+                    "1",  # contact ID
+                    "99",  # invalid relationship number
+                ]
 
                 handle_delete_relationship(mock_api)
 
@@ -303,7 +327,12 @@ class TestRelationshipsMenu:
         """Test navigating to view relationships."""
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
-                mock_prompt.side_effect = ["1", "1", "b"]  # view, contact ID, back
+                mock_prompt.side_effect = [
+                    "1",  # view from menu
+                    "",  # search for contact (empty to see all)
+                    "1",  # contact ID
+                    "b",  # back
+                ]
 
                 handle_relationships_menu(mock_api)
 
@@ -318,7 +347,9 @@ class TestRelationshipsMenu:
                 mock_prompt.side_effect = [
                     "2",  # select add from menu
                     "friend_of",  # select relationship type
+                    "",  # search for first contact (empty to see all)
                     "1",  # first contact
+                    "",  # search for second contact (empty to see all)
                     "2",  # second contact
                     "",  # no start date
                     "b",  # back to exit menu
@@ -360,7 +391,8 @@ class TestRelationshipDisplayFormatting:
         ]
 
         with patch("prt_src.cli.console", mock_console):
-            with patch("prt_src.cli.Prompt.ask", return_value="1"):
+            with patch("prt_src.cli.Prompt.ask") as mock_prompt:
+                mock_prompt.side_effect = ["", "1"]  # search (empty), then contact ID
                 handle_view_relationships(mock_api)
 
                 # Verify dates are displayed
@@ -379,7 +411,14 @@ class TestRelationshipDisplayFormatting:
 
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
-                mock_prompt.side_effect = ["friend_of", "1", "2", ""]
+                mock_prompt.side_effect = [
+                    "friend_of",  # relationship type
+                    "",  # search for first contact (empty to see all)
+                    "1",  # first contact
+                    "",  # search for second contact (empty to see all)
+                    "2",  # second contact
+                    "",  # no start date
+                ]
 
                 handle_add_relationship(mock_api)
 
