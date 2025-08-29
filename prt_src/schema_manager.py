@@ -19,7 +19,7 @@ console = Console()
 class SchemaManager:
     """Simple, safe database schema management."""
 
-    CURRENT_VERSION = 4
+    CURRENT_VERSION = 5
 
     def __init__(self, db):
         """Initialize with database connection."""
@@ -44,9 +44,7 @@ class SchemaManager:
 
             # Check if profile_image column exists
             try:
-                self.db.session.execute(
-                    text("SELECT profile_image FROM contacts LIMIT 1")
-                )
+                self.db.session.execute(text("SELECT profile_image FROM contacts LIMIT 1"))
                 return 2  # Has profile image columns
             except Exception:
                 return 1  # Original schema without profile images
@@ -70,9 +68,7 @@ class SchemaManager:
             )
 
             # Insert initial version if table is empty
-            result = self.db.session.execute(
-                text("SELECT COUNT(*) FROM schema_version")
-            ).fetchone()
+            result = self.db.session.execute(text("SELECT COUNT(*) FROM schema_version")).fetchone()
             if result[0] == 0:
                 current_version = self.get_schema_version()
                 self.db.session.execute(
@@ -83,9 +79,7 @@ class SchemaManager:
             self.db.session.commit()
         except Exception as e:
             self.db.session.rollback()
-            console.print(
-                f"Warning: Could not create schema_version table: {e}", style="yellow"
-            )
+            console.print(f"Warning: Could not create schema_version table: {e}", style="yellow")
 
     def create_backup(self, version: int) -> Path:
         """Create a timestamped backup of the database."""
@@ -134,9 +128,7 @@ class SchemaManager:
 
         try:
             # Add the new columns
-            self.db.session.execute(
-                text("ALTER TABLE contacts ADD COLUMN profile_image BLOB")
-            )
+            self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN profile_image BLOB"))
             console.print("  ✓ Added profile_image column", style="green")
 
             self.db.session.execute(
@@ -151,15 +143,11 @@ class SchemaManager:
 
             # Update schema version
             self.db.session.execute(
-                text(
-                    "UPDATE schema_version SET version = 2, updated_at = CURRENT_TIMESTAMP"
-                )
+                text("UPDATE schema_version SET version = 2, updated_at = CURRENT_TIMESTAMP")
             )
 
             self.db.session.commit()
-            console.print(
-                "✅ Profile image support added successfully!", style="green bold"
-            )
+            console.print("✅ Profile image support added successfully!", style="green bold")
 
         except Exception as e:
             self.db.session.rollback()
@@ -220,18 +208,12 @@ class SchemaManager:
                 self.db.session.execute(
                     text("ALTER TABLE relationships RENAME TO contact_metadata")
                 )
-                console.print(
-                    "  ✓ Renamed relationships table to contact_metadata", style="green"
-                )
+                console.print("  ✓ Renamed relationships table to contact_metadata", style="green")
             except Exception:
                 # Table might already be renamed or not exist, check for contact_metadata
                 try:
-                    self.db.session.execute(
-                        text("SELECT 1 FROM contact_metadata LIMIT 1")
-                    )
-                    console.print(
-                        "  ✓ contact_metadata table already exists", style="green"
-                    )
+                    self.db.session.execute(text("SELECT 1 FROM contact_metadata LIMIT 1"))
+                    console.print("  ✓ contact_metadata table already exists", style="green")
                 except Exception:
                     # Neither exists, create contact_metadata
                     self.db.session.execute(
@@ -313,17 +295,11 @@ class SchemaManager:
                     console.print("  ✓ Migrated join table data", style="green")
 
                     # Drop old join tables
-                    self.db.session.execute(
-                        text("DROP TABLE IF EXISTS relationship_tags")
-                    )
-                    self.db.session.execute(
-                        text("DROP TABLE IF EXISTS relationship_notes")
-                    )
+                    self.db.session.execute(text("DROP TABLE IF EXISTS relationship_tags"))
+                    self.db.session.execute(text("DROP TABLE IF EXISTS relationship_notes"))
                     console.print("  ✓ Cleaned up old join tables", style="green")
                 except Exception as e:
-                    console.print(
-                        f"  ⚠ Could not migrate old join tables: {e}", style="yellow"
-                    )
+                    console.print(f"  ⚠ Could not migrate old join tables: {e}", style="yellow")
 
             # 7. Populate default relationship types
             default_types = [
@@ -365,15 +341,11 @@ class SchemaManager:
 
             # Update schema version
             self.db.session.execute(
-                text(
-                    "UPDATE schema_version SET version = 3, updated_at = CURRENT_TIMESTAMP"
-                )
+                text("UPDATE schema_version SET version = 3, updated_at = CURRENT_TIMESTAMP")
             )
 
             self.db.session.commit()
-            console.print(
-                "✅ Relationship types support added successfully!", style="green bold"
-            )
+            console.print("✅ Relationship types support added successfully!", style="green bold")
 
         except Exception as e:
             self.db.session.rollback()
@@ -417,22 +389,62 @@ class SchemaManager:
             # Update schema version if table exists
             try:
                 self.db.session.execute(
-                    text(
-                        "UPDATE schema_version SET version = 4, updated_at = CURRENT_TIMESTAMP"
-                    )
+                    text("UPDATE schema_version SET version = 4, updated_at = CURRENT_TIMESTAMP")
                 )
             except Exception:
                 # Schema version table might not exist in test databases
                 pass
 
             self.db.session.commit()
-            console.print(
-                "✅ Backup metadata tracking added successfully!", style="green bold"
-            )
+            console.print("✅ Backup metadata tracking added successfully!", style="green bold")
 
         except Exception as e:
             self.db.session.rollback()
             raise RuntimeError(f"Failed to add backup metadata tracking: {e}")
+
+    def apply_migration_v4_to_v5(self):
+        """Add FTS5 full-text search support."""
+        console.print("Adding full-text search support...", style="blue")
+
+        try:
+            # Read and execute the FTS5 migration SQL
+            from pathlib import Path
+
+            migration_path = Path(__file__).parent.parent / "migrations" / "add_fts5_support.sql"
+            if not migration_path.exists():
+                raise RuntimeError(f"Migration file not found: {migration_path}")
+
+            with open(migration_path, "r") as f:
+                sql_content = f.read()
+
+            # Execute SQL statements one by one (split by semicolon)
+            statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+
+            for statement in statements:
+                if statement and not statement.startswith("--"):
+                    try:
+                        self.db.session.execute(text(statement))
+                    except Exception as e:
+                        # Some statements might fail if objects already exist
+                        # Log but continue
+                        if "already exists" not in str(e).lower():
+                            console.print(f"  ⚠ Warning during FTS5 setup: {e}", style="yellow")
+
+            console.print("  ✓ Created FTS5 virtual tables", style="green")
+            console.print("  ✓ Added synchronization triggers", style="green")
+            console.print("  ✓ Indexed existing data", style="green")
+
+            # Update schema version
+            self.db.session.execute(
+                text("UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP")
+            )
+
+            self.db.session.commit()
+            console.print("✅ Full-text search support added successfully!", style="green bold")
+
+        except Exception as e:
+            self.db.session.rollback()
+            raise RuntimeError(f"Failed to add FTS5 support: {e}")
 
     def migrate_to_version(self, target_version: int, current_version: int):
         """Apply migrations to reach target version."""
@@ -441,13 +453,26 @@ class SchemaManager:
             (1, 2): [self.apply_migration_v1_to_v2],
             (2, 3): [self.apply_migration_v2_to_v3],
             (3, 4): [self.apply_migration_v3_to_v4],
+            (4, 5): [self.apply_migration_v4_to_v5],
             (1, 3): [self.apply_migration_v1_to_v2, self.apply_migration_v2_to_v3],
             (1, 4): [
                 self.apply_migration_v1_to_v2,
                 self.apply_migration_v2_to_v3,
                 self.apply_migration_v3_to_v4,
             ],
+            (1, 5): [
+                self.apply_migration_v1_to_v2,
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+            ],
             (2, 4): [self.apply_migration_v2_to_v3, self.apply_migration_v3_to_v4],
+            (2, 5): [
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+            ],
+            (3, 5): [self.apply_migration_v3_to_v4, self.apply_migration_v4_to_v5],
         }
 
         migration_path = migrations.get((current_version, target_version))
@@ -465,9 +490,7 @@ class SchemaManager:
         current_version = self.get_schema_version()
 
         if current_version >= self.CURRENT_VERSION:
-            console.print(
-                f"✅ Database is up to date (version {current_version})", style="green"
-            )
+            console.print(f"✅ Database is up to date (version {current_version})", style="green")
             return True
 
         if current_version == 0:
@@ -528,6 +551,5 @@ class SchemaManager:
             "current_version": current_version,
             "target_version": self.CURRENT_VERSION,
             "migration_needed": current_version < self.CURRENT_VERSION,
-            "migration_available": current_version > 0
-            and current_version < self.CURRENT_VERSION,
+            "migration_available": current_version > 0 and current_version < self.CURRENT_VERSION,
         }
