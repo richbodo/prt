@@ -94,6 +94,10 @@ class UnifiedSearchAPI:
         self._search_history: List[Tuple[str, float]] = []
         self._popular_searches: Dict[str, int] = {}
 
+        # Memory management constants
+        self.MAX_POPULAR_SEARCHES = 1000
+        self.MAX_HISTORY_SIZE = 100
+
         # Performance metrics
         self._metrics = {
             "total_searches": 0,
@@ -343,7 +347,14 @@ class UnifiedSearchAPI:
         if not self.contact_cache:
             return results
 
-        cached_contacts = self.contact_cache.search(query, limit)
+        try:
+            cached_contacts = self.contact_cache.search(query, limit)
+        except Exception as e:
+            # Log error and return empty results rather than failing the entire search
+            # In production, you'd want to log this error
+            print(f"Warning: Cache search failed: {e}")
+            return results
+
         for contact in cached_contacts:
             # Determine priority based on match type
             priority = self._determine_priority(query, contact.name)
@@ -375,7 +386,13 @@ class UnifiedSearchAPI:
         Returns:
             List of unified search results from FTS
         """
-        fts_results = self.indexer.search(query, entity_types, limit)
+        try:
+            fts_results = self.indexer.search(query, entity_types, limit)
+        except Exception as e:
+            # Log error and return empty results rather than failing the entire search
+            # In production, you'd want to log this error
+            print(f"Warning: FTS search failed: {e}")
+            return []
 
         results = []
         for fts_result in fts_results:
@@ -579,7 +596,7 @@ class UnifiedSearchAPI:
             return SearchPriority.PARTIAL_MATCH
 
     def _add_to_history(self, query: str) -> None:
-        """Add query to search history.
+        """Add query to search history with memory management.
 
         Args:
             query: Search query
@@ -587,13 +604,21 @@ class UnifiedSearchAPI:
         # Add to history
         self._search_history.append((query, time.time()))
 
-        # Keep only last 100 searches
-        if len(self._search_history) > 100:
+        # Keep only last MAX_HISTORY_SIZE searches
+        if len(self._search_history) > self.MAX_HISTORY_SIZE:
             self._search_history.pop(0)
 
         # Update popular searches
         query_lower = query.lower()
         self._popular_searches[query_lower] = self._popular_searches.get(query_lower, 0) + 1
+
+        # Manage popular searches memory
+        if len(self._popular_searches) > self.MAX_POPULAR_SEARCHES:
+            # Keep only the top searches
+            sorted_items = sorted(self._popular_searches.items(), key=lambda x: x[1], reverse=True)
+            # Keep top 75% of MAX_POPULAR_SEARCHES
+            keep_count = int(self.MAX_POPULAR_SEARCHES * 0.75)
+            self._popular_searches = dict(sorted_items[:keep_count])
 
     def _update_avg_search_time(self, search_time: float) -> None:
         """Update average search time metric.

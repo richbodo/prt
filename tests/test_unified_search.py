@@ -417,3 +417,76 @@ class TestUnifiedSearchAPI:
             unified_api._add_to_history(f"query{i}")
 
         assert len(unified_api._search_history) == 100  # Limited to 100
+
+    def test_cache_search_error_handling(self, unified_api):
+        """Test that cache search errors are handled gracefully."""
+        # Mock the cache to raise an exception
+        unified_api.contact_cache.search = MagicMock(
+            side_effect=Exception("Database connection lost")
+        )
+
+        # Search should still work (falling back to FTS)
+        results = unified_api.search("test query")
+
+        # Should get results from FTS even though cache failed
+        assert results is not None
+        assert results["total"] >= 0
+        assert "results" in results
+
+    def test_fts_search_error_handling(self, unified_api):
+        """Test that FTS search errors are handled gracefully."""
+        # Mock the indexer to raise an exception
+        unified_api.indexer.search = MagicMock(side_effect=Exception("FTS index corrupted"))
+
+        # Mock cache to return some results
+        if unified_api.contact_cache:
+            unified_api.contact_cache.search = MagicMock(
+                return_value=[
+                    MagicMock(
+                        id=1,
+                        name="Cache Result",
+                        email="cache@example.com",
+                        phone="555-0001",
+                        tags=[],
+                    )
+                ]
+            )
+
+        # Search should still work with cache results only
+        results = unified_api.search("test")
+
+        # Should get results from cache even though FTS failed
+        assert results is not None
+        assert results["total"] >= 0
+
+    def test_popular_searches_memory_management(self, unified_api):
+        """Test that popular searches memory is bounded."""
+        # Add more searches than MAX_POPULAR_SEARCHES
+        for i in range(1500):
+            unified_api._add_to_history(f"unique_query_{i}")
+
+        # Popular searches should be bounded
+        assert len(unified_api._popular_searches) <= unified_api.MAX_POPULAR_SEARCHES
+
+        # Should keep the most popular ones (those with higher counts)
+        # Add repeated searches to ensure they're kept
+        for _ in range(10):
+            unified_api._add_to_history("frequent_query")
+
+        assert "frequent_query" in unified_api._popular_searches
+        assert unified_api._popular_searches["frequent_query"] == 10
+
+    def test_both_search_sources_fail(self, unified_api):
+        """Test graceful handling when both cache and FTS fail."""
+        # Mock both to fail
+        if unified_api.contact_cache:
+            unified_api.contact_cache.search = MagicMock(side_effect=Exception("Cache error"))
+        unified_api.indexer.search = MagicMock(side_effect=Exception("FTS error"))
+
+        # Search should return empty results but not crash
+        results = unified_api.search("test")
+
+        assert results is not None
+        assert results["total"] == 0
+        assert results["results"] == {}
+        assert "stats" in results
