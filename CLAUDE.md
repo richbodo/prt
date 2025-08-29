@@ -31,17 +31,25 @@ python -m prt_src.cli
 ### Virtual Environment
 The project uses a Python virtual environment in `prt_env/` created by `init.sh`. The script handles platform-specific dependency installation (macOS via Homebrew, Linux via apt).
 
-### Testing
+### Testing and Code Quality
 ```bash
+# IMPORTANT: Always activate virtual environment first
+source ./init.sh  # This also installs dev dependencies
+
 # Run all tests
-python -m pytest tests/
+./prt_env/bin/python -m pytest tests/
 
 # Run specific test modules
-python -m pytest tests/test_api.py -v
-python -m pytest tests/test_db.py -v
+./prt_env/bin/python -m pytest tests/test_api.py -v
+./prt_env/bin/python -m pytest tests/test_relationship_cli.py -v
 
-# Run tests with minimal output
-python -m pytest tests/ --tb=short -q
+# Run linting and formatting (MUST use venv binaries)
+./prt_env/bin/ruff check prt_src/ --fix
+./prt_env/bin/black prt_src/
+
+# Run both linter and formatter on specific files
+./prt_env/bin/ruff check prt_src/cli.py prt_src/db.py --fix
+./prt_env/bin/black prt_src/cli.py prt_src/db.py
 
 # Create standalone test database with fixture data
 cd tests && python fixtures.py
@@ -178,6 +186,72 @@ The project uses a simple schema management system in `prt_src/schema_manager.py
 - **Local storage**: No cloud sync, all data stays on device
 - **Profile image support**: Binary data stored directly in database
 - **Comprehensive export system**: JSON + images for data portability
+
+## Relationship Management System
+
+### Architecture
+The relationship management system is split across three layers:
+- **Database Layer (`prt_src/db.py`)**: Core relationship operations and analytics
+- **API Layer (`prt_src/api.py`)**: Business logic and data transformation
+- **CLI Layer (`prt_src/cli.py`)**: User interaction and display
+
+### Key Database Methods for Relationships
+```python
+# Basic operations
+db.create_contact_relationship(from_id, to_id, type_key, start_date=None)
+db.delete_contact_relationship(from_id, to_id, type_key)
+db.get_contact_relationships(contact_id)
+db.list_relationship_types()
+
+# Advanced analytics (Part 3 of Issue #64)
+db.get_relationship_analytics()  # Returns network statistics
+db.find_mutual_connections(contact1_id, contact2_id)  # Common connections
+db.find_relationship_path(from_id, to_id, max_depth=6)  # BFS pathfinding
+db.get_network_degrees(contact_id, degrees=2)  # Network exploration
+db.bulk_create_relationships(relationships)  # Batch operations
+db.export_relationships(format="json")  # Export to JSON/CSV
+```
+
+### CLI Helper Functions
+```python
+# Validation and UI helpers
+_get_valid_date(prompt_text)  # Date input with retry logic
+_validate_contact_id(contact_id, contacts)  # ID verification
+_display_contacts_paginated(contacts, title)  # Large list handling
+_select_contact_with_search(contacts, prompt_text)  # Search + selection
+```
+
+## SQLAlchemy Import Patterns
+
+### Essential Imports for Complex Queries
+```python
+# Always include these when working with advanced database operations
+from sqlalchemy import and_, case, func, or_, text
+from sqlalchemy.orm import aliased
+
+# Required model imports for relationship operations
+from prt_src.models import Contact, ContactRelationship, RelationshipType
+```
+
+### Common Query Patterns
+```python
+# Using aliased for self-joins
+ContactAlias = aliased(Contact)
+
+# Case statements for conditional logic
+case([(condition, value)], else_=default_value)
+
+# Aggregate functions
+func.count(), func.max(), func.min()
+
+# Complex filters
+.filter(or_(condition1, condition2))
+.filter(and_(condition1, condition2))
+
+# Null checks (use .is_ not ==)
+.filter(ContactRelationship.end_date.is_(None))  # Correct
+# NOT: .filter(ContactRelationship.end_date == None)  # Wrong
+```
 
 ## Git Commit Guidelines
 
