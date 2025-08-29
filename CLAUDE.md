@@ -47,11 +47,15 @@ The project uses a Python virtual environment in `prt_env/` created by `init.sh`
 source ./init.sh  # This also installs dev dependencies
 
 # Run all tests
-./prt_env/bin/python -m pytest tests/
+./prt_env/bin/python -m pytest tests/ -v
 
 # Run specific test modules
 ./prt_env/bin/python -m pytest tests/test_api.py -v
 ./prt_env/bin/python -m pytest tests/test_relationship_cli.py -v
+
+# Testing Commands (use these exact paths)
+./prt_env/bin/python -m pytest tests/test_*.py -v  # Run all test files
+./prt_env/bin/python -m pytest tests/test_unified_search.py -v  # Run specific test
 
 # Run linting and formatting (MUST use venv binaries)
 ./prt_env/bin/ruff check prt_src/ --fix
@@ -146,12 +150,40 @@ api = PRTAPI()  # Loads config automatically
 contacts = api.search_contacts("john")
 ```
 
-### Error Handling
+### Error Handling Pattern
+Always use the logger and provide fallbacks for robust error handling:
+```python
+from prt_src.logging_config import get_logger
+logger = get_logger(__name__)
+
+try:
+    result = operation()
+except Exception as e:
+    logger.warning(f"Operation failed: {e}", exc_info=True)
+    return safe_default  # Always provide a fallback
+```
+
 The CLI includes comprehensive error handling with user-friendly messages for:
 - Database connection issues
 - Missing tables/setup
 - Empty databases
 - File permission problems
+
+### Memory Management
+For long-running operations with in-memory collections:
+```python
+# Bound all in-memory collections
+MAX_CACHE_SIZE = 1000  # Define reasonable limits
+MAX_HISTORY_SIZE = 100
+
+# Implement cleanup when limits exceeded
+if len(cache) > MAX_CACHE_SIZE:
+    # Remove least recently used/least important items
+    sorted_items = sorted(cache.items(), key=lambda x: x[1], reverse=True)
+    cache = dict(sorted_items[:int(MAX_CACHE_SIZE * 0.75)])
+```
+
+Target: The system must handle 5000+ contacts efficiently without memory issues.
 
 ### Test Fixtures
 Use the fixture system for testing:
