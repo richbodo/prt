@@ -14,6 +14,14 @@ while architecting for future Flet mobile deployment.
 4. Validation is in core layer (consistent across platforms)
 5. Screens are thin (UI only, no business logic)
 
+## Implementation Patterns (Established in Phase 1)
+1. **Error handling with logging and fallbacks** - Never crash, always provide safe defaults
+2. **Memory-bounded collections** - Implement MAX_SIZE limits for long-running stability
+3. **Comprehensive test coverage** - Include error scenarios and edge cases
+4. **Use existing search infrastructure** - Don't reinvent what Phase 1 built
+5. **Logger usage instead of print** - Use `get_logger(__name__)` for all output
+6. **Scale target: 5000+ contacts** - All components must handle this efficiently
+
 ## Status Markers
 - [ ] Not Started
 - [🔄] In Progress  
@@ -261,6 +269,25 @@ pygtrie>=2.5.0
 4. Dependencies are noted with [DEPENDS: x.x]
 5. This plan assumes Textual now, Flet later architecture
 6. Core business logic must remain UI-agnostic
+
+## Phase 2 Context (For LLMs Starting Fresh)
+### What's Already Built (Phase 1)
+- **FTS5 search**: Full-text search with BM25 ranking (`prt_src/core/search_index/`)
+- **Contact cache**: LRU cache with prefix trie (`prt_src/core/search_cache/`)
+- **Unified Search API**: Integrated search with error handling (`prt_src/core/search_unified.py`)
+- **Core operations**: UI-agnostic business logic (`prt_src/core/`)
+
+### Architecture Notes
+- **Single-threaded currently**: No async/threading yet, but Textual may introduce it
+- **Single DB session**: `self.db.session` - will need connection pooling if concurrent
+- **Logging configured**: Use `from prt_src.logging_config import get_logger`
+- **Pre-commit hooks**: `ruff` and `black` run automatically on commit
+
+### Phase 2 Tips
+- Task 2.1 (Autocomplete): Can leverage existing prefix trie from ContactSearchCache
+- Task 2.2 (Pagination): Must handle 5000+ contacts efficiently
+- Task 2.3 (Selection): Consider thread-safety if Textual adds concurrency
+- Task 2.4 (Validation): Follow established error handling patterns
 
 ## Progress Tracking
 Last Updated: 2025-08-29
