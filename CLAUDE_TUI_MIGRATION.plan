@@ -1,0 +1,269 @@
+# PRT TUI Migration Plan
+# Generated: 2025-08-29
+# Purpose: Comprehensive plan to address Issues #68-72 via Textual, preparing for future Flet migration
+# Status: PLANNING
+
+## Overview
+This plan addresses the CLI UX issues (#68-72) by implementing Textual for improved TUI and web interface,
+while architecting for future Flet mobile deployment.
+
+## Key Architectural Decisions
+1. Core operations MUST be UI-agnostic (enables Flet later)
+2. Search uses SQLite FTS5 (fast, portable, works on mobile)
+3. Autocomplete is centralized (one engine, multiple UIs)
+4. Validation is in core layer (consistent across platforms)
+5. Screens are thin (UI only, no business logic)
+
+## Status Markers
+- [ ] Not Started
+- [🔄] In Progress  
+- [✅] Completed
+- [❌] Blocked
+- [⏭️] Skipped
+
+## Phase Tracking
+
+### Phase 0: Architecture Preparation
+**Goal:** Separate business logic from UI for future platform portability
+
+- [ ] Task 0.1: Create Core Operations Layer
+  - Location: `prt_src/core/operations.py`
+  - Extract business logic from CLI
+  - Remove all Rich/console dependencies
+  - Return data, not formatted output
+
+- [ ] Task 0.2: Create Platform Abstraction Layer
+  - Location: `prt_src/platforms/`
+  - Create base classes for platform-specific code
+  - Prepare for terminal/web/mobile variants
+
+### Phase 1: Database & Search Infrastructure
+**Goal:** Build fast search and indexing for 5000+ contacts
+**Parallelizable:** Tasks 1.1, 1.2, 1.3 can run simultaneously
+
+- [ ] Task 1.1: Add FTS5 Virtual Tables [PARALLEL]
+  - Create migrations/add_fts5_support.sql
+  - Add contacts_fts, notes_fts, tags_fts virtual tables
+  - Add synchronization triggers
+  - Update SchemaManager
+
+- [ ] Task 1.2: Build Search Indexer [PARALLEL]
+  - Location: `prt_src/core/search/indexer.py`
+  - Implement SearchIndexer class
+  - Add incremental updates
+  - Create result ranking
+
+- [ ] Task 1.3: Create Contact Search Cache [PARALLEL]
+  - Location: `prt_src/core/search/contact_cache.py`
+  - Build LRU cache
+  - Implement prefix trie for autocomplete
+  - Add cache warming
+
+- [ ] Task 1.4: Implement Unified Search API [DEPENDS: 1.1, 1.2]
+  - Location: `prt_src/core/search/unified.py`
+  - Search across all entities
+  - Group results by type
+  - Add search suggestions
+
+### Phase 2: Core Components Library
+**Goal:** Build reusable components for Textual and future Flet
+**Parallelizable:** All tasks can run simultaneously
+
+- [ ] Task 2.1: Create Autocomplete Engine [PARALLEL]
+  - Location: `prt_src/core/components/autocomplete.py`
+  - UI-agnostic autocomplete logic
+  - Fuzzy matching
+  - Context-aware suggestions
+
+- [ ] Task 2.2: Build Pagination System [PARALLEL]
+  - Location: `prt_src/core/components/pagination.py`
+  - Alphabetical jump (A-Z)
+  - Position memory
+  - Lazy loading
+
+- [ ] Task 2.3: Create Selection System [PARALLEL]
+  - Location: `prt_src/core/components/selection.py`
+  - Multi-select logic
+  - Filter/sort capabilities
+  - Selection history
+
+- [ ] Task 2.4: Build Validation System [PARALLEL]
+  - Location: `prt_src/core/components/validation.py`
+  - Entity validators
+  - Deduplication detection
+  - Data sanitization
+
+### Phase 3: Textual UI Framework
+**Goal:** Build Textual application structure and widgets
+
+- [ ] Task 3.1: Setup Textual Application Structure
+  - Location: `prt_src/tui/app.py`
+  - Main application class
+  - CSS styling (styles.css)
+  - Keybindings configuration
+
+- [ ] Task 3.2: Build Base Widgets [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/base.py`
+  - LoadingIndicator, ErrorBoundary
+  - ToastNotification, ConfirmDialog
+
+- [ ] Task 3.3: Create Contact Selector Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/contact_selector.py`
+  - Autocomplete integration
+  - Visual preview
+  - Keyboard navigation
+
+- [ ] Task 3.4: Build Data Table Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/data_table.py`
+  - Pagination support
+  - Column sorting
+  - Row selection
+
+- [ ] Task 3.5: Create Backup List Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/backup_list.py`
+  - Game save-style UI
+  - Backup preview
+  - Restore confirmation
+
+### Phase 4: Screen Implementations
+**Goal:** Implement screens addressing Issues #68-72
+
+- [ ] Task 4.1: Implement Main Screen
+  - Location: `prt_src/tui/screens/main.py`
+  - Navigation menu
+  - Status bar
+  - Quick actions
+
+- [ ] Task 4.2: Build Contacts Screen [DEPENDS: 3.3, 3.4]
+  - Location: `prt_src/tui/screens/contacts.py`
+  - **Addresses Issue #68:**
+    - Paginated list with A-Z jump
+    - "Switch to Search" action
+    - Contact preview pane
+
+- [ ] Task 4.3: Create Relationships Screen [DEPENDS: 3.3]
+  - Location: `prt_src/tui/screens/relationships.py`
+  - **Addresses Issue #69:**
+    - Dual contact selector
+    - Relationship type selector
+    - Edit/Delete combined function
+    - Remove "View Relationships" menu item
+
+- [ ] Task 4.4: Build Search Screen [DEPENDS: 1.4, 2.1]
+  - Location: `prt_src/tui/screens/search.py`
+  - **Addresses Issue #70:**
+    - Full-text search on all contact info
+    - Search by tags/notes
+    - Search by relationship type to YOU
+    - Export results
+
+- [ ] Task 4.5: Implement Database Screen [DEPENDS: 3.5]
+  - Location: `prt_src/tui/screens/database.py`
+  - **Addresses Issue #71:**
+    - Combined Status/Test/Statistics view
+    - Game-style backup/restore
+    - Backup notes and pagination
+
+### Phase 5: Enhanced Relationship Types
+**Goal:** Expand relationship types per Issue #69
+
+- [ ] Task 5.1: Expand Relationship Types Data [PARALLEL]
+  - Add extended family (aunt, uncle, niece, nephew)
+  - Add grandparent/grandchild
+  - Add in-law relationships
+  - Add cousin relationships (first, second)
+
+- [ ] Task 5.2: Create Relationship Type Manager [PARALLEL]
+  - Location: `prt_src/core/relationships/type_manager.py`
+  - Relationship inference
+  - Symmetric handling
+
+### Phase 6: Integration & Migration
+**Goal:** Integrate Textual with existing CLI
+
+- [ ] Task 6.1: Create CLI Router
+  - Update `prt_src/cli.py`
+  - Add --tui flag (make default)
+  - Add --classic flag for old CLI
+
+- [ ] Task 6.2: Build Web Server Wrapper
+  - Location: `prt_src/web.py`
+  - FastAPI wrapper for Textual-web
+  - Authentication middleware
+
+- [ ] Task 6.3: Create Migration Utilities
+  - Settings migration
+  - Backup compatibility
+
+### Phase 7: Testing & Polish
+**Goal:** Ensure quality and usability
+
+- [ ] Task 7.1: Create Test Suites [PARALLEL GROUP B]
+  - Widget unit tests
+  - Screen integration tests
+  - Performance tests (5000+ contacts)
+
+- [ ] Task 7.2: Build Demo Mode [PARALLEL GROUP B]
+  - Demo data generator
+  - Guided tour
+
+- [ ] Task 7.3: Add Telemetry [PARALLEL GROUP B]
+  - Usage tracking (opt-in)
+  - Performance monitoring
+
+### Phase 8: Future-Proofing for Flet
+**Goal:** Prepare for mobile deployment
+
+- [ ] Task 8.1: Create UI Abstraction Layer
+  - Location: `prt_src/ui/`
+  - Abstract UI interfaces
+  - Platform-agnostic events
+
+- [ ] Task 8.2: Document Platform APIs
+  - Document core operations
+  - UI component contracts
+
+## Critical Path
+Minimum path to address Issues #68-72:
+Phase 0 → Phase 1.1 & 1.2 → Phase 1.4 → Phase 3.1 → Phase 4.1-4.5 → Phase 6.1
+
+## Parallelization Groups
+**Group A (UI Components):**
+- Tasks 3.2, 3.3, 3.4, 3.5
+
+**Group B (Infrastructure):**
+- Tasks 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4
+
+**Group C (Testing/Polish):**
+- Tasks 7.1, 7.2, 7.3
+
+## Dependencies to Add
+```
+textual>=0.47.0
+textual-dev>=1.3.0
+pyperclip>=1.8.2
+aiofiles>=23.2.1
+lru-dict>=1.3.0
+pygtrie>=2.5.0
+```
+
+## Issue Mapping
+- Issue #68 (View Contacts): Task 4.2
+- Issue #69 (Manage Relationships): Tasks 4.3, 5.1
+- Issue #70 (Search): Tasks 1.1-1.4, 4.4
+- Issue #71 (Database Management): Task 4.5
+- Issue #72 (Meta): All phases
+
+## Notes for Future Claude Sessions
+1. Check task status markers before starting work
+2. Update status markers after completing tasks
+3. Tasks marked [PARALLEL] can be assigned to subagents
+4. Dependencies are noted with [DEPENDS: x.x]
+5. This plan assumes Textual now, Flet later architecture
+6. Core business logic must remain UI-agnostic
+
+## Progress Tracking
+Last Updated: 2025-08-29
+Current Phase: PLANNING
+Completed Tasks: 0/32
+Next Action: Begin Phase 0 - Architecture Preparation

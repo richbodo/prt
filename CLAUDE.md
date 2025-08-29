@@ -17,6 +17,16 @@ NEVER proactively create documentation files (*.md) or README files. Only create
 
 PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project uses Python with SQLAlchemy, Typer for CLI, and includes AI-powered chat functionality via Ollama integration.
 
+## 📋 Active Development Plan
+
+**IMPORTANT:** Check `CLAUDE_TUI_MIGRATION.plan` for the current multi-phase development plan addressing Issues #68-72. This plan covers:
+- Textual TUI implementation for improved UX
+- Search and indexing infrastructure
+- Future Flet mobile migration path
+- Task status tracking and dependencies
+
+Always review the plan file before starting work to check task statuses and dependencies.
+
 ## Development Environment Setup
 
 ### Initial Setup
