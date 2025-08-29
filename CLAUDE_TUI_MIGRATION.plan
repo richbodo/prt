@@ -77,29 +77,55 @@ while architecting for future Flet mobile deployment.
 **Goal:** Build reusable components for Textual and future Flet
 **Parallelizable:** All tasks can run simultaneously
 
+#### Integration Guidelines:
+- Components must be UI-framework agnostic (no Textual imports in core)
+- Should integrate with existing search infrastructure where applicable
+- Must handle 5000+ contacts efficiently
+- Components can be aware of each other but loosely coupled
+
 - [ ] Task 2.1: Create Autocomplete Engine [PARALLEL]
   - Location: `prt_src/core/components/autocomplete.py`
   - UI-agnostic autocomplete logic
-  - Fuzzy matching
-  - Context-aware suggestions
+  - Fuzzy matching (consider using existing SearchIndexer for scoring)
+  - Context-aware suggestions based on:
+    - Current entity type (contact/tag/note)
+    - User search history (from UnifiedSearchAPI._search_history)
+    - Popular searches (from UnifiedSearchAPI._popular_searches)
+  - **Integration:** Should wrap/enhance existing ContactSearchCache.autocomplete()
+  - **Example:** When typing "Joh", suggest "John Smith" if recently searched
 
 - [ ] Task 2.2: Build Pagination System [PARALLEL]
   - Location: `prt_src/core/components/pagination.py`
-  - Alphabetical jump (A-Z)
-  - Position memory
-  - Lazy loading
+  - Alphabetical jump (A-Z navigation for contact lists)
+  - Position memory (remember last viewed page per list type)
+  - Lazy loading (fetch pages on demand, not all 5000 at once)
+  - **Integration:** Works with search results from UnifiedSearchAPI
+  - **Example:** Jump to "S" section, remember user was on page 3 of "S" contacts
+  - **Performance:** Must paginate 5000+ items smoothly
 
 - [ ] Task 2.3: Create Selection System [PARALLEL]
   - Location: `prt_src/core/components/selection.py`
-  - Multi-select logic
-  - Filter/sort capabilities
-  - Selection history
+  - Multi-select logic (checkbox-style selection tracking)
+  - Filter/sort capabilities:
+    - By name (alphabetical)
+    - By date added (newest/oldest)
+    - By relationship count
+    - By tag presence
+  - Selection history (remember recent selections for quick re-select)
+  - **Integration:** Maintains selection state across pagination changes
+  - **Example:** Select 10 contacts, change page, selections persist
 
 - [ ] Task 2.4: Build Validation System [PARALLEL]
   - Location: `prt_src/core/components/validation.py`
-  - Entity validators
-  - Deduplication detection
-  - Data sanitization
+  - Entity validators:
+    - Contact: email format, phone normalization, required fields
+    - Tag: no special characters, max length
+    - Note: title required, content max length
+    - Relationship: prevent self-relationships, validate dates
+  - Deduplication detection (find similar contacts by name/email/phone)
+  - Data sanitization (strip whitespace, normalize phone numbers)
+  - **Integration:** Used by all create/update operations in core
+  - **Example:** Detect "John Smith" vs "john smith" as potential duplicate
 
 ### Phase 3: Textual UI Framework
 **Goal:** Build Textual application structure and widgets
