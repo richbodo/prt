@@ -93,9 +93,18 @@ class Database:
         backup_filename = f"{self.path.stem}_backup_{timestamp}.db"
         backup_path = self.path.parent / backup_filename
 
+        # Security: Validate backup path is within expected directory
+        backup_path = backup_path.resolve()
+        expected_dir = self.path.parent.resolve()
+        if not str(backup_path).startswith(str(expected_dir)):
+            raise ValueError(f"Invalid backup path: {backup_path}")
+
         # Copy database file
         if self.path.exists():
             shutil.copy2(self.path, backup_path)
+
+            # Security: Set restrictive permissions on backup file
+            os.chmod(backup_path, 0o600)
 
             # Get file size
             file_size = os.path.getsize(backup_path)
@@ -199,13 +208,43 @@ class Database:
         if not backup_path.exists():
             raise FileNotFoundError(f"Backup file not found: {backup_path}")
 
+        # Security: Validate backup path is within expected directory
+        backup_path = backup_path.resolve()
+        expected_dir = self.path.parent.resolve()
+        if not str(backup_path).startswith(str(expected_dir)):
+            raise ValueError(f"Invalid backup path: {backup_path}")
+
         # Create a safety backup of current database before restore
         safety_backup = self.path.with_suffix(".pre_restore.bak")
         if self.path.exists():
             shutil.copy2(self.path, safety_backup)
+            import os
 
-        # Restore the backup
-        shutil.copy2(backup_path, self.path)
+            os.chmod(safety_backup, 0o600)  # Secure the safety backup too
+
+        # Transaction-safe restore using atomic rename
+        temp_restore = self.path.with_suffix(".restore.tmp")
+        try:
+            # Copy to temp file first
+            shutil.copy2(backup_path, temp_restore)
+
+            # Close current database connection before replacing file
+            self.session.close()
+
+            # Atomic rename - this is the actual "transaction"
+            # Either succeeds completely or fails completely
+            temp_restore.replace(self.path)
+
+            # Reconnect to the restored database
+            self.connect()
+
+        except Exception as e:
+            # Cleanup temp file if it exists
+            if temp_restore.exists():
+                temp_restore.unlink()
+            # Try to reconnect to original database
+            self.connect()
+            raise e
 
         return True
 

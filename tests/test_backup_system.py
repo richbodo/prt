@@ -222,9 +222,10 @@ class TestBackupRestoration:
         # Verify safety backup file was created
         assert safety_backup_path.exists(), "Safety backup file should exist"
 
-        # Note: After restoration, the backup_metadata table is from the restored database,
-        # so it won't contain records of backups made after the original backup.
-        # This is a limitation of storing metadata in the same database being backed up.
+        # Note: After restoration, the backup_metadata table is from the
+        # restored database, so it won't contain records of backups made
+        # after the original backup. This is a limitation of storing metadata
+        # in the same database being backed up.
 
 
 class TestAutoBackupManagement:
@@ -290,6 +291,56 @@ class TestAutoBackupManagement:
 
         backups = test_db.list_backups()
         assert len(backups) == 1
+
+
+class TestBackupSecurity:
+    """Test backup security features."""
+
+    def test_backup_file_permissions(self, test_db):
+        """Test that backup files have restrictive permissions."""
+        import os
+        import stat
+
+        backup = test_db.create_backup_with_metadata(comment="Test permissions")
+        backup_path = Path(backup["path"])
+
+        # Check file permissions (should be 0o600)
+        file_stat = os.stat(backup_path)
+        file_mode = stat.S_IMODE(file_stat.st_mode)
+        assert file_mode == 0o600, f"Expected 0o600, got {oct(file_mode)}"
+
+    def test_atomic_restore(self, test_db):
+        """Test that restore operation is atomic."""
+        # Create a backup
+        backup = test_db.create_backup_with_metadata(comment="Test atomic")
+
+        # Add data to current database
+        from prt_src.models import Contact
+
+        new_contact = Contact(name="Test Contact", email="test@example.com")
+        test_db.session.add(new_contact)
+        test_db.session.commit()
+
+        # Verify temp file is cleaned up after successful restore
+        temp_path = test_db.path.with_suffix(".restore.tmp")
+        assert not temp_path.exists()
+
+        # Restore
+        success = test_db.restore_backup(backup["id"])
+        assert success is True
+
+        # Verify temp file was cleaned up
+        assert not temp_path.exists()
+
+        # Verify database was restored (new contact should be gone)
+        test_db.session.close()
+        test_db.connect()
+        restored_count = (
+            test_db.session.query(Contact)
+            .filter(Contact.name == "Test Contact")
+            .count()
+        )
+        assert restored_count == 0
 
 
 class TestBackupMetadata:
