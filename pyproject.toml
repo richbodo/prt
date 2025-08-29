@@ -1,10 +1,14 @@
 [tool.black]
-line-length = 88
+line-length = 100
 
 [tool.ruff]
-line-length = 88
+line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "I"]
+# Ignore E501 (line too long) for specific cases
+ignore = ["E501"]  # We'll rely on black for line length formatting
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 100
