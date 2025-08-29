@@ -14,41 +14,52 @@ from pathlib import Path
 def extract_profile_images(db_path, output_dir="extracted_images"):
     """Extract profile images from database and save to disk."""
 
-    # Create output directory
     output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True)
-
-    # Connect to database
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    # Get all contacts with profile images
-    cursor.execute(
-        """
-        SELECT name, profile_image, profile_image_filename 
-        FROM contacts 
-        WHERE profile_image IS NOT NULL
-    """
-    )
-
-    results = cursor.fetchall()
-
-    if not results:
-        print("No profile images found in database.")
+    try:
+        output_path.mkdir(exist_ok=True)
+    except OSError as e:
+        print(f"Failed to create output directory: {e}")
         return
 
-    print(f"Found {len(results)} profile images:")
+    conn = None
+    try:
+        # Connect to database
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-    for name, image_data, filename in results:
-        # Save image to disk
-        output_file = output_path / filename
-        with open(output_file, "wb") as f:
-            f.write(image_data)
+        # Get all contacts with profile images
+        cursor.execute(
+            """
+        SELECT name, profile_image, profile_image_filename
+        FROM contacts
+        WHERE profile_image IS NOT NULL
+    """
+        )
 
-        size_kb = len(image_data) / 1024
-        print(f"  {name}: {filename} ({size_kb:.1f} KB)")
+        results = cursor.fetchall()
 
-    conn.close()
+        if not results:
+            print("No profile images found in database.")
+            return
+
+        print(f"Found {len(results)} profile images:")
+
+        for name, image_data, filename in results:
+            # Save image to disk
+            output_file = output_path / filename
+            try:
+                with open(output_file, "wb") as f:
+                    f.write(image_data)
+                size_kb = len(image_data) / 1024
+                print(f"  {name}: {filename} ({size_kb:.1f} KB)")
+            except OSError as e:
+                print(f"Failed to write {filename}: {e}")
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+    finally:
+        if conn:
+            conn.close()
+
     print(f"\nImages extracted to: {output_path.resolve()}")
 
 

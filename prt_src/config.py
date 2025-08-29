@@ -10,7 +10,10 @@ REQUIRED_FIELDS = ['google_api_key', 'openai_api_key', 'db_path', 'db_username',
 def data_dir() -> Path:
     """Return the directory for local private data and ensure it exists."""
     path = Path.cwd() / DATA_DIR_NAME
-    path.mkdir(exist_ok=True)
+    try:
+        path.mkdir(exist_ok=True)
+    except OSError as e:
+        raise RuntimeError(f"Failed to create data directory: {e}") from e
     return path
 
 
@@ -39,8 +42,11 @@ def load_config() -> Dict[str, Any]:
 
 
 def save_config(cfg: Dict[str, Any]) -> None:
-    with config_path().open('w') as f:
-        json.dump(cfg, f, indent=2)
+    try:
+        with config_path().open('w') as f:
+            json.dump(cfg, f, indent=2)
+    except OSError as e:
+        raise RuntimeError(f"Failed to write config file: {e}") from e
 
 
 def _migrate_secrets_if_needed():
@@ -67,14 +73,20 @@ def get_db_credentials() -> tuple[str, str]:
     _migrate_secrets_if_needed()
     
     secrets_dir = data_dir() / "secrets"
-    secrets_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        secrets_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        raise RuntimeError(f"Failed to create secrets directory: {e}") from e
     secrets_file = secrets_dir / "db_secrets.txt"
-    
+
     if secrets_file.exists():
-        with open(secrets_file, 'r') as f:
-            lines = f.read().strip().split('\n')
-            if len(lines) >= 2:
-                return lines[0], lines[1]
+        try:
+            with open(secrets_file, 'r') as f:
+                lines = f.read().strip().split('\n')
+                if len(lines) >= 2:
+                    return lines[0], lines[1]
+        except OSError as e:
+            raise RuntimeError(f"Failed to read secrets file: {e}") from e
     
     # Generate new credentials
     import secrets as secrets_module
@@ -83,8 +95,11 @@ def get_db_credentials() -> tuple[str, str]:
     username = ''.join(secrets_module.choice(string.ascii_lowercase) for _ in range(8))
     password = ''.join(secrets_module.choice(string.ascii_letters + string.digits) for _ in range(16))
     
-    with open(secrets_file, 'w') as f:
-        f.write(f"{username}\n{password}")
+    try:
+        with open(secrets_file, 'w') as f:
+            f.write(f"{username}\n{password}")
+    except OSError as e:
+        raise RuntimeError(f"Failed to write secrets file: {e}") from e
     
     return username, password
 

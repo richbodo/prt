@@ -148,8 +148,11 @@ class DirectoryGenerator:
                 if source_image.exists():
                     # Copy with the same filename (contact_id.jpg)
                     dest_image = output_images_dir / source_image.name
-                    shutil.copy2(source_image, dest_image)
-                    images_copied += 1
+                    try:
+                        shutil.copy2(source_image, dest_image)
+                        images_copied += 1
+                    except OSError as e:
+                        console.print(f"❌ Failed to copy {source_image}: {e}", style="red")
         
         if images_copied > 0:
             console.print(f"🖼️  Copied {images_copied} profile images", style="green")

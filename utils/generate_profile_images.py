@@ -154,13 +154,20 @@ def generate_profile_images():
 def save_images_to_disk(profiles, output_dir="profile_images"):
     """Save generated images to disk for inspection."""
     output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True)
+    try:
+        output_path.mkdir(exist_ok=True)
+    except OSError as e:
+        print(f"Failed to create output directory: {e}")
+        return
 
     for filename, profile in profiles.items():
         file_path = output_path / filename
-        with open(file_path, "wb") as f:
-            f.write(profile["bytes"])
-        print(f"Saved: {file_path}")
+        try:
+            with open(file_path, "wb") as f:
+                f.write(profile["bytes"])
+            print(f"Saved: {file_path}")
+        except OSError as e:
+            print(f"Failed to save {file_path}: {e}")
 
 
 if __name__ == "__main__":
