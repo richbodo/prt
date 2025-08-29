@@ -19,15 +19,20 @@ class PRTAPI:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize PRT API with configuration."""
-        if config is None:
-            config = load_config()
-
-        # Get database path from config
-        db_path = Path(config["db_path"])
+        try:
+            if config is None:
+                config = load_config()
+            # Get database path from config
+            db_path = Path(config["db_path"])
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize configuration: {e}") from e
 
         # Create database instance
         self.db = Database(db_path)
-        self.db.connect()
+        try:
+            self.db.connect()
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to database: {e}") from e
 
         # Initialize schema manager and check for migrations
         self.schema_manager = SchemaManager(self.db)

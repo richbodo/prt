@@ -44,21 +44,24 @@ def _extract_fields(row: Dict[str, str], prefix: str) -> List[str]:
 def parse_contacts(csv_path: str) -> List[Dict[str, List[str]]]:
     """Parse contacts from a Google Contacts CSV export."""
     contacts: List[Dict[str, List[str]]] = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # Skip completely empty rows
-            if not any(field.strip() for field in row.values()):
-                continue
-            first = row.get("First Name", "").strip()
-            last = row.get("Last Name", "").strip()
-            contact = {
-                "first": first,
-                "last": last,
-                "emails": _extract_fields(row, "E-mail"),
-                "phones": _extract_fields(row, "Phone"),
-            }
-            contacts.append(contact)
+    try:
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # Skip completely empty rows
+                if not any(field.strip() for field in row.values()):
+                    continue
+                first = row.get("First Name", "").strip()
+                last = row.get("Last Name", "").strip()
+                contact = {
+                    "first": first,
+                    "last": last,
+                    "emails": _extract_fields(row, "E-mail"),
+                    "phones": _extract_fields(row, "Phone"),
+                }
+                contacts.append(contact)
+    except (UnicodeDecodeError, csv.Error) as e:
+        raise RuntimeError(f"Failed to parse contacts: {e}") from e
     return contacts
 
 
@@ -72,7 +75,10 @@ def main() -> None:
         contacts = parse_contacts(csv_path)
     except FileNotFoundError:
         print(f"File not found: {csv_path}")
-        return
+        sys.exit(1)
+    except RuntimeError as e:
+        print(e)
+        sys.exit(1)
 
     print(f"Number of contacts: {len(contacts)}")
     for contact in contacts:

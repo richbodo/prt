@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -30,15 +31,23 @@ def _credentials() -> Credentials:
     token_path = data_dir() / "token.json"
     creds = None
     if token_path.exists():
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+        except OSError as e:
+            raise RuntimeError(f"Failed to load credentials: {e}") from e
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            secrets_file = _secrets_file()
-            flow = InstalledAppFlow.from_client_secrets_file(secrets_file, SCOPES)
-            creds = flow.run_local_server(port=0)
-        token_path.write_text(creds.to_json())
+        try:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                secrets_file = _secrets_file()
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    secrets_file, SCOPES
+                )
+                creds = flow.run_local_server(port=0)
+            token_path.write_text(creds.to_json())
+        except (OSError, RefreshError, Exception) as e:
+            raise RuntimeError(f"Failed to obtain credentials: {e}") from e
     return creds
 
 
@@ -59,6 +68,10 @@ def fetch_contacts(config: Dict[str, str]) -> List[Tuple[str, str]]:
         )
     except HttpError as err:
         raise RuntimeError(f"Google API error: {err}") from err
+    except (OSError, RefreshError) as e:
+        raise RuntimeError(f"Failed to fetch contacts: {e}") from e
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error fetching contacts: {e}") from e
 
     contacts: List[Tuple[str, str]] = []
     for person in result.get("connections", []):

@@ -23,9 +23,14 @@ class Database:
         db_url = f"sqlite:///{self.path}"
 
         # Standard SQLite connection
-        self.engine = create_engine(db_url, echo=False)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        self.session = self.SessionLocal()
+        try:
+            self.engine = create_engine(db_url, echo=False)
+            self.SessionLocal = sessionmaker(
+                autocommit=False, autoflush=False, bind=self.engine
+            )
+            self.session = self.SessionLocal()
+        except SQLAlchemyError as e:
+            raise RuntimeError(f"Failed to connect to database: {e}") from e
 
     def is_valid(self) -> bool:
         """Check if the database is valid using SQLite integrity check."""
@@ -63,7 +68,10 @@ class Database:
         """
         backup_path = self.path.with_name(self.path.name + suffix)
         if self.path.exists():
-            shutil.copy(self.path, backup_path)
+            try:
+                shutil.copy(self.path, backup_path)
+            except OSError as e:
+                raise RuntimeError(f"Failed to backup database: {e}") from e
         return backup_path
 
     def create_backup_with_metadata(
@@ -101,13 +109,16 @@ class Database:
 
         # Copy database file
         if self.path.exists():
-            shutil.copy2(self.path, backup_path)
-
-            # Security: Set restrictive permissions on backup file
-            os.chmod(backup_path, 0o600)
-
-            # Get file size
-            file_size = os.path.getsize(backup_path)
+            try:
+                shutil.copy2(self.path, backup_path)
+                # Security: Set restrictive permissions on backup file
+                os.chmod(backup_path, 0o600)
+                # Get file size
+                file_size = os.path.getsize(backup_path)
+            except OSError as e:
+                if backup_path.exists():
+                    backup_path.unlink()
+                raise RuntimeError(f"Failed to create backup: {e}") from e
 
             # Get current schema version
             try:
