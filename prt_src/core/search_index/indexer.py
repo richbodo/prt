@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
+from prt_src.logging_config import get_logger
+
 
 class EntityType(Enum):
     """Types of entities that can be searched."""
@@ -55,6 +57,7 @@ class SearchIndexer:
         """
         self.db = db
         self._fts_available = None
+        self.logger = get_logger(__name__)
         self._last_index_update = None
 
     def check_fts_available(self) -> bool:
@@ -209,7 +212,7 @@ class SearchIndexer:
 
         except Exception as e:
             # Log error but don't crash
-            print(f"Error searching contacts: {e}")
+            self.logger.error(f"Error searching contacts: {e}", exc_info=True)
 
         return results
 
@@ -268,7 +271,7 @@ class SearchIndexer:
                 results.append(result)
 
         except Exception as e:
-            print(f"Error searching notes: {e}")
+            self.logger.error(f"Error searching notes: {e}", exc_info=True)
 
         return results
 
@@ -320,7 +323,7 @@ class SearchIndexer:
                 results.append(result)
 
         except Exception as e:
-            print(f"Error searching tags: {e}")
+            self.logger.error(f"Error searching tags: {e}", exc_info=True)
 
         return results
 
@@ -470,7 +473,9 @@ class SearchIndexer:
 
         except Exception as e:
             self.db.session.rollback()
-            print(f"Error updating index for {entity_type.value} {entity_id}: {e}")
+            self.logger.error(
+                f"Error updating index for {entity_type.value} {entity_id}: {e}", exc_info=True
+            )
             return False
 
     def rebuild_index(self) -> bool:
@@ -542,7 +547,7 @@ class SearchIndexer:
 
         except Exception as e:
             self.db.session.rollback()
-            print(f"Error rebuilding index: {e}")
+            self.logger.error(f"Error rebuilding index: {e}", exc_info=True)
             return False
 
     def get_index_stats(self) -> Dict[str, Any]:
@@ -599,5 +604,5 @@ class SearchIndexer:
 
         except Exception as e:
             self.db.session.rollback()
-            print(f"Error optimizing index: {e}")
+            self.logger.error(f"Error optimizing index: {e}", exc_info=True)
             return False

@@ -59,21 +59,28 @@ def extract_profile_images(db_path, output_dir="extracted_images"):
     finally:
         if conn:
             conn.close()
+
     print(f"\nImages extracted to: {output_path.resolve()}")
 
+
 if __name__ == "__main__":
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logger = logging.getLogger(__name__)
+
     # Default to test fixture database
     default_db = Path(__file__).parent.parent / "tests" / "prt_data" / "test_fixtures.db"
-    
+
     if len(sys.argv) > 1:
         db_path = Path(sys.argv[1])
     else:
         db_path = default_db
-    
+
     if not db_path.exists():
         print(f"Database not found: {db_path}")
         print("Run 'cd tests && python fixtures.py' to create test database.")
         sys.exit(1)
-    
+
     print(f"Extracting images from: {db_path}")
     extract_profile_images(db_path)

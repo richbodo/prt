@@ -7,6 +7,7 @@ from sqlalchemy import and_, case, create_engine, func, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import aliased, sessionmaker
 
+from .logging_config import get_logger
 from .models import Contact, ContactRelationship, RelationshipType
 
 
@@ -16,6 +17,7 @@ class Database:
         self.engine = None
         self.SessionLocal = None
         self.session = None
+        self.logger = get_logger(__name__)
 
     def connect(self) -> None:
         """Connect to the database using SQLAlchemy."""
@@ -25,9 +27,7 @@ class Database:
         # Standard SQLite connection
         try:
             self.engine = create_engine(db_url, echo=False)
-            self.SessionLocal = sessionmaker(
-                autocommit=False, autoflush=False, bind=self.engine
-            )
+            self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
             self.session = self.SessionLocal()
         except SQLAlchemyError as e:
             raise RuntimeError(f"Failed to connect to database: {e}") from e
@@ -768,7 +768,7 @@ class Database:
                 ],
             }
         except Exception as e:
-            print(f"Error getting relationship analytics: {e}")
+            self.logger.error(f"Error getting relationship analytics: {e}", exc_info=True)
             return {}
 
     def find_mutual_connections(self, contact1_id: int, contact2_id: int) -> List[Dict[str, Any]]:
@@ -823,7 +823,7 @@ class Database:
                 {"id": c.id, "name": c.name, "email": c.email, "phone": c.phone} for c in mutual
             ]
         except Exception as e:
-            print(f"Error finding mutual connections: {e}")
+            self.logger.error(f"Error finding mutual connections: {e}", exc_info=True)
             return []
 
     def find_relationship_path(self, from_id: int, to_id: int, max_depth: int = 6) -> List[int]:
@@ -874,7 +874,7 @@ class Database:
 
             return []  # No path found
         except Exception as e:
-            print(f"Error finding relationship path: {e}")
+            self.logger.error(f"Error finding relationship path: {e}", exc_info=True)
             return []
 
     def bulk_create_relationships(self, relationships: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -1023,7 +1023,7 @@ class Database:
                 return data
 
         except Exception as e:
-            print(f"Error exporting relationships: {e}")
+            self.logger.error(f"Error exporting relationships: {e}", exc_info=True)
             return [] if format == "json" else ""
 
     def get_network_degrees(self, contact_id: int, degrees: int = 2) -> Dict[str, List[Dict]]:
@@ -1083,7 +1083,7 @@ class Database:
 
             return result
         except Exception as e:
-            print(f"Error getting network degrees: {e}")
+            self.logger.error(f"Error getting network degrees: {e}", exc_info=True)
             return {}
 
 
