@@ -2,11 +2,10 @@
 
 ## QuickStart
 
-The `init.sh` file sets up a virtual environment for development and installs required dependencies. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`. After activation, install development tools with `pip install -r requirements-dev.txt`.
+The `init.sh` file sets up a virtual environment for development and installs required dependencies. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`. Init.sh also installs development tools with `pip install -r requirements-dev.txt`.
 
 ```bash
 source ./init.sh
-pip install -r requirements-dev.txt
 python -m prt_src.cli
 ```
 
@@ -18,15 +17,12 @@ python -m prt_src.cli setup
 
 ## Development Workflow
 
-This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files. Make sure the development dependencies are installed first:
+This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files. Run these commands before committing to ensure consistent code style.
 
 ```bash
-pip install -r requirements-dev.txt
 pre-commit install
 pre-commit run --files <file1> <file2>
 ```
-
-Run these commands before committing to ensure consistent code style.
 
 ## Motivation/Purpose: 
 
