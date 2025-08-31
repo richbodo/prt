@@ -75,23 +75,23 @@ class TestRelationshipList:
     def test_relationship_list_load(self):
         """Test loading relationships."""
         relationships = [
-            {"from": "Alice", "to": "Bob", "type": "friend"},
-            {"from": "Bob", "to": "Charlie", "type": "colleague"},
-            {"from": "Alice", "to": "Charlie", "type": "family"},
+            {"from_contact": "Alice", "to_contact": "Bob", "type": "friend"},
+            {"from_contact": "Bob", "to_contact": "Charlie", "type": "colleague"},
+            {"from_contact": "Alice", "to_contact": "Charlie", "type": "family"},
         ]
 
         rel_list = RelationshipList()
         rel_list.load_relationships(relationships)
 
         assert len(rel_list.relationships) == 3
-        assert rel_list.relationships[0]["from"] == "Alice"
+        assert rel_list.relationships[0]["from_contact"] == "Alice"
 
     def test_relationship_list_filter_by_contact(self):
         """Test filtering relationships by contact."""
         relationships = [
-            {"from": "Alice", "to": "Bob", "type": "friend"},
-            {"from": "Bob", "to": "Charlie", "type": "colleague"},
-            {"from": "Alice", "to": "Charlie", "type": "family"},
+            {"from_contact": "Alice", "to_contact": "Bob", "type": "friend"},
+            {"from_contact": "Bob", "to_contact": "Charlie", "type": "colleague"},
+            {"from_contact": "Alice", "to_contact": "Charlie", "type": "family"},
         ]
 
         rel_list = RelationshipList()
@@ -104,9 +104,9 @@ class TestRelationshipList:
     def test_relationship_list_group_by_type(self):
         """Test grouping relationships by type."""
         relationships = [
-            {"from": "Alice", "to": "Bob", "type": "friend"},
-            {"from": "Bob", "to": "Charlie", "type": "friend"},
-            {"from": "Alice", "to": "David", "type": "family"},
+            {"from_contact": "Alice", "to_contact": "Bob", "type": "friend"},
+            {"from_contact": "Bob", "to_contact": "Charlie", "type": "friend"},
+            {"from_contact": "Alice", "to_contact": "David", "type": "family"},
         ]
 
         rel_list = RelationshipList()
@@ -154,9 +154,9 @@ class TestRelationshipGraph:
     def test_relationship_graph_from_relationships(self):
         """Test building graph from relationships."""
         relationships = [
-            {"from": "Alice", "to": "Bob", "type": "friend"},
-            {"from": "Bob", "to": "Charlie", "type": "colleague"},
-            {"from": "Alice", "to": "Charlie", "type": "family"},
+            {"from_contact": "Alice", "to_contact": "Bob", "type": "friend"},
+            {"from_contact": "Bob", "to_contact": "Charlie", "type": "colleague"},
+            {"from_contact": "Alice", "to_contact": "Charlie", "type": "family"},
         ]
 
         graph = RelationshipGraph()

@@ -6,6 +6,7 @@ between contacts.
 
 from typing import Callable, Dict, List, Optional, Set
 
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Input, Label, Select, Static
@@ -108,6 +109,57 @@ class RelationshipEditor(Static):
         required = ["from_contact", "to_contact", "type"]
         return all(field in relationship for field in required)
 
+    def validate_strength(self, value: str) -> bool:
+        """Validate strength is between 1-10.
+
+        Args:
+            value: The strength value to validate
+
+        Returns:
+            True if valid
+        """
+        try:
+            strength = int(value)
+            return 1 <= strength <= 10
+        except (ValueError, TypeError):
+            return False
+
+    @on(Button.Pressed, "#save-rel")
+    def handle_save(self) -> None:
+        """Handle save button click."""
+        try:
+            # Gather current form data
+            from_contact = self.query_one("#from-contact", Input).value
+            to_contact = self.query_one("#to-contact", Input).value
+            rel_type = self.query_one("#rel-type", Select).value
+            strength_str = self.query_one("#strength", Input).value
+
+            # Validate and convert strength
+            strength = 5  # default
+            if strength_str and self.validate_strength(strength_str):
+                strength = int(strength_str)
+
+            # Create relationship object with consistent schema
+            self.relationship = {
+                "from_contact": from_contact,
+                "to_contact": to_contact,
+                "type": rel_type or "friend",
+                "strength": strength,
+            }
+
+            if self.validate_relationship(self.relationship):
+                if self.on_save:
+                    self.on_save(self.relationship)
+        except Exception:
+            pass
+
+    @on(Button.Pressed, "#cancel-rel")
+    def handle_cancel(self) -> None:
+        """Handle cancel button click."""
+        # Reset form to original values if editing
+        if self.relationship:
+            self.set_relationship(self.relationship)
+
     def save(self) -> None:
         """Save the current relationship."""
         if self.relationship and self.validate_relationship(self.relationship):
@@ -144,6 +196,34 @@ class RelationshipList(ModeAwareWidget):
             # Relationships container
             yield Vertical(id="relationships-container", classes="relationships-container")
 
+    @on(Button.Pressed, "#apply-filter")
+    def handle_apply_filter(self) -> None:
+        """Handle apply filter button click."""
+        try:
+            contact_name = self.query_one("#contact-filter", Input).value
+            if contact_name:
+                self.filter_by_contact(contact_name)
+        except Exception:
+            pass
+
+    @on(Button.Pressed, "#clear-filter")
+    def handle_clear_filter(self) -> None:
+        """Handle clear filter button click."""
+        try:
+            self.query_one("#contact-filter", Input).value = ""
+            self.filtered_relationships = self.relationships.copy()
+            self.current_contact = None
+            self._update_display()
+        except Exception:
+            pass
+
+    @on(Button.Pressed, "#add-rel")
+    def handle_add_relationship(self) -> None:
+        """Handle add new relationship button."""
+        # This would typically open a dialog or switch to edit mode
+        # For now, just a placeholder
+        pass
+
     def load_relationships(self, relationships: List[Dict]) -> None:
         """Load relationships into the list.
 
@@ -164,7 +244,7 @@ class RelationshipList(ModeAwareWidget):
         self.filtered_relationships = [
             rel
             for rel in self.relationships
-            if rel.get("from") == contact_name or rel.get("to") == contact_name
+            if rel.get("from_contact") == contact_name or rel.get("to_contact") == contact_name
         ]
         self._update_display()
 
@@ -197,8 +277,8 @@ class RelationshipList(ModeAwareWidget):
 
                 # Relationships of this type
                 for rel in rels:
-                    from_contact = rel.get("from", "Unknown")
-                    to_contact = rel.get("to", "Unknown")
+                    from_contact = rel.get("from_contact", "Unknown")
+                    to_contact = rel.get("to_contact", "Unknown")
                     strength = rel.get("strength", "")
 
                     rel_text = f"{from_contact} → {to_contact}"
@@ -261,8 +341,8 @@ class RelationshipGraph(Static):
         self.edges.clear()
 
         for rel in relationships:
-            from_contact = rel.get("from")
-            to_contact = rel.get("to")
+            from_contact = rel.get("from_contact")
+            to_contact = rel.get("to_contact")
             rel_type = rel.get("type", "unknown")
 
             if from_contact and to_contact:
