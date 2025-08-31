@@ -6,8 +6,12 @@ the CLI interface and AI chat mode. It abstracts database operations and
 provides a consistent interface for all PRT functionality.
 """
 
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from .config import data_dir, load_config
 from .db import Database
@@ -149,6 +153,52 @@ class PRTAPI:
             return self.db.is_valid()
         except Exception:
             return False
+
+    def execute_sql(self, sql: str, confirm: bool = False) -> Dict[str, Any]:
+        """Execute raw SQL against the database.
+
+        Args:
+            sql: SQL query to execute
+            confirm: Required for write operations
+
+        Returns:
+            Dict containing rows (for SELECT), rowcount, and error message if any
+        """
+        result: Dict[str, Any] = {"rows": None, "rowcount": 0, "error": None}
+
+        # Basic detection of write operations
+        normalized = re.sub(r"\s+", " ", sql.strip()).lower()
+        write_ops = ("insert", "update", "delete", "replace", "drop", "create", "alter")
+        is_write = not normalized.startswith(("select", "with", "pragma", "explain")) and any(
+            op in normalized for op in write_ops
+        )
+
+        if is_write and not confirm:
+            result["error"] = "Write operation requires confirmation"
+            return result
+
+        if is_write:
+            try:
+                self.auto_backup_before_operation("execute_sql")
+            except Exception as e:
+                self.logger.error(f"Backup before SQL execution failed: {e}")
+
+        try:
+            res = self.db.session.execute(text(sql))
+            if res.returns_rows:
+                rows = [dict(row._mapping) for row in res]
+                result["rows"] = rows
+                result["rowcount"] = len(rows)
+            else:
+                result["rowcount"] = res.rowcount
+            if is_write:
+                self.db.session.commit()
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            result["error"] = str(e)
+            self.logger.error(f"Error executing SQL: {e}", exc_info=True)
+
+        return result
 
     # Search operations
     def search_contacts(self, query: str) -> List[Dict[str, Any]]:
