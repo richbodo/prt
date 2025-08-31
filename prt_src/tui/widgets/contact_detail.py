@@ -162,7 +162,7 @@ class ContactDetailView(ModeAwareWidget):
 
             # Set email validator
             if field_name == "email":
-                editor.set_validator(lambda v: not v or "@" in v)
+                editor.set_validator(lambda v, fn=field_name: not v or "@" in v)
 
         # Try to mount in UI if widget is mounted
         try:
