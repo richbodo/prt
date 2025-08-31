@@ -3,6 +3,7 @@
 from .base import ConfirmDialog, ModeAwareWidget, StatusBar, ToastNotification
 from .contact_detail import ContactDetailView, FieldEditor
 from .contact_list import ContactListWidget, ContactRow
+from .search_filter import FilterPanel, SearchableList, SearchBar
 from .settings import SettingItem, SettingsCategory, SettingsScreen
 
 __all__ = [
@@ -14,6 +15,9 @@ __all__ = [
     "ContactRow",
     "ContactDetailView",
     "FieldEditor",
+    "SearchBar",
+    "FilterPanel",
+    "SearchableList",
     "SettingItem",
     "SettingsCategory",
     "SettingsScreen",
