@@ -295,6 +295,52 @@ func.count(), func.max(), func.min()
 # NOT: .filter(ContactRelationship.end_date == None)  # Wrong
 ```
 
+## TUI Development Guidelines
+
+### Parallel Development
+- When working on multiple parallel features, expect merge conflicts in `__init__.py` and `styles.tcss`
+- Resolve conflicts by **combining** imports/styles, not choosing one over the other
+- Merge PRs one at a time to minimize conflict complexity
+
+### Common Issues and Solutions
+- **Lambda closure bug**: Use default parameters to capture loop variables
+  ```python
+  # Bug: All validators reference the last field_name
+  lambda v: validate(v, field_name)
+  
+  # Fix: Capture current field_name with default parameter
+  lambda v, fn=field_name: validate(v, fn)
+  ```
+- **Reserved properties**: Avoid using `name` on Textual widgets (it's reserved)
+  - Use alternatives like `category_name`, `item_name`, etc.
+- **Event handlers**: Place `@on` decorators outside `compose()` method
+  ```python
+  def compose(self) -> ComposeResult:
+      yield Button("Save", id="save-btn")
+  
+  # Correct placement - outside compose()
+  @on(Button.Pressed, "#save-btn")
+  def handle_save(self) -> None:
+      ...
+  ```
+
+### Testing Approach
+- Use lightweight TDD: Write 2-3 failing tests → implement → expand tests
+- Run tests with: `./prt_env/bin/python -m pytest tests/test_*.py -v`
+- Always lint before committing: 
+  ```bash
+  ./prt_env/bin/ruff check prt_src/tui/ --fix && ./prt_env/bin/black prt_src/tui/
+  ```
+
+### Widget Organization
+- Base classes in `prt_src/tui/widgets/base.py`
+- Specific widgets in their own files under `prt_src/tui/widgets/`
+- All widgets must be exported in `__init__.py`
+
+### Data Schema Consistency
+- Use consistent field names across components (e.g., `from_contact`/`to_contact` not `from`/`to`)
+- Validate data structures match between widgets that communicate
+
 ## Git Commit Guidelines
 
 When creating commit messages:
