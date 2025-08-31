@@ -5,6 +5,7 @@ from .contact_detail import ContactDetailView, FieldEditor
 from .contact_list import ContactListWidget, ContactRow
 from .relationship import RelationshipEditor, RelationshipGraph, RelationshipList
 from .search_filter import FilterPanel, SearchableList, SearchBar
+from .settings import SettingItem, SettingsCategory, SettingsScreen
 
 __all__ = [
     "ModeAwareWidget",
@@ -21,4 +22,7 @@ __all__ = [
     "RelationshipEditor",
     "RelationshipList",
     "RelationshipGraph",
+    "SettingItem",
+    "SettingsCategory",
+    "SettingsScreen",
 ]
