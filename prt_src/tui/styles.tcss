@@ -327,3 +327,41 @@ Footer {
     background: $panel;
     color: $text-muted;
 }
+
+/* Navigation Menu */
+.navigation-menu {
+    width: 100%;
+    padding: 1;
+}
+
+.menu-container {
+    width: 100%;
+}
+
+.menu-item {
+    padding: 1 2;
+    margin: 0 0 1 0;
+    background: $panel;
+    border: round $border;
+    color: $text;
+}
+
+.menu-item.selected {
+    background: $primary;
+    border: round $accent;
+    text-style: bold;
+}
+
+.menu-item.current {
+    background: $success-darken-1;
+    border: round $success;
+}
+
+.menu-item.disabled {
+    opacity: 0.5;
+    color: $text-muted;
+}
+
+.menu-item:hover {
+    background: $primary-lighten-1;
+}
