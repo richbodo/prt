@@ -30,16 +30,16 @@ def mock_api():
     api.db.list_relationship_types.return_value = [
         {
             "id": 1,
-            "type_key": "parent_of",
-            "description": "Is the parent of",
-            "inverse_type_key": "child_of",
+            "type_key": "mother",
+            "description": "Is the mother of",
+            "inverse_type_key": None,
             "is_symmetrical": False,
         },
         {
             "id": 2,
-            "type_key": "friend_of",
+            "type_key": "friend",
             "description": "Is a friend of",
-            "inverse_type_key": "friend_of",
+            "inverse_type_key": "friend",
             "is_symmetrical": True,
         },
         {
@@ -55,8 +55,8 @@ def mock_api():
     api.db.get_contact_relationships.return_value = [
         {
             "relationship_id": 1,
-            "type": "parent_of",
-            "description": "Is the parent of",
+            "type": "mother",
+            "description": "Is the mother of",
             "other_contact_id": 2,
             "other_contact_name": "Bob Jones",
             "other_contact_email": "bob@example.com",
@@ -66,7 +66,7 @@ def mock_api():
         },
         {
             "relationship_id": 2,
-            "type": "friend_of",
+            "type": "friend",
             "description": "Is a friend of",
             "other_contact_id": 3,
             "other_contact_name": "Charlie Brown",
@@ -152,7 +152,7 @@ class TestAddRelationship:
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 with patch("prt_src.cli.Confirm.ask", return_value=True):
                     mock_prompt.side_effect = [
-                        "parent_of",  # relationship type
+                        "mother",  # relationship type
                         "",  # search for first contact (empty to see all)
                         "1",  # from contact ID
                         "",  # search for second contact (empty to see all)
@@ -164,7 +164,7 @@ class TestAddRelationship:
 
                     # Verify relationship was created
                     mock_api.db.create_contact_relationship.assert_called_once_with(
-                        1, 2, "parent_of", start_date=None
+                        1, 2, "mother", start_date=None
                     )
 
                     # Verify success message
@@ -175,7 +175,7 @@ class TestAddRelationship:
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 mock_prompt.side_effect = [
-                    "friend_of",  # relationship type
+                    "friend",  # relationship type
                     "",  # search for first contact (empty to see all)
                     "1",  # from contact ID
                     "",  # search for second contact (empty to see all)
@@ -199,7 +199,7 @@ class TestAddRelationship:
         ]
 
         with patch("prt_src.cli.console", mock_console):
-            with patch("prt_src.cli.Prompt.ask", return_value="friend_of"):
+            with patch("prt_src.cli.Prompt.ask", return_value="friend"):
                 handle_add_relationship(mock_api)
 
                 # Should show error message
@@ -273,9 +273,7 @@ class TestDeleteRelationship:
                     handle_delete_relationship(mock_api)
 
                     # Verify deletion
-                    mock_api.db.delete_contact_relationship.assert_called_once_with(
-                        1, 2, "parent_of"
-                    )
+                    mock_api.db.delete_contact_relationship.assert_called_once_with(1, 2, "mother")
 
                     # Verify success message
                     mock_console.print.assert_any_call(
@@ -346,7 +344,7 @@ class TestRelationshipsMenu:
                 # Need more mock values for the add relationship flow
                 mock_prompt.side_effect = [
                     "2",  # select add from menu
-                    "friend_of",  # select relationship type
+                    "friend",  # select relationship type
                     "",  # search for first contact (empty to see all)
                     "1",  # first contact
                     "",  # search for second contact (empty to see all)
@@ -402,9 +400,9 @@ class TestRelationshipDisplayFormatting:
         """Test displaying symmetrical relationships."""
         mock_api.db.list_relationship_types.return_value = [
             {
-                "type_key": "friend_of",
+                "type_key": "friend",
                 "description": "Is a friend of",
-                "inverse_type_key": "friend_of",
+                "inverse_type_key": "friend",
                 "is_symmetrical": True,
             }
         ]
@@ -412,7 +410,7 @@ class TestRelationshipDisplayFormatting:
         with patch("prt_src.cli.console", mock_console):
             with patch("prt_src.cli.Prompt.ask") as mock_prompt:
                 mock_prompt.side_effect = [
-                    "friend_of",  # relationship type
+                    "friend",  # relationship type
                     "",  # search for first contact (empty to see all)
                     "1",  # first contact
                     "",  # search for second contact (empty to see all)
