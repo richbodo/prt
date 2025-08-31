@@ -1,0 +1,22 @@
+version: 1
+name: contact_discovery
+description: |
+  Short passages containing contact details. The model should identify
+  key information such as names, email addresses, or phone numbers.
+tests:
+  - id: email-and-phone
+    text: "Reach Alice at alice@example.com or call 555-123-4567."
+    expected:
+      name: "Alice"
+      email: "alice@example.com"
+      phone: "555-123-4567"
+  - id: name-and-email
+    text: "Bob Smith (bob.smith@company.io) moved to 42 Galaxy Way."
+    expected:
+      name: "Bob Smith"
+      email: "bob.smith@company.io"
+      address: "42 Galaxy Way"
+  - id: phone-only
+    text: "Call our support line at (800) 555-0199 for help."
+    expected:
+      phone: "(800) 555-0199"
