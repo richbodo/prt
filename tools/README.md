@@ -10,10 +10,13 @@ This directory contains standalone tools that work with PRT exports and data.
 
 **Usage**:
 ```bash
-# Basic usage
+# Basic usage (graph layout)
 python tools/make_directory.py generate exports/contacts_search_20250826_191055/
 
-# Custom output directory  
+# Static work-directory layout
+python tools/make_directory.py generate exports/contacts_search_20250826_191055/ --layout work
+
+# Custom output directory
 python tools/make_directory.py generate exports/tags_search_20250826_191055/ --output ./my_directory
 
 # Force overwrite existing directory

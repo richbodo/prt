@@ -14,7 +14,7 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import typer
 from rich.console import Console
@@ -27,67 +27,83 @@ console = Console()
 
 class DirectoryGenerator:
     """Handles the generation of contact directory websites."""
-    
-    def __init__(self, export_path: Path, output_path: Optional[Path] = None):
+
+    def __init__(
+        self,
+        export_path: Path,
+        output_path: Optional[Path] = None,
+        layout: str = "graph",
+    ):
         self.export_path = Path(export_path)
         self.output_path = output_path or Path("directories") / self.export_path.name
         self.export_data = None
         self.contact_data = []
-        
+        self.layout = layout
+
     def validate_export(self) -> bool:
         """Validate that the export directory contains required files."""
         if not self.export_path.exists():
             console.print(f"❌ Export directory not found: {self.export_path}", style="red")
             return False
-            
+
         if not self.export_path.is_dir():
             console.print(f"❌ Path is not a directory: {self.export_path}", style="red")
             return False
-            
+
         # Look for JSON file
         json_files = list(self.export_path.glob("*_search_results.json"))
         if not json_files:
             console.print("❌ No search results JSON file found in export directory", style="red")
             return False
-            
+
         self.json_file = json_files[0]
-        
+
         # Check for profile images directory
         images_dir = self.export_path / "profile_images"
         if not images_dir.exists():
-            console.print("⚠️  No profile_images directory found - contacts will show without images", style="yellow")
-        
+            console.print(
+                "⚠️  No profile_images directory found - contacts will show without images",
+                style="yellow",
+            )
+
         return True
-    
+
     def load_export_data(self) -> bool:
         """Load and parse the JSON export data."""
         try:
-            with open(self.json_file, 'r', encoding='utf-8') as f:
+            with open(self.json_file, "r", encoding="utf-8") as f:
                 self.export_data = json.load(f)
-            
+
             # Validate JSON structure
             if "export_info" not in self.export_data or "results" not in self.export_data:
-                console.print("❌ Invalid JSON structure - missing export_info or results", style="red")
+                console.print(
+                    "❌ Invalid JSON structure - missing export_info or results", style="red"
+                )
                 return False
-                
-            console.print(f"✅ Loaded export data: {self.export_data['export_info']['search_type']} search", style="green")
+
+            console.print(
+                f"✅ Loaded export data: {self.export_data['export_info']['search_type']} search",
+                style="green",
+            )
             console.print(f"   Query: '{self.export_data['export_info']['query']}'", style="dim")
-            console.print(f"   Results: {self.export_data['export_info']['total_results']}", style="dim")
-            
+            console.print(
+                f"   Results: {self.export_data['export_info']['total_results']}", style="dim"
+            )
+
             return True
-            
+
         except json.JSONDecodeError as e:
             console.print(f"❌ Invalid JSON file: {e}", style="red")
             return False
         except Exception as e:
             console.print(f"❌ Error loading export data: {e}", style="red")
             return False
-    
+
     def extract_contacts(self) -> List[Dict[str, Any]]:
         """Extract contact data from different search result types."""
         contacts = []
         search_type = self.export_data["export_info"]["search_type"]
-        
+
         if search_type == "contacts":
             # Direct contact search results - results are contact objects
             for result in self.export_data["results"]:
@@ -95,53 +111,75 @@ class DirectoryGenerator:
                     contacts.append(result)
                 elif "contact" in result and "id" in result["contact"]:  # Nested contact object
                     contacts.append(result["contact"])
-            
+
         elif search_type == "tags":
             # Extract contacts from tag results
             for tag_result in self.export_data["results"]:
                 if "associated_contacts" in tag_result:
                     contacts.extend(tag_result["associated_contacts"])
-                    
+
         elif search_type == "notes":
-            # Extract contacts from note results  
+            # Extract contacts from note results
             for note_result in self.export_data["results"]:
                 if "associated_contacts" in note_result:
                     contacts.extend(note_result["associated_contacts"])
-        
+
         # Remove duplicates based on contact ID
         unique_contacts = {}
         for contact in contacts:
             if "id" in contact and contact["id"] not in unique_contacts:
                 unique_contacts[contact["id"]] = contact
-        
+
         self.contact_data = list(unique_contacts.values())
         console.print(f"📊 Extracted {len(self.contact_data)} unique contacts", style="blue")
-        
+
         return self.contact_data
-    
+
+    def build_nodes(self) -> List[Dict[str, Any]]:
+        """Transform contact data into node dictionaries."""
+        nodes: List[Dict[str, Any]] = []
+        for contact in self.contact_data:
+            node = {
+                "id": contact["id"],
+                "name": contact["name"],
+                "email": contact.get("email", ""),
+                "phone": contact.get("phone", ""),
+                "has_image": contact.get("has_profile_image", False),
+                "image_path": (
+                    f"images/{contact['id']}.jpg"
+                    if contact.get("has_profile_image")
+                    else "images/default.svg"
+                ),
+                "tags": contact.get("relationship_info", {}).get("tags", []),
+                "notes": contact.get("relationship_info", {}).get("notes", []),
+            }
+            nodes.append(node)
+
+        return nodes
+
     def create_output_directory(self) -> bool:
         """Create the output directory structure."""
         try:
             self.output_path.mkdir(parents=True, exist_ok=True)
             (self.output_path / "images").mkdir(exist_ok=True)
-            
+
             console.print(f"📁 Created output directory: {self.output_path}", style="green")
             return True
-            
+
         except Exception as e:
             console.print(f"❌ Error creating output directory: {e}", style="red")
             return False
-    
+
     def copy_profile_images(self) -> int:
         """Copy profile images to the output directory."""
         images_copied = 0
         images_dir = self.export_path / "profile_images"
         output_images_dir = self.output_path / "images"
-        
+
         if not images_dir.exists():
             console.print("⚠️  No profile images to copy", style="yellow")
             return 0
-        
+
         for contact in self.contact_data:
             if contact.get("has_profile_image") and contact.get("exported_image_path"):
                 source_image = self.export_path / contact["exported_image_path"]
@@ -153,48 +191,36 @@ class DirectoryGenerator:
                         images_copied += 1
                     except OSError as e:
                         console.print(f"❌ Failed to copy {source_image}: {e}", style="red")
-        
+
         if images_copied > 0:
             console.print(f"🖼️  Copied {images_copied} profile images", style="green")
-        
+
         return images_copied
-    
+
     def generate_data_js(self) -> bool:
         """Generate JavaScript data file for the visualization."""
         try:
             # Prepare data for D3.js
-            nodes = []
+            nodes = self.build_nodes()
             links = []
-            
-            # Create nodes for each contact
-            for contact in self.contact_data:
-                node = {
-                    "id": contact["id"],
-                    "name": contact["name"],
-                    "email": contact.get("email", ""),
-                    "phone": contact.get("phone", ""),
-                    "has_image": contact.get("has_profile_image", False),
-                    "image_path": f"images/{contact['id']}.jpg" if contact.get("has_profile_image") else "images/default.svg",
-                    "tags": contact.get("relationship_info", {}).get("tags", []),
-                    "notes": contact.get("relationship_info", {}).get("notes", [])
-                }
-                nodes.append(node)
-            
+
             # Create links based on shared tags (simple relationship detection)
             for i, contact1 in enumerate(self.contact_data):
                 tags1 = set(contact1.get("relationship_info", {}).get("tags", []))
-                for j, contact2 in enumerate(self.contact_data[i+1:], i+1):
+                for j, contact2 in enumerate(self.contact_data[i + 1 :], i + 1):
                     tags2 = set(contact2.get("relationship_info", {}).get("tags", []))
                     shared_tags = tags1.intersection(tags2)
-                    
+
                     if shared_tags:
-                        links.append({
-                            "source": contact1["id"],
-                            "target": contact2["id"],
-                            "relationship": list(shared_tags),
-                            "strength": len(shared_tags)
-                        })
-            
+                        links.append(
+                            {
+                                "source": contact1["id"],
+                                "target": contact2["id"],
+                                "relationship": list(shared_tags),
+                                "strength": len(shared_tags),
+                            }
+                        )
+
             # Generate JavaScript file
             js_data = {
                 "export_info": self.export_data["export_info"],
@@ -203,30 +229,33 @@ class DirectoryGenerator:
                 "metadata": {
                     "generated_at": datetime.now().isoformat(),
                     "total_contacts": len(nodes),
-                    "total_relationships": len(links)
-                }
+                    "total_relationships": len(links),
+                },
             }
-            
+
             js_content = f"// Contact directory data - generated by make_directory.py\nconst contactData = {json.dumps(js_data, indent=2)};\n"
-            
-            with open(self.output_path / "data.js", 'w', encoding='utf-8') as f:
+
+            with open(self.output_path / "data.js", "w", encoding="utf-8") as f:
                 f.write(js_content)
-            
-            console.print(f"📄 Generated data.js with {len(nodes)} contacts and {len(links)} relationships", style="green")
+
+            console.print(
+                f"📄 Generated data.js with {len(nodes)} contacts and {len(links)} relationships",
+                style="green",
+            )
             return True
-            
+
         except Exception as e:
             console.print(f"❌ Error generating data.js: {e}", style="red")
             return False
-    
-    def generate_html(self) -> bool:
-        """Generate the main HTML file with D3.js interactive visualization."""
+
+    def generate_graph_html(self) -> bool:
+        """Generate the D3.js force-directed graph HTML."""
         try:
             # Get export metadata for display
             export_info = self.export_data["export_info"]
             search_type = export_info["search_type"]
             query = export_info["query"]
-            
+
             # Advanced HTML template with D3.js force-directed graph
             html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -792,50 +821,154 @@ class DirectoryGenerator:
     </script>
 </body>
 </html>"""
-            
-            with open(self.output_path / "index.html", 'w', encoding='utf-8') as f:
+
+            with open(self.output_path / "index.html", "w", encoding="utf-8") as f:
                 f.write(html_content)
-            
+
             console.print("🎨 Generated interactive D3.js visualization", style="green")
             return True
-            
+
         except Exception as e:
             console.print(f"❌ Error generating HTML: {e}", style="red")
             return False
-    
+
+    def generate_work_html(self) -> bool:
+        """Generate a static grid-based work directory."""
+        try:
+            export_info = self.export_data["export_info"]
+            search_type = export_info["search_type"]
+            query = export_info["query"]
+            nodes = self.build_nodes()
+
+            cards = []
+            for n in nodes:
+                email_html = f"<div class='email'>{n['email']}</div>" if n["email"] else ""
+                phone_html = f"<div class='phone'>{n['phone']}</div>" if n["phone"] else ""
+                cards.append(
+                    f"<div class='card'><img src='{n['image_path']}' alt='{n['name']}'><div class='name'>{n['name']}</div>{email_html}{phone_html}</div>"
+                )
+            cards_html = "\n".join(cards)
+
+            html_content = f"""<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>Contact Directory - {query}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+            padding-top: 80px;
+        }}
+        .header {{
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 1.5em;
+        }}
+        .header .search-info {{
+            font-size: 0.9em;
+            color: #666;
+        }}
+        .grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 0 20px 40px;
+        }}
+        .card {{
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }}
+        .card img {{
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }}
+        .name {{
+            font-weight: 600;
+            margin-bottom: 4px;
+        }}
+        .email, .phone {{
+            font-size: 0.9em;
+            color: #555;
+        }}
+    </style>
+</head>
+<body>
+    <div class=\"header\">
+        <h1>Contact Directory</h1>
+        <div class=\"search-info\">{search_type.title()} search for \"{query}\" • {len(nodes)} contacts</div>
+    </div>
+    <div class=\"grid\">
+        {cards_html}
+    </div>
+</body>
+</html>"""
+
+            with open(self.output_path / "index.html", "w", encoding="utf-8") as f:
+                f.write(html_content)
+
+            console.print("🎨 Generated work directory", style="green")
+            return True
+        except Exception as e:
+            console.print(f"❌ Error generating HTML: {e}", style="red")
+            return False
+
+    def generate_html(self) -> bool:
+        """Generate HTML according to selected layout."""
+        if self.layout == "work":
+            return self.generate_work_html()
+        return self.generate_graph_html()
+
     def generate(self) -> bool:
         """Main generation process."""
         console.print("🚀 Starting contact directory generation...", style="bold blue")
-        
+
         # Step 1: Validate export
         if not self.validate_export():
             return False
-        
+
         # Step 2: Load data
         if not self.load_export_data():
             return False
-        
+
         # Step 3: Extract contacts
         self.extract_contacts()
-        
+
         if not self.contact_data:
-            console.print("⚠️  No contacts found in export data - generating empty directory", style="yellow")
-        
+            console.print(
+                "⚠️  No contacts found in export data - generating empty directory", style="yellow"
+            )
+
         # Step 4: Create output directory
         if not self.create_output_directory():
             return False
-        
+
         # Step 5: Copy images
         self.copy_profile_images()
-        
-        # Step 6: Generate data file
-        if not self.generate_data_js():
-            return False
-        
+
+        # Step 6: Generate data file (only for graph layout)
+        if self.layout != "work":
+            if not self.generate_data_js():
+                return False
+
         # Step 7: Generate HTML
         if not self.generate_html():
             return False
-        
+
         # Success!
         success_text = Text()
         success_text.append("✅ Contact directory generated successfully!\n\n", style="bold green")
@@ -843,34 +976,37 @@ class DirectoryGenerator:
         success_text.append(f"{self.output_path.absolute()}\n", style="blue")
         success_text.append("🌐 Open: ", style="bold")
         success_text.append(f"file://{self.output_path.absolute()}/index.html\n", style="blue")
-        
+
         console.print(Panel(success_text, title="Generation Complete", border_style="green"))
-        
+
         return True
 
 
 @app.command()
 def generate(
     export_dir: str = typer.Argument(..., help="Path to PRT export directory"),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output directory (default: directories/{export_name})"),
-    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing output directory")
+    output: Optional[str] = typer.Option(
+        None, "--output", "-o", help="Output directory (default: directories/{export_name})"
+    ),
+    layout: str = typer.Option("graph", "--layout", "-l", help="Layout style: graph or work"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing output directory"),
 ):
     """Generate an interactive contact directory from a PRT export."""
-    
+
     export_path = Path(export_dir)
     output_path = Path(output) if output else None
-    
+
     # Check if output exists and handle force flag
     final_output_path = output_path or Path("directories") / export_path.name
     if final_output_path.exists() and not force:
         if not typer.confirm(f"Output directory '{final_output_path}' exists. Overwrite?"):
             console.print("❌ Operation cancelled", style="red")
             raise typer.Exit(1)
-    
+
     # Generate the directory
-    generator = DirectoryGenerator(export_path, output_path)
+    generator = DirectoryGenerator(export_path, output_path, layout=layout)
     success = generator.generate()
-    
+
     if not success:
         console.print("❌ Directory generation failed", style="red")
         raise typer.Exit(1)
@@ -881,12 +1017,14 @@ def info():
     """Show information about make_directory.py."""
     info_text = Text()
     info_text.append("make_directory.py - PRT Contact Directory Generator\n\n", style="bold blue")
-    info_text.append("Creates interactive single-page websites from PRT JSON exports.\n", style="white")
+    info_text.append(
+        "Creates interactive single-page websites from PRT JSON exports.\n", style="white"
+    )
     info_text.append("Shows contact relationships as navigable 2D graphs.\n\n", style="white")
     info_text.append("Phase 1: Basic HTML generation with contact cards\n", style="dim")
     info_text.append("Phase 2: D3.js interactive graph visualization (coming soon)\n", style="dim")
     info_text.append("Phase 3: Mobile support and advanced features\n", style="dim")
-    
+
     console.print(Panel(info_text, title="About", border_style="blue"))
 
 
