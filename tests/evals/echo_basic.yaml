@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+providers:
+  - echo
+
+prompts:
+  - 'Repeat: {{text}}'
+
+tests:
+  - vars:
+      text: 'hello world'
+    assert:
+      - type: icontains
+        value: 'hello world'
