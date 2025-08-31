@@ -17,7 +17,9 @@ python -m prt_src.cli setup
 
 ## Development Workflow
 
-This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files. Run these commands before committing to ensure consistent code style.
+Easiest thing to do it to just fire up the venv and make sure everything is installed in one command: source ./init.sh.
+
+Before checkin: This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files. Run these commands before committing to ensure consistent code style.
 
 ```bash
 pre-commit install
