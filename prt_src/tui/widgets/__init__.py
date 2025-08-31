@@ -2,12 +2,15 @@
 
 from .base import ConfirmDialog, ModeAwareWidget, StatusBar, ToastNotification
 from .contact_detail import ContactDetailView, FieldEditor
+from .contact_list import ContactListWidget, ContactRow
 
 __all__ = [
     "ModeAwareWidget",
     "StatusBar",
     "ToastNotification",
     "ConfirmDialog",
+    "ContactListWidget",
+    "ContactRow",
     "ContactDetailView",
     "FieldEditor",
 ]
