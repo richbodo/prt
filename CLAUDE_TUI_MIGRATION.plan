@@ -127,76 +127,248 @@ while architecting for future Flet mobile deployment.
   - **Integration:** Used by all create/update operations in core
   - **Example:** Detect "John Smith" vs "john smith" as potential duplicate
 
-### Phase 3: Textual UI Framework
-**Goal:** Build Textual application structure and widgets
+### Phase 3: Textual UI Framework (Detailed Implementation)
+**Goal:** Build Textual application with TDD approach following design decisions
+**TDD Pattern:** Write failing tests → Implement widget → Make tests pass
 
-- [ ] Task 3.1: Setup Textual Application Structure
+- [ ] Task 3.1: Setup Textual Application Structure & First-Run Logic
   - Location: `prt_src/tui/app.py`
-  - Main application class
-  - CSS styling (styles.css)
-  - Keybindings configuration
+  - Test file: `tests/test_tui_app.py` (write first)
+  - Main application class with mode management
+  - CSS styling (styles.tcss) - dark theme with clear mode indicators
+  - Global keybindings:
+    - `ESC`: Toggle between navigation/edit modes
+    - `q`: Quit (in navigation mode)
+    - `?`: Show context-sensitive help
+  - **First-run detection and "You" contact creation:**
+    - Check if "You" contact exists in DB
+    - If not, show prompt for user's name (optional)
+    - Create contact with first_name="You" if skipped
+    - Store "You" contact ID in settings for quick access
 
-- [ ] Task 3.2: Build Base Widgets [PARALLEL GROUP A]
+- [ ] Task 3.2: Build Base Widgets & Mode Management [PARALLEL GROUP A]
   - Location: `prt_src/tui/widgets/base.py`
-  - LoadingIndicator, ErrorBoundary
-  - ToastNotification, ConfirmDialog
+  - Test file: `tests/test_tui_base_widgets.py` (write first)
+  - **ModeAwareWidget** base class:
+    - Handle ESC key for mode switching
+    - Visual mode indicator (border color change)
+    - Mode-specific keybinding activation
+  - **StatusBar** widget:
+    - Show current mode prominently (e.g., "NAV" or "EDIT")
+    - Selected item count when applicable
+    - Context-sensitive help hints
+    - Location/breadcrumb display
+  - **ToastNotification** for immediate feedback
+  - **ConfirmDialog** for destructive operations
 
-- [ ] Task 3.3: Create Contact Selector Widget [PARALLEL GROUP A]
-  - Location: `prt_src/tui/widgets/contact_selector.py`
-  - Autocomplete integration
-  - Visual preview
-  - Keyboard navigation
+- [ ] Task 3.3: Create Dual Contact Selector Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/dual_contact_selector.py`
+  - Test file: `tests/test_tui_dual_selector.py` (write first)
+  - **Split-pane selector** (Issue #69):
+    - Left pane: Contact 1 (defaults to "You")
+    - Right pane: Contact 2
+    - Both panes use ContactSearchCache for autocomplete
+    - Fuzzy matching with SearchIndexer scoring
+    - Live preview of selected contacts
+    - Tab/Shift-Tab to switch panes
+    - Auto-advance after selection
+  - **Integration with Phase 2 components:**
+    - Uses AutocompleteEngine for suggestions
+    - Uses ValidationSystem for contact validation
 
-- [ ] Task 3.4: Build Data Table Widget [PARALLEL GROUP A]
-  - Location: `prt_src/tui/widgets/data_table.py`
-  - Pagination support
-  - Column sorting
-  - Row selection
+- [ ] Task 3.4: Build Paginated Contact Table Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/contact_table.py`
+  - Test file: `tests/test_tui_contact_table.py` (write first)
+  - **Three-pane layout** (Issue #68):
+    - Left: Contact list (paginated)
+    - Right: Contact preview
+  - **Navigation patterns:**
+    - `j/k` or arrows: Move up/down
+    - `A-Z` keys: Jump to letter section (using PaginationSystem)
+    - `Space`: Toggle selection (using SelectionSystem)
+    - `s`: Switch to search mode
+    - `a`: Add new contact
+  - **Performance requirements:**
+    - Must handle 5000+ contacts smoothly
+    - Lazy loading via PaginationSystem
+    - Selection state persists across pages
 
-- [ ] Task 3.5: Create Backup List Widget [PARALLEL GROUP A]
-  - Location: `prt_src/tui/widgets/backup_list.py`
-  - Game save-style UI
-  - Backup preview
-  - Restore confirmation
+- [ ] Task 3.5: Create Backup Slots Widget [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/backup_slots.py`
+  - Test file: `tests/test_tui_backup_slots.py` (write first)
+  - **Backup slots concept** (Issue #71):
+    - Top slot: "[enter a name for a new backup]" (grayed)
+    - Below: Recent backups in reverse chronological order
+    - Scrollable list with keyboard navigation
+  - **Restore behavior:**
+    - Creates auto-backup before restore: "auto-backup-DATETIME"
+    - Shows confirmation with info about auto-backup
+    - Non-destructive restore process
+  - **Visual design:**
+    - Game save-style presentation
+    - Shows backup size, date, and custom name
+    - Preview of backup contents on selection
 
-### Phase 4: Screen Implementations
-**Goal:** Implement screens addressing Issues #68-72
+- [ ] Task 3.6: Build Search Results Widget with Export [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/search_results.py`
+  - Test file: `tests/test_tui_search_results.py` (write first)
+  - **Search display** (Issue #70):
+    - Table view with type indicators
+    - Preview pane for selected result
+    - Grouped by entity type (contacts, tags, notes)
+  - **Export functionality:**
+    - `e`: Trigger export of selected items
+    - `c`: Export as CSV
+    - `v`: Export as VCard
+    - `j`: Export as JSON
+    - Immediate export without complex dialog
+    - Uses SelectionSystem to track selected items
 
-- [ ] Task 4.1: Implement Main Screen
-  - Location: `prt_src/tui/screens/main.py`
-  - Navigation menu
-  - Status bar
-  - Quick actions
+- [ ] Task 3.7: Create Relationship Type Selector [PARALLEL GROUP A]
+  - Location: `prt_src/tui/widgets/relationship_type_selector.py`
+  - Test file: `tests/test_tui_relationship_selector.py` (write first)
+  - **Extended relationship types** (Issue #69):
+    - Family: parent, child, sibling, grandparent, grandchild
+    - Extended: aunt, uncle, niece, nephew, cousin
+    - In-laws: mother-in-law, father-in-law, etc.
+    - Professional: colleague, mentor, mentee, boss
+    - Social: friend, acquaintance, neighbor
+  - **Smart defaults:**
+    - Most recently used types at top
+    - Alphabetical listing below
+    - Type-ahead search for quick selection
 
-- [ ] Task 4.2: Build Contacts Screen [DEPENDS: 3.3, 3.4]
+- [ ] Task 3.8: Build Navigation Menu Widget
+  - Location: `prt_src/tui/widgets/navigation_menu.py`
+  - Test file: `tests/test_tui_navigation_menu.py` (write first)
+  - **Home screen menu:**
+    - `[c]` Contacts
+    - `[r]` Relationships
+    - `[s]` Search
+    - `[d]` Database
+    - `[m]` Contact Metadata (tags/notes)
+    - `[t]` Chat Mode
+    - `[?]` Help
+    - `[q]` Quit
+  - Single-key activation in navigation mode
+  - Visual highlight of current section
+
+### Phase 4: Screen Implementations with Integration
+**Goal:** Implement screens addressing Issues #68-72 using Phase 3 widgets
+**TDD Pattern:** Write screen integration tests → Compose widgets → Pass tests
+
+- [ ] Task 4.1: Implement Home Screen with Navigation
+  - Location: `prt_src/tui/screens/home.py`
+  - Test file: `tests/test_tui_home_screen.py` (write first)
+  - **Components:**
+    - NavigationMenu widget (Task 3.8)
+    - StatusBar showing mode and hints
+    - Quick stats (total contacts, relationships)
+  - **First-run handling:**
+    - Detect if "You" contact exists
+    - Show welcome message and setup if needed
+  - **Keybindings:**
+    - Single-key navigation to all screens
+    - ESC always returns here from any screen
+
+- [ ] Task 4.2: Build Contacts Screen [DEPENDS: 3.4, 2.2, 2.3]
   - Location: `prt_src/tui/screens/contacts.py`
-  - **Addresses Issue #68:**
-    - Paginated list with A-Z jump
-    - "Switch to Search" action
-    - Contact preview pane
+  - Test file: `tests/test_tui_contacts_screen.py` (write first)
+  - **Addresses Issue #68: Paginated contacts with search**
+  - **Components:**
+    - ContactTable widget (Task 3.4) as main view
+    - Integrated with PaginationSystem for A-Z jumping
+    - Integrated with SelectionSystem for multi-select
+  - **Key features:**
+    - Three-pane layout (list | preview)
+    - A-Z jump navigation (direct letter keys)
+    - `s` switches to search mode overlay
+    - `a` opens add contact dialog
+    - `e` exports selected contacts
+    - Space toggles selection
+  - **Performance:** Must handle 5000+ contacts
 
-- [ ] Task 4.3: Create Relationships Screen [DEPENDS: 3.3]
+- [ ] Task 4.3: Create Relationships Screen [DEPENDS: 3.3, 3.7, 2.4]
   - Location: `prt_src/tui/screens/relationships.py`
-  - **Addresses Issue #69:**
-    - Dual contact selector
-    - Relationship type selector
-    - Edit/Delete combined function
-    - Remove "View Relationships" menu item
+  - Test file: `tests/test_tui_relationships_screen.py` (write first)
+  - **Addresses Issue #69: Dual selector with extended types**
+  - **Components:**
+    - DualContactSelector widget (Task 3.3)
+    - RelationshipTypeSelector widget (Task 3.7)
+    - ValidationSystem integration for relationship rules
+  - **Workflow:**
+    - Split-pane contact selection (You + Other)
+    - Relationship type selection below
+    - Visual confirmation before creation
+    - Combined edit/delete in relationship list
+  - **Smart defaults:**
+    - Contact 1 defaults to "You"
+    - Remember last used relationship type
 
-- [ ] Task 4.4: Build Search Screen [DEPENDS: 1.4, 2.1]
+- [ ] Task 4.4: Build Search Screen [DEPENDS: 3.6, 2.1, 1.4]
   - Location: `prt_src/tui/screens/search.py`
-  - **Addresses Issue #70:**
-    - Full-text search on all contact info
-    - Search by tags/notes
-    - Search by relationship type to YOU
-    - Export results
+  - Test file: `tests/test_tui_search_screen.py` (write first)
+  - **Addresses Issue #70: Full-text search with export**
+  - **Components:**
+    - SearchResults widget (Task 3.6)
+    - Integrated with UnifiedSearchAPI (Phase 1)
+    - AutocompleteEngine for search suggestions
+  - **Search capabilities:**
+    - Full-text search across all entities
+    - Filter by entity type (contacts/tags/notes)
+    - Search relationships to "You" specifically
+    - Real-time results as you type
+  - **Export workflow:**
+    - `e` key triggers export mode
+    - `c/v/j` for format selection
+    - Immediate export of selected results
 
-- [ ] Task 4.5: Implement Database Screen [DEPENDS: 3.5]
+- [ ] Task 4.5: Implement Database Management Screen [DEPENDS: 3.5]
   - Location: `prt_src/tui/screens/database.py`
-  - **Addresses Issue #71:**
-    - Combined Status/Test/Statistics view
-    - Game-style backup/restore
-    - Backup notes and pagination
+  - Test file: `tests/test_tui_database_screen.py` (write first)
+  - **Addresses Issue #71: Game-style backup/restore**
+  - **Components:**
+    - BackupSlots widget (Task 3.5)
+    - Database statistics panel
+    - Connection status indicator
+  - **Features:**
+    - Backup slots with custom names
+    - Non-destructive restore with auto-backup
+    - Database health checks
+    - Storage usage statistics
+  - **Keybindings:**
+    - `b` create new backup
+    - `r` restore selected backup
+    - `d` delete selected backup (with confirmation)
+
+- [ ] Task 4.6: Build Metadata Management Screen [NEW]
+  - Location: `prt_src/tui/screens/metadata.py`
+  - Test file: `tests/test_tui_metadata_screen.py` (write first)
+  - **Manage tags and notes for contacts**
+  - **Two-pane layout:**
+    - Left: Contact selector with search
+    - Right: Tags and notes for selected contact
+  - **Features:**
+    - Add/remove tags with autocomplete
+    - Create/edit/delete notes
+    - Bulk tag operations on multiple contacts
+  - **Integration:**
+    - Uses ValidationSystem for tag validation
+    - Uses SelectionSystem for bulk operations
+
+- [ ] Task 4.7: Implement Chat Mode Screen [NEW]
+  - Location: `prt_src/tui/screens/chat.py`
+  - Test file: `tests/test_tui_chat_screen.py` (write first)
+  - **Natural language interface to PRT**
+  - **Components:**
+    - Chat history display
+    - Input field with command detection
+    - Results preview pane
+  - **Features:**
+    - Natural language queries ("show me all family members")
+    - Command shortcuts detected and executed
+    - History of recent queries
+    - Export chat session
 
 ### Phase 5: Enhanced Relationship Types
 **Goal:** Expand relationship types per Issue #69
@@ -257,9 +429,54 @@ while architecting for future Flet mobile deployment.
   - Document core operations
   - UI component contracts
 
+## TDD Testing Strategy for Phase 3-4
+
+### Widget Testing Pattern (Phase 3)
+1. **Write failing test first** (`tests/test_tui_*.py`)
+   - Test widget initialization
+   - Test key handling and navigation
+   - Test integration with Phase 2 components
+   - Test state management
+2. **Implement widget** to pass tests
+3. **Add edge case tests** and fix issues
+4. **Performance test** with 5000+ items
+
+### Screen Testing Pattern (Phase 4)
+1. **Write integration tests** (`tests/test_tui_*_screen.py`)
+   - Test widget composition
+   - Test screen transitions
+   - Test data flow between widgets
+   - Test keybinding conflicts
+2. **Implement screen** using widgets
+3. **Test user workflows** end-to-end
+
+### What NOT to Test
+- Visual rendering (user testing will cover)
+- CSS styling
+- Exact pixel positions
+- Animation timing
+
+### Critical Integration Tests
+- "You" contact creation on first run
+- Selection state persistence across pagination
+- Export functionality with 100+ selected items
+- Backup/restore with auto-backup creation
+- Mode switching (NAV/EDIT) consistency
+
+## Implementation Order (Updated)
+
+### Phase 3 Implementation Sequence
+1. Task 3.1 (App structure) - Sets up foundation
+2. Task 3.2 (Base widgets) - Provides mode management
+3. Tasks 3.3-3.8 in parallel - All widgets independent
+
+### Phase 4 Implementation Sequence
+1. Task 4.1 (Home) - Entry point
+2. Tasks 4.2-4.7 can be done in any order (all screens independent)
+
 ## Critical Path
 Minimum path to address Issues #68-72:
-Phase 0 → Phase 1.1 & 1.2 → Phase 1.4 → Phase 3.1 → Phase 4.1-4.5 → Phase 6.1
+Phase 2 (Components) → Phase 3.1-3.2 (Foundation) → Phase 3.3-3.6 (Core Widgets) → Phase 4.1-4.5 (Issue Screens)
 
 ## Parallelization Groups
 **Group A (UI Components):**
@@ -281,12 +498,35 @@ lru-dict>=1.3.0
 pygtrie>=2.5.0
 ```
 
-## Issue Mapping
-- Issue #68 (View Contacts): Task 4.2
-- Issue #69 (Manage Relationships): Tasks 4.3, 5.1
-- Issue #70 (Search): Tasks 1.1-1.4, 4.4
-- Issue #71 (Database Management): Task 4.5
-- Issue #72 (Meta): All phases
+## Issue Mapping (Detailed)
+
+### Issue #68 (View Contacts)
+- Phase 3: Task 3.4 (ContactTable widget with A-Z jump)
+- Phase 4: Task 4.2 (Contacts Screen with three-pane layout)
+- Features: Pagination, A-Z jumping, search mode switch
+
+### Issue #69 (Manage Relationships)
+- Phase 3: Task 3.3 (DualContactSelector), Task 3.7 (RelationshipTypeSelector)
+- Phase 4: Task 4.3 (Relationships Screen)
+- Phase 5: Task 5.1 (Extended relationship types)
+- Features: Split-pane selection, "You" default, extended types
+
+### Issue #70 (Search)
+- Phase 1: Tasks 1.1-1.4 (Search infrastructure) ✅
+- Phase 2: Task 2.1 (AutocompleteEngine)
+- Phase 3: Task 3.6 (SearchResults widget with export)
+- Phase 4: Task 4.4 (Search Screen)
+- Features: Full-text search, export (e/c/v/j keys), relationship filtering
+
+### Issue #71 (Database Management)
+- Phase 3: Task 3.5 (BackupSlots widget)
+- Phase 4: Task 4.5 (Database Screen)
+- Features: Game-style slots, auto-backup on restore, non-destructive
+
+### Issue #72 (Meta - Overhaul CLI)
+- All phases contribute to this
+- Phase 3-4 specifically replace CLI with TUI
+- Phase 6 provides migration path
 
 ## Notes for Future Claude Sessions
 1. Check task status markers before starting work
@@ -315,9 +555,36 @@ pygtrie>=2.5.0
 - Task 2.3 (Selection): Consider thread-safety if Textual adds concurrency
 - Task 2.4 (Validation): Follow established error handling patterns
 
+## Phase 3 Context (For LLMs Starting Fresh)
+### What's Already Built (Phase 1-2)
+- **Phase 1:** FTS5 search, contact cache, unified search API ✅
+- **Phase 2:** Autocomplete, Pagination, Selection, Validation systems ✅
+- **Core operations:** UI-agnostic business logic ready
+
+### Design Decisions Made
+- **Navigation:** jkl movement, ESC for mode switching, single-key actions
+- **"You" contact:** Auto-created on first run with optional name prompt
+- **Backup/Restore:** Non-destructive with auto-backup creation
+- **Export:** Simple keybinding approach (e→c/v/j)
+- **See:** `/docs/Phase3_Design_Decisions.md` for complete UI specifications
+
+### TDD Approach for Phase 3
+1. Write failing widget test in `tests/test_tui_*.py`
+2. Implement widget in `prt_src/tui/widgets/`
+3. Make tests pass
+4. Add integration tests for Phase 2 component usage
+5. Performance test with 5000+ items
+
+### Key Integration Points
+- Widgets MUST use Phase 2 components (don't reinvent)
+- All business logic stays in core layer
+- Textual only handles presentation
+- Mode management is centralized in ModeAwareWidget base class
+
 ## Progress Tracking
-Last Updated: 2025-08-29
-Current Phase: Phase 1 COMPLETE ✅ | Phase 2 READY TO START
-Completed Tasks: 6/32 (Phase 0: 2/2 ✅, Phase 1: 4/4 ✅)
-Completed PRs: #73, #74, #75, #77 (All Phase 1 tasks merged)
-Next Action: Begin Phase 2 - Core Components Library (4 parallel tasks)
+Last Updated: 2025-08-31
+Current Phase: Phase 2 COMPLETE ✅ | Phase 3 READY TO START
+Completed Tasks: 10/44 (Phase 0: 2/2 ✅, Phase 1: 4/4 ✅, Phase 2: 4/4 ✅)
+Completed PRs: #73, #74, #75, #77 (Phase 1), #78, #79, #80, #81 (Phase 2)
+Design Decisions: See `/docs/Phase3_Design_Decisions.md` for UI design details
+Next Action: Begin Phase 3 - Textual UI Framework (8 widget tasks with TDD approach)
