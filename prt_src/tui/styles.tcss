@@ -152,3 +152,86 @@ Footer {
 .edit {
     border: solid $warning;
 }
+
+/* Search Bar */
+.search-bar {
+    width: 100%;
+    height: 3;
+    margin-bottom: 1;
+}
+
+.search-container {
+    width: 100%;
+}
+
+.search-input {
+    width: 1fr;
+}
+
+.search-button, .clear-button {
+    margin-left: 1;
+}
+
+/* Filter Panel */
+.filter-panel {
+    width: 30;
+    height: 100%;
+    border: round $primary;
+    padding: 1;
+}
+
+.filter-title {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.filter-list {
+    height: 1fr;
+    overflow-y: auto;
+}
+
+.filter-item {
+    padding: 0 1;
+    margin: 0;
+    background: $panel;
+    border: round $border;
+    margin-bottom: 1;
+}
+
+.clear-filters-button {
+    dock: bottom;
+    margin-top: 1;
+}
+
+/* Searchable List */
+.searchable-list {
+    width: 100%;
+    height: 100%;
+}
+
+.content-area {
+    width: 100%;
+    height: 1fr;
+}
+
+.items-list {
+    width: 1fr;
+    height: 100%;
+    padding: 0 1;
+    overflow-y: auto;
+}
+
+.search-item {
+    padding: 1;
+    margin-bottom: 1;
+    background: $panel;
+    border: round $border;
+}
+
+.search-status {
+    dock: bottom;
+    height: 1;
+    padding: 0 1;
+    background: $panel;
+    color: $text-muted;
+}
