@@ -153,6 +153,44 @@ Footer {
     border: solid $warning;
 }
 
+/* Contact List */
+.contact-list {
+    width: 100%;
+    height: 100%;
+}
+
+#contact-scroll {
+    width: 100%;
+    height: 100%;
+    border: round $primary;
+}
+
+.contact-row {
+    width: 100%;
+    height: auto;
+    padding: 0 1;
+    margin: 0;
+}
+
+.contact-row.selected {
+    background: $primary;
+}
+
+.contact-row-content {
+    width: 100%;
+    padding: 1 0;
+}
+
+.contact-name {
+    text-style: bold;
+    color: $text;
+}
+
+.contact-info {
+    color: $text-muted;
+    margin-top: 0;
+}
+
 /* Search Bar */
 .search-bar {
     width: 100%;
