@@ -73,3 +73,82 @@ Footer {
     content-align: right middle;
     padding: 0 1;
 }
+
+/* Toast notifications */
+.toast {
+    dock: top;
+    layer: notification;
+    width: auto;
+    height: 3;
+    padding: 1;
+    margin: 1;
+    border: round;
+    opacity: 0.95;
+}
+
+.toast.info {
+    background: $primary;
+    color: $text;
+}
+
+.toast.success {
+    background: $success;
+    color: $text;
+}
+
+.toast.error {
+    background: $error;
+    color: $text;
+}
+
+.toast.warning {
+    background: $warning;
+    color: $text;
+}
+
+/* Confirm dialog */
+.confirm-dialog {
+    layer: dialog;
+    width: 60;
+    height: auto;
+    padding: 2;
+    margin: 4 8;
+    background: $panel;
+    border: thick $primary;
+}
+
+#dialog-content {
+    width: 100%;
+    height: auto;
+}
+
+#dialog-message {
+    width: 100%;
+    height: auto;
+    margin-bottom: 2;
+    text-align: center;
+}
+
+#dialog-buttons {
+    width: 100%;
+    height: 3;
+    align: center middle;
+}
+
+#dialog-buttons Button {
+    margin: 0 1;
+    width: 16;
+}
+
+#confirm-btn.dangerous {
+    background: $error;
+}
+
+/* Mode-aware widget states */
+.navigation {
+    border: solid $success;
+}
+
+.edit {
+    border: solid $warning;
+}
