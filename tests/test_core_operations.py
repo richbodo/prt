@@ -62,16 +62,23 @@ def mock_api():
     api.db.list_relationship_types.return_value = [
         {
             "id": 1,
-            "type_key": "parent_of",
-            "description": "Is the parent of",
-            "inverse_type_key": "child_of",
+            "type_key": "mother",
+            "description": "Is the mother of",
+            "inverse_type_key": None,
             "is_symmetrical": False,
         },
         {
             "id": 2,
-            "type_key": "friend_of",
+            "type_key": "friend",
             "description": "Is a friend of",
-            "inverse_type_key": "friend_of",
+            "inverse_type_key": "friend",
+            "is_symmetrical": True,
+        },
+        {
+            "id": 3,
+            "type_key": "coworker",
+            "description": "Is a coworker of",
+            "inverse_type_key": "coworker",
             "is_symmetrical": True,
         },
     ]
@@ -80,8 +87,8 @@ def mock_api():
     api.db.get_contact_relationships.return_value = [
         {
             "relationship_id": 1,
-            "type": "parent_of",
-            "description": "Is the parent of",
+            "type": "mother",
+            "description": "Is the mother of",
             "other_contact_id": 2,
             "other_contact_name": "Bob Jones",
             "other_contact_email": "bob@example.com",
@@ -233,17 +240,17 @@ class TestRelationshipOperations:
         ops = RelationshipOperations(mock_api)
 
         # Same contact ID
-        result = ops.create_relationship(1, 1, "friend_of")
+        result = ops.create_relationship(1, 1, "friend")
         assert result["success"] is False
         assert "same contact" in result["error"].lower()
 
         # Invalid from_id
-        result = ops.create_relationship(999, 2, "friend_of")
+        result = ops.create_relationship(999, 2, "friend")
         assert result["success"] is False
         assert "999" in result["error"]
 
         # Invalid to_id
-        result = ops.create_relationship(1, 999, "friend_of")
+        result = ops.create_relationship(1, 999, "friend")
         assert result["success"] is False
         assert "999" in result["error"]
 
@@ -253,7 +260,7 @@ class TestRelationshipOperations:
         assert "invalid_type" in result["error"].lower()
 
         # Valid relationship
-        result = ops.create_relationship(1, 2, "friend_of")
+        result = ops.create_relationship(1, 2, "friend")
         assert result["success"] is True
 
     def test_delete_relationship_exists(self, mock_api):
@@ -261,11 +268,11 @@ class TestRelationshipOperations:
         ops = RelationshipOperations(mock_api)
 
         # Delete existing relationship
-        result = ops.delete_relationship(1, 2, "parent_of")
+        result = ops.delete_relationship(1, 2, "mother")
         assert result["success"] is True
 
         # Delete non-existent relationship
-        result = ops.delete_relationship(1, 3, "parent_of")
+        result = ops.delete_relationship(1, 3, "mother")
         assert result["success"] is False
         assert "not found" in result["error"].lower()
 
@@ -284,7 +291,7 @@ class TestRelationshipOperations:
         ops = RelationshipOperations(mock_api)
 
         types = ops.list_relationship_types()
-        assert len(types) == 2
+        assert len(types) == 3
         for rel_type in types:
             assert "type_key" in rel_type
             assert "description" in rel_type
@@ -314,13 +321,13 @@ class TestSearchOperations:
         ops = SearchOperations(mock_api)
 
         # Search for contacts with specific relationship type
-        results = ops.search_by_relationship_type("parent_of", from_user=True)
+        results = ops.search_by_relationship_type("mother", from_user=True)
         assert isinstance(results, list)
 
         # Each result should have relationship info
         for contact in results:
             assert "relationship_type" in contact
-            assert contact["relationship_type"] == "parent_of"
+            assert contact["relationship_type"] == "mother"
 
     def test_search_empty_query(self, mock_api):
         """Handles empty string gracefully."""
@@ -407,14 +414,14 @@ class TestOperationsOrchestrator:
         """Operation validation works correctly."""
         # Valid create_relationship
         result = operations.validate_operation(
-            "create_relationship", {"from_id": 1, "to_id": 2, "type_key": "friend_of"}
+            "create_relationship", {"from_id": 1, "to_id": 2, "type_key": "friend"}
         )
         assert result["valid"] is True
         assert len(result["errors"]) == 0
 
         # Invalid - same contact
         result = operations.validate_operation(
-            "create_relationship", {"from_id": 1, "to_id": 1, "type_key": "friend_of"}
+            "create_relationship", {"from_id": 1, "to_id": 1, "type_key": "friend"}
         )
         assert result["valid"] is False
         assert "same contact" in result["errors"][0].lower()
