@@ -5,6 +5,8 @@ Lightweight TDD approach - start with basic tests, then expand.
 
 from unittest.mock import Mock, patch
 
+import pytest
+
 # These imports will fail initially - that's expected in TDD
 from prt_src.tui.app import AppMode, FirstRunHandler, PRTApp
 
@@ -101,6 +103,18 @@ class TestFirstRunHandler:
         assert contact["first_name"] == "You"
         assert contact["last_name"] == ""
         mock_db.create_contact.assert_called_once()
+
+    @patch("prt_src.tui.app.Database")
+    def test_create_you_contact_handles_db_error(self, mock_db_class):
+        """Test that database errors are properly raised."""
+        mock_db = Mock()
+        mock_db_class.return_value = mock_db
+        mock_db.create_contact.side_effect = Exception("Database error")
+
+        handler = FirstRunHandler(mock_db)
+
+        with pytest.raises(RuntimeError, match="Failed to create 'You' contact"):
+            handler.create_you_contact("Test User")
 
 
 class TestAppStyles:

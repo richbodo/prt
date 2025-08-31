@@ -85,8 +85,8 @@ class FirstRunHandler:
             return contact
         except Exception as e:
             logger.error(f"Error creating 'You' contact: {e}")
-            # Return a minimal contact on error
-            return {"id": -1, "first_name": first_name, "last_name": last_name}
+            # Raise exception so caller can handle appropriately
+            raise RuntimeError(f"Failed to create 'You' contact: {e}") from e
 
     @property
     def you_contact_id(self) -> Optional[int]:
@@ -258,7 +258,7 @@ def extend_database():
         except Exception as e:
             logger.error(f"Error creating contact: {e}")
             self.session.rollback()
-            return {"id": -1, "first_name": "", "last_name": ""}
+            raise
 
     # Monkey-patch for now, will properly integrate later
     if not hasattr(Database, "get_you_contact"):
