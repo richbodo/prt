@@ -1,0 +1,75 @@
+/* PRT Textual Application Styles
+ * Dark theme with clear mode indicators
+ */
+
+/* Global styles */
+Screen {
+    background: $surface;
+}
+
+/* Header styling with mode indicator */
+Header {
+    background: $primary;
+}
+
+Header.edit-mode {
+    background: $warning;
+}
+
+/* Main container */
+#main-container {
+    padding: 1;
+}
+
+/* Welcome message */
+#welcome {
+    content-align: center middle;
+    text-style: bold;
+    color: $text;
+}
+
+/* Footer with keybinding hints */
+Footer {
+    background: $panel;
+}
+
+/* Mode indicators */
+.mode-indicator {
+    dock: right;
+    width: 10;
+    content-align: center middle;
+    background: $accent;
+    color: $text;
+}
+
+.mode-indicator.navigation {
+    background: $success;
+}
+
+.mode-indicator.edit {
+    background: $warning;
+}
+
+/* Status bar */
+.status-bar {
+    dock: bottom;
+    height: 1;
+    background: $panel;
+    color: $text-muted;
+}
+
+/* Selection counter */
+.selection-count {
+    dock: left;
+    width: 20;
+    content-align: left middle;
+    padding: 0 1;
+}
+
+/* Help hints */
+.help-hints {
+    dock: right;
+    width: 40;
+    content-align: right middle;
+    padding: 0 1;
+}

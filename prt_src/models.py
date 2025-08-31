@@ -8,6 +8,7 @@ to generate and apply migrations.
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     Date,
     DateTime,
@@ -31,11 +32,14 @@ class Contact(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
+    first_name = Column(String(100))  # First name for better contact management
+    last_name = Column(String(100))  # Last name for better contact management
     email = Column(String(255))
     phone = Column(String(50))
     profile_image = Column(LargeBinary)  # Store profile image as binary data
     profile_image_filename = Column(String(255))  # Original filename for reference
     profile_image_mime_type = Column(String(50))  # MIME type (e.g., 'image/jpeg')
+    is_you = Column(Boolean, default=False)  # Special flag for the "You" contact
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
@@ -139,9 +143,7 @@ class ContactRelationship(Base):
     to_contact = relationship(
         "Contact", foreign_keys=[to_contact_id], back_populates="relationships_to"
     )
-    relationship_type = relationship(
-        "RelationshipType", back_populates="contact_relationships"
-    )
+    relationship_type = relationship("RelationshipType", back_populates="contact_relationships")
 
     def __repr__(self):
         return f"<ContactRelationship(from={self.from_contact_id}, to={self.to_contact_id}, type={self.type_id})>"
@@ -218,14 +220,10 @@ class ContactMetadata(Base):
     contact = relationship("Contact", back_populates="metadata_rel")
 
     # Many-to-many relationship with Tag via metadata_tags
-    tags = relationship(
-        "Tag", secondary="metadata_tags", back_populates="metadata_entries"
-    )
+    tags = relationship("Tag", secondary="metadata_tags", back_populates="metadata_entries")
 
     # Many-to-many relationship with Note via metadata_notes
-    notes = relationship(
-        "Note", secondary="metadata_notes", back_populates="metadata_entries"
-    )
+    notes = relationship("Note", secondary="metadata_notes", back_populates="metadata_entries")
 
     def __repr__(self):
         return f"<ContactMetadata(id={self.id}, contact_id={self.contact_id})>"
