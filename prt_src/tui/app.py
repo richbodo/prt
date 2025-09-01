@@ -258,6 +258,10 @@ class PRTApp(App):
         """
         params = params or {}
 
+        # Update services with app reference (lazy injection to avoid circular deps)
+        if self.services.get("notification_service"):
+            self.services["notification_service"].set_app(self)
+
         # Create new screen instance
         new_screen = create_screen(screen_name, **self.services, **params)
 
@@ -268,7 +272,10 @@ class PRTApp(App):
         # Hide current screen
         if self.current_screen:
             await self.current_screen.on_hide()
-            self.query_one("#main-container").remove()
+            try:
+                self.query_one("#main-container").remove()
+            except Exception:
+                pass  # Container may not exist yet
 
         # Mount new screen
         self.current_screen = new_screen

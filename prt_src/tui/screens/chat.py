@@ -35,9 +35,12 @@ class ChatScreen(BaseScreen):
             self._clear_input()
             self._has_input = False
         else:
-            # Go home if no input
+            # Go home if no input (with null check)
             if self.nav_service:
-                self.nav_service.go_home()
+                try:
+                    self.nav_service.go_home()
+                except Exception:
+                    pass  # Navigation service may not be available
 
     def _clear_input(self) -> None:
         """Clear the chat input field."""

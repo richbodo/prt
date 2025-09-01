@@ -30,14 +30,16 @@ class NavigationService:
     and breadcrumb generation.
     """
 
-    def __init__(self, max_history: int = 15):
+    def __init__(self, max_history: int = 15, max_stack_depth: int = 20):
         """Initialize navigation service.
 
         Args:
             max_history: Maximum number of history entries to keep
+            max_stack_depth: Maximum depth of navigation stack
         """
         # Navigation stack (current navigation path)
         self._stack: List[NavEntry] = []
+        self._max_stack_depth = max_stack_depth
 
         # Navigation history ring buffer
         self._history: Deque[NavEntry] = deque(maxlen=max_history)
@@ -56,6 +58,16 @@ class NavigationService:
             params: Optional parameters to pass to the screen
         """
         params = params or {}
+
+        # Check stack depth limit
+        if len(self._stack) >= self._max_stack_depth:
+            logger.warning(
+                f"Navigation stack depth limit ({self._max_stack_depth}) reached. "
+                "Clearing old entries from bottom of stack."
+            )
+            # Remove oldest entries to make room
+            while len(self._stack) >= self._max_stack_depth:
+                self._stack.pop(0)
 
         # Create navigation entry
         entry = NavEntry(

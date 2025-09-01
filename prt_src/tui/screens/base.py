@@ -97,9 +97,17 @@ class BaseScreen(Container, ABC):
         if not self._show_header:
             return None
 
+        # Safe navigation service access with null check
+        breadcrumb = []
+        if self.nav_service:
+            try:
+                breadcrumb = self.nav_service.get_breadcrumb()
+            except Exception:
+                pass  # Navigation service may not be initialized
+
         return {
             "title": self.get_screen_name().title(),
-            "breadcrumb": self.nav_service.get_breadcrumb() if self.nav_service else [],
+            "breadcrumb": breadcrumb,
             "searchBox": False,
             "compact": False,
         }
