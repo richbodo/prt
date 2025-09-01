@@ -643,6 +643,54 @@ class Database:
 
         return sorted(results, key=lambda x: (x["type"], x["other_contact_name"]))
 
+    def get_all_relationships(self) -> List[Dict[str, Any]]:
+        """Get all relationships in the database."""
+        from sqlalchemy.orm import aliased
+
+        from .models import Contact, ContactRelationship, RelationshipType
+
+        # Create aliases for the Contact table to handle self-joins
+        FromContact = aliased(Contact)
+        ToContact = aliased(Contact)
+
+        # Get all relationships with their types and contact information
+        relationships = (
+            self.session.query(ContactRelationship, RelationshipType, FromContact, ToContact)
+            .join(RelationshipType, ContactRelationship.type_id == RelationshipType.id)
+            .join(FromContact, ContactRelationship.from_contact_id == FromContact.id)
+            .join(ToContact, ContactRelationship.to_contact_id == ToContact.id)
+            .all()
+        )
+
+        results = []
+        for rel, rel_type, from_contact, to_contact in relationships:
+            # Determine status based on end_date
+            status = "Active"
+            if rel.end_date:
+                from datetime import date
+
+                if rel.end_date <= date.today():
+                    status = "Ended"
+                else:
+                    status = "Future End"
+
+            results.append(
+                {
+                    "relationship_id": rel.id,
+                    "person1": from_contact.name,
+                    "person1_id": from_contact.id,
+                    "relationship_type": rel_type.description or rel_type.type_key,
+                    "type_key": rel_type.type_key,
+                    "person2": to_contact.name,
+                    "person2_id": to_contact.id,
+                    "start_date": rel.start_date,
+                    "end_date": rel.end_date,
+                    "status": status,
+                }
+            )
+
+        return sorted(results, key=lambda x: (x["type_key"], x["person1"], x["person2"]))
+
     def delete_contact_relationship(self, from_contact_id: int, to_contact_id: int, type_key: str):
         """Delete a relationship between two contacts (and its inverse if applicable)."""
         from .models import ContactRelationship, RelationshipType

@@ -11,7 +11,7 @@ from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widgets import Button, Input, Label, Static, TextArea
 
-from prt_src.tui.app import AppMode
+from prt_src.tui.types import AppMode
 from prt_src.tui.widgets.base import ModeAwareWidget
 
 
