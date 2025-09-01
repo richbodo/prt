@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -31,8 +31,8 @@ def _ensure_pipeline(config: Any):
     global _tokenizer, _model, _generator
     if _generator is None:
         # Import heavy deps lazily so the module can be imported without them
-        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
         import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
         auth = _get_hf_token(config)
         _tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME, use_auth_token=auth)
@@ -51,4 +51,3 @@ def chat(message: str, config: Any) -> str:
     generator = _ensure_pipeline(config)
     result = generator(message, max_new_tokens=128)
     return result[0]["generated_text"]
-

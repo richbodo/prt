@@ -113,13 +113,16 @@ class ChatScreen(BaseScreen):
         welcome_msg = """
 [bold blue]🤖 PRT Chat Assistant[/bold blue]
 
-Welcome to the PRT natural language interface! You can ask me about:
+Welcome to the PRT natural language interface! I can help you with your contacts and relationships.
+
+[yellow]🔗 Enhanced with Ollama AI (if available)[/yellow]
+When Ollama is running, I provide intelligent responses with direct database access.
 
 • [green]Contacts:[/green] "Show me contacts I haven't talked to recently"
 • [green]Notes:[/green] "Add a note about John's birthday"
 • [green]Relationships:[/green] "Find all family relationships"
-• [green]Recent activity:[/green] "When did I last meet Sarah?"
 • [green]Search:[/green] "Find everyone tagged as 'work'"
+• [green]Database:[/green] "How many contacts do I have?"
 
 [dim]Press Ctrl+L to clear chat, Up/Down arrows to browse history, ESC to go back[/dim]
 """
@@ -235,11 +238,13 @@ Welcome to the PRT natural language interface! You can ask me about:
             query: User's natural language query
         """
         try:
-            # Parse the query and determine intent
-            intent, params = self._parse_query(query)
+            # Try Ollama integration first if available
+            result = await self._try_ollama_query(query)
 
-            # Execute the appropriate action
-            result = await self._execute_command(intent, params, query)
+            if result is None:
+                # Fallback to local processing if Ollama isn't available
+                intent, params = self._parse_query(query)
+                result = await self._execute_command(intent, params, query)
 
             # Display the result
             assistant_msg = ChatMessage(result, is_user=False)
@@ -253,6 +258,43 @@ Welcome to the PRT natural language interface! You can ask me about:
             )
             self.message_history.append(error_msg)
             self._display_message(error_msg)
+
+    async def _try_ollama_query(self, query: str) -> Optional[str]:
+        """Try to process query using Ollama LLM.
+
+        Args:
+            query: User's natural language query
+
+        Returns:
+            LLM response or None if Ollama isn't available
+        """
+        try:
+            # Import Ollama integration
+            from prt_src.llm_ollama import OllamaLLM
+
+            # Check if we have data service
+            if not self.data_service or not hasattr(self.data_service, "api"):
+                return None
+
+            # Create Ollama LLM instance
+            ollama = OllamaLLM(self.data_service.api)
+
+            # Get response from Ollama
+            response = ollama.chat(query)
+
+            # Check for error responses
+            if response.startswith("Error:"):
+                logger.warning(f"Ollama error: {response}")
+                return None
+
+            return response
+
+        except ImportError:
+            logger.debug("Ollama integration not available")
+            return None
+        except Exception as e:
+            logger.warning(f"Ollama query failed: {e}")
+            return None
 
     def _parse_query(self, query: str) -> tuple[str, Dict[str, Any]]:
         """Parse natural language query to extract intent and parameters.

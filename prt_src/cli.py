@@ -2715,10 +2715,23 @@ def run_interactive_cli(debug: bool = False):
 def main(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
+    classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
     if ctx.invoked_subcommand is None:
-        run_interactive_cli(debug=debug)
+        if classic:
+            run_interactive_cli(debug=debug)
+        else:
+            # Launch TUI by default
+            try:
+                from prt_src.tui.app import PRTApp
+
+                app = PRTApp()
+                app.run()
+            except Exception as e:
+                console.print(f"Failed to launch TUI: {e}", style="red")
+                console.print("Falling back to classic CLI...", style="yellow")
+                run_interactive_cli(debug=debug)
 
 
 @app.command()

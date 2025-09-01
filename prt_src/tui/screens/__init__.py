@@ -90,3 +90,64 @@ __all__ = [
 
 # Screen imports will be added here as they're implemented
 # Each screen module will call register_screen() when imported
+
+# Import screens to register them (Phase 5 Contact Management Forms)
+try:
+    from . import (
+        contact_detail,  # Contact Detail Screen (Task 5.3)
+        contact_form,  # Contact Form Screen (Task 5.4)
+    )
+
+    # Make imports accessible
+    _ = contact_detail
+    _ = contact_form
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import contact screens: {e}")
+
+# Import screens to register them (Phase 5 Relationship Management - Task 5.5 & 5.6)
+try:
+    from . import (
+        relationship_form,  # Relationship Form Screen (Task 5.5)
+        relationship_types,  # Relationship Types Screen (Task 5.6)
+    )
+
+    # Make imports accessible
+    _ = relationship_form
+    _ = relationship_types
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import relationship screens: {e}")
+
+# Import screens to register them (Phase 5 Import/Export - Task 5.7 & 5.8)
+try:
+    # Import needs special handling due to 'import' keyword
+    import importlib
+
+    import_module = importlib.import_module("prt_src.tui.screens.import")
+    from . import export  # Export Screen (Task 5.8)
+
+    # Make imports accessible
+    _ = import_module
+    _ = export
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import import/export screens: {e}")
+
+# Import screens to register them (Phase 5 Track D - First-Run Wizard)
+try:
+    from . import wizard  # First-Run Wizard Screen (Task 5.9)
+
+    # Make import accessible
+    _ = wizard
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import wizard screen: {e}")

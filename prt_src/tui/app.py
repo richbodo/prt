@@ -125,6 +125,13 @@ class PRTApp(App):
             self.db = Database(Path(":memory:"))
             self.db.connect()
 
+        # Ensure database tables are created
+        try:
+            self.db.initialize()
+            logger.info("Database tables initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize database tables: {e}")
+
         # Initialize first-run handler
         self.first_run_handler = FirstRunHandler(self.db)
 
@@ -137,18 +144,23 @@ class PRTApp(App):
         # Initialize data service
         from prt_src.api import PRTAPI
         from prt_src.tui.services.data import DataService
+        from prt_src.tui.services.notification import NotificationService
 
         prt_api = PRTAPI()  # PRTAPI creates its own database connection
         self.data_service = DataService(prt_api)
+        self.notification_service = NotificationService(self)
 
         # Current screen reference
         self.current_screen = None
+
+        # Initialize database with default data
+        self._initialize_database_data()
 
         # Services to inject into screens
         self.services = {
             "nav_service": self.nav_service,
             "data_service": self.data_service,
-            "notification_service": None,  # Will be added later
+            "notification_service": self.notification_service,
             "selection_service": None,  # Will wire Phase 2 service
             "validation_service": None,  # Will wire Phase 2 service
         }
@@ -172,17 +184,21 @@ class PRTApp(App):
     def on_mount(self) -> None:
         """Handle application mount event."""
         if self._is_first_run:
-            # Will show first-run setup in future
-            logger.info("First run detected - will show setup")
+            logger.info("First run detected - showing wizard")
+            # Navigate to wizard screen
+            self.set_timer(0.1, self._go_to_wizard)
         else:
             logger.info("Existing installation detected")
-
-        # Navigate to home screen
-        self.set_timer(0.1, self._go_to_home)
+            # Navigate to home screen
+            self.set_timer(0.1, self._go_to_home)
 
     async def _go_to_home(self) -> None:
         """Navigate to home screen."""
         await self.switch_screen("home")
+
+    async def _go_to_wizard(self) -> None:
+        """Navigate to wizard screen."""
+        await self.switch_screen("wizard")
 
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
@@ -292,6 +308,38 @@ class PRTApp(App):
         await new_screen.on_show()
 
         logger.info(f"Switched to screen: {screen_name}")
+
+    def _initialize_database_data(self) -> None:
+        """Initialize database with default data (relationship types and 'You' contact).
+
+        This method is called during app initialization to ensure:
+        1. Default relationship types are seeded
+        2. 'You' contact is created if missing (on first run)
+        """
+        try:
+            # Use set_timer to run async initialization after app is mounted
+            self.set_timer(0.05, self._async_initialize_database_data)
+        except Exception as e:
+            logger.error(f"Failed to schedule database data initialization: {e}")
+
+    async def _async_initialize_database_data(self) -> None:
+        """Async method to initialize database data."""
+        try:
+            # Seed default relationship types
+            logger.info("Seeding default relationship types...")
+            await self.data_service.seed_default_relationship_types()
+
+            # Auto-create "You" contact if missing (first run)
+            if self._is_first_run:
+                logger.info("First run detected - creating 'You' contact")
+                try:
+                    self.first_run_handler.create_you_contact()
+                    logger.info("'You' contact created successfully")
+                except Exception as e:
+                    logger.error(f"Failed to create 'You' contact: {e}")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize database data: {e}")
 
 
 # Placeholder for Database extensions
