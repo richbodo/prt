@@ -186,11 +186,11 @@ class PRTApp(App):
         if self._is_first_run:
             logger.info("First run detected - showing wizard")
             # Navigate to wizard screen
-            self.set_timer(0.1, self._go_to_wizard)
+            self.call_after_refresh(self._go_to_wizard)
         else:
             logger.info("Existing installation detected")
             # Navigate to home screen
-            self.set_timer(0.1, self._go_to_home)
+            self.call_after_refresh(self._go_to_home)
 
     async def _go_to_home(self) -> None:
         """Navigate to home screen."""
@@ -296,7 +296,8 @@ class PRTApp(App):
         if self.current_screen:
             await self.current_screen.on_hide()
             try:
-                self.query_one("#main-container").remove()
+                container = self.query_one("#main-container")
+                await container.remove()
             except Exception:
                 pass  # Container may not exist yet
 
