@@ -278,7 +278,7 @@ class MetadataScreen(BaseScreen):
             self.current_tab = "notes"
 
         # Update footer hints
-        self.app.call_later(self.refresh_footer)
+        self.app.call_after_refresh(self.refresh_footer)
 
     def refresh_footer(self) -> None:
         """Refresh footer to update key hints."""
