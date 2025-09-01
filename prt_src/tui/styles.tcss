@@ -365,3 +365,43 @@ Footer {
 .menu-item:hover {
     background: $primary-lighten-1;
 }
+
+/* Screen Base Styles */
+.screen-placeholder {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+    text-style: italic;
+    color: $text-muted;
+    padding: 2;
+}
+
+/* Screen-specific styles */
+.screen-home {
+    padding: 1;
+}
+
+.screen-contacts {
+    padding: 0;
+}
+
+.screen-search {
+    padding: 1;
+}
+
+.screen-relationships {
+    padding: 1;
+}
+
+.screen-database {
+    padding: 1;
+}
+
+.screen-metadata {
+    padding: 1;
+}
+
+.screen-chat {
+    padding: 0;
+    background: $background;
+}
