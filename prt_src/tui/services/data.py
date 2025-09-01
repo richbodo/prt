@@ -650,3 +650,401 @@ class DataService:
         from datetime import datetime
 
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Relationship types initialization
+
+    async def seed_default_relationship_types(self) -> bool:
+        """Seed the database with default relationship types.
+
+        Creates standard relationship types with their inverses:
+        - parent/child
+        - sibling/sibling (symmetrical)
+        - spouse/spouse (symmetrical)
+        - friend/friend (symmetrical)
+        - colleague/colleague (symmetrical)
+        - grandparent/grandchild
+        - aunt_uncle/niece_nephew
+        - cousin/cousin (symmetrical)
+        - mentor/mentee
+        - reports_to/manages
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Check if relationship types already exist
+            existing_types = self.api.list_all_relationship_types()
+            if existing_types:
+                logger.info("Relationship types already exist, skipping seeding")
+                return True
+
+            # Define default relationship types
+            default_types = [
+                {
+                    "type_key": "parent",
+                    "description": "Is the parent of",
+                    "inverse_key": "child",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "child",
+                    "description": "Is the child of",
+                    "inverse_key": "parent",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "sibling",
+                    "description": "Is the sibling of",
+                    "inverse_key": "sibling",
+                    "is_symmetrical": True,
+                },
+                {
+                    "type_key": "spouse",
+                    "description": "Is the spouse of",
+                    "inverse_key": "spouse",
+                    "is_symmetrical": True,
+                },
+                {
+                    "type_key": "friend",
+                    "description": "Is a friend of",
+                    "inverse_key": "friend",
+                    "is_symmetrical": True,
+                },
+                {
+                    "type_key": "colleague",
+                    "description": "Is a colleague of",
+                    "inverse_key": "colleague",
+                    "is_symmetrical": True,
+                },
+                {
+                    "type_key": "grandparent",
+                    "description": "Is the grandparent of",
+                    "inverse_key": "grandchild",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "grandchild",
+                    "description": "Is the grandchild of",
+                    "inverse_key": "grandparent",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "aunt_uncle",
+                    "description": "Is the aunt/uncle of",
+                    "inverse_key": "niece_nephew",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "niece_nephew",
+                    "description": "Is the niece/nephew of",
+                    "inverse_key": "aunt_uncle",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "cousin",
+                    "description": "Is a cousin of",
+                    "inverse_key": "cousin",
+                    "is_symmetrical": True,
+                },
+                {
+                    "type_key": "mentor",
+                    "description": "Is the mentor of",
+                    "inverse_key": "mentee",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "mentee",
+                    "description": "Is the mentee of",
+                    "inverse_key": "mentor",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "reports_to",
+                    "description": "Reports to",
+                    "inverse_key": "manages",
+                    "is_symmetrical": False,
+                },
+                {
+                    "type_key": "manages",
+                    "description": "Manages",
+                    "inverse_key": "reports_to",
+                    "is_symmetrical": False,
+                },
+            ]
+
+            # Create each relationship type
+            success_count = 0
+            for rel_type in default_types:
+                try:
+                    success = self.api.create_relationship_type(
+                        type_key=rel_type["type_key"],
+                        description=rel_type["description"],
+                        inverse_key=rel_type["inverse_key"],
+                        is_symmetrical=rel_type["is_symmetrical"],
+                    )
+                    if success:
+                        success_count += 1
+                    else:
+                        logger.warning(
+                            f"Failed to create relationship type: {rel_type['type_key']}"
+                        )
+                except Exception as e:
+                    logger.error(f"Error creating relationship type {rel_type['type_key']}: {e}")
+
+            logger.info(
+                f"Successfully created {success_count}/{len(default_types)} relationship types"
+            )
+            return success_count > 0
+
+        except Exception as e:
+            logger.error(f"Failed to seed default relationship types: {e}")
+            return False
+
+    # Relationship type management operations
+
+    async def get_relationship_types(self) -> List[Dict]:
+        """Get all relationship types.
+
+        Returns:
+            List of relationship type dictionaries
+        """
+        try:
+            return self.api.list_all_relationship_types()
+        except Exception as e:
+            logger.error(f"Failed to get relationship types: {e}")
+            return []
+
+    async def create_relationship_type(
+        self,
+        type_key: str,
+        description: str,
+        inverse_key: Optional[str] = None,
+        is_symmetrical: bool = False,
+    ) -> Optional[Dict]:
+        """Create a new relationship type.
+
+        Args:
+            type_key: Unique key for the relationship type
+            description: Human-readable description
+            inverse_key: Key for the inverse relationship type
+            is_symmetrical: Whether the relationship is symmetrical
+
+        Returns:
+            Created relationship type dictionary or None
+        """
+        try:
+            success = self.api.create_relationship_type(
+                type_key=type_key,
+                description=description,
+                inverse_key=inverse_key,
+                is_symmetrical=is_symmetrical,
+            )
+            if success:
+                # Return the created relationship type
+                rel_types = await self.get_relationship_types()
+                for rel_type in rel_types:
+                    if rel_type.get("type_key") == type_key:
+                        return rel_type
+            return None
+        except Exception as e:
+            logger.error(f"Failed to create relationship type '{type_key}': {e}")
+            return None
+
+    async def update_relationship_type(
+        self,
+        type_key: str,
+        description: Optional[str] = None,
+        inverse_key: Optional[str] = None,
+        is_symmetrical: Optional[bool] = None,
+    ) -> bool:
+        """Update a relationship type.
+
+        Args:
+            type_key: Key of the relationship type to update
+            description: New description (if provided)
+            inverse_key: New inverse key (if provided)
+            is_symmetrical: New symmetrical flag (if provided)
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Get current relationship type
+            rel_types = await self.get_relationship_types()
+            current_type = None
+            for rel_type in rel_types:
+                if rel_type.get("type_key") == type_key:
+                    current_type = rel_type
+                    break
+
+            if not current_type:
+                logger.error(f"Relationship type '{type_key}' not found")
+                return False
+
+            # For now, we'll need to delete and recreate since the API doesn't have update method
+            # This is a simplification - in production you'd want proper update methods
+            if description is None:
+                description = current_type.get("description", "")
+            if inverse_key is None:
+                inverse_key = current_type.get("inverse_type_key")
+            if is_symmetrical is None:
+                is_symmetrical = bool(current_type.get("is_symmetrical", False))
+
+            # Delete old type
+            delete_success = self.api.delete_relationship_type(type_key)
+            if not delete_success:
+                return False
+
+            # Create new type
+            create_success = self.api.create_relationship_type(
+                type_key=type_key,
+                description=description,
+                inverse_key=inverse_key,
+                is_symmetrical=is_symmetrical,
+            )
+            return create_success
+
+        except Exception as e:
+            logger.error(f"Failed to update relationship type '{type_key}': {e}")
+            return False
+
+    async def delete_relationship_type(self, type_key: str) -> bool:
+        """Delete a relationship type.
+
+        Args:
+            type_key: Key of the relationship type to delete
+
+        Returns:
+            True if successful
+        """
+        try:
+            return self.api.delete_relationship_type(type_key)
+        except Exception as e:
+            logger.error(f"Failed to delete relationship type '{type_key}': {e}")
+            return False
+
+    async def get_relationship_type_usage_count(self, type_key: str) -> int:
+        """Get the usage count for a relationship type.
+
+        Args:
+            type_key: Key of the relationship type
+
+        Returns:
+            Number of relationships using this type
+        """
+        try:
+            all_relationships = await self.get_relationships()
+            usage_count = 0
+            for rel in all_relationships:
+                if rel.get("type_key") == type_key:
+                    usage_count += 1
+            return usage_count
+        except Exception as e:
+            logger.error(f"Failed to get usage count for relationship type '{type_key}': {e}")
+            return 0
+
+    async def create_relationship_with_details(
+        self,
+        from_contact_id: int,
+        to_contact_id: int,
+        type_key: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> bool:
+        """Create a relationship with detailed information.
+
+        Args:
+            from_contact_id: Source contact ID
+            to_contact_id: Target contact ID
+            type_key: Relationship type key
+            start_date: Optional start date (ISO format)
+            end_date: Optional end date (ISO format)
+
+        Returns:
+            True if successful
+        """
+        try:
+            # Convert date strings to date objects if provided
+            start_date_obj = None
+            if start_date:
+                from datetime import datetime
+
+                try:
+                    start_date_obj = datetime.fromisoformat(start_date).date()
+                except ValueError:
+                    logger.warning(f"Invalid start_date format: {start_date}")
+
+            if end_date:
+                from datetime import datetime
+
+                try:
+                    # Convert to date object (currently not used, but may be needed for validation)
+                    datetime.fromisoformat(end_date).date()
+                except ValueError:
+                    logger.warning(f"Invalid end_date format: {end_date}")
+
+            # Create the relationship using the core operations
+            from prt_src.core.relationships import RelationshipOperations
+
+            rel_ops = RelationshipOperations(self.api)
+
+            result = rel_ops.create_relationship(
+                from_id=from_contact_id,
+                to_id=to_contact_id,
+                type_key=type_key,
+                start_date=start_date_obj,
+            )
+
+            return result.get("success", False)
+
+        except Exception as e:
+            logger.error(f"Failed to create relationship with details: {e}")
+            return False
+
+    async def get_relationship_details(self, relationship_id: int) -> Optional[Dict]:
+        """Get detailed information about a relationship.
+
+        Args:
+            relationship_id: ID of the relationship
+
+        Returns:
+            Relationship details dictionary or None
+        """
+        try:
+            all_relationships = await self.get_relationships()
+            for rel in all_relationships:
+                if rel.get("relationship_id") == relationship_id:
+                    return rel
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get relationship details for {relationship_id}: {e}")
+            return None
+
+    async def update_relationship(
+        self,
+        relationship_id: int,
+        type_key: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> bool:
+        """Update a relationship.
+
+        Args:
+            relationship_id: ID of the relationship to update
+            type_key: New relationship type key (if provided)
+            start_date: New start date (if provided)
+            end_date: New end date (if provided)
+
+        Returns:
+            True if successful
+        """
+        try:
+            # This is a simplified implementation
+            # In a full implementation, you would update the relationship directly in the database
+            # For now, we'll indicate that this functionality needs to be implemented
+            logger.warning("Update relationship functionality not fully implemented")
+            return False
+
+        except Exception as e:
+            logger.error(f"Failed to update relationship {relationship_id}: {e}")
+            return False

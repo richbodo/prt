@@ -218,15 +218,49 @@ class RelationshipsScreen(BaseScreen):
         """Handle add new relationship action."""
         logger.info("Add relationship requested")
 
-        if self.notification_service:
-            self.notification_service.show_info("Add relationship functionality coming soon")
+        if self.nav_service:
+            try:
+                # Push relationship form screen to navigation stack
+                self.nav_service.push("relationship_form")
+
+                # Switch to relationship form screen in add mode
+                if hasattr(self.app, "switch_screen"):
+                    await self.app.switch_screen("relationship_form", mode="add")
+                else:
+                    logger.warning("App does not have switch_screen method")
+
+            except Exception as e:
+                logger.error(f"Failed to navigate to relationship form: {e}")
+                if self.notification_service:
+                    self.notification_service.show_error("Failed to open relationship form")
+        else:
+            if self.notification_service:
+                self.notification_service.show_error("Navigation service not available")
 
     async def _handle_edit_relationship(self, relationship_id: int) -> None:
         """Handle edit relationship action."""
         logger.info(f"Edit relationship {relationship_id} requested")
 
-        if self.notification_service:
-            self.notification_service.show_info("Edit relationship functionality coming soon")
+        if self.nav_service:
+            try:
+                # Push relationship form screen to navigation stack
+                self.nav_service.push("relationship_form")
+
+                # Switch to relationship form screen in edit mode
+                if hasattr(self.app, "switch_screen"):
+                    await self.app.switch_screen(
+                        "relationship_form", mode="edit", relationship_id=relationship_id
+                    )
+                else:
+                    logger.warning("App does not have switch_screen method")
+
+            except Exception as e:
+                logger.error(f"Failed to navigate to relationship form: {e}")
+                if self.notification_service:
+                    self.notification_service.show_error("Failed to open relationship form")
+        else:
+            if self.notification_service:
+                self.notification_service.show_error("Navigation service not available")
 
     async def _handle_delete_relationship(self, relationship_id: int) -> None:
         """Handle delete relationship action."""

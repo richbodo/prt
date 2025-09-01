@@ -39,6 +39,9 @@ class HomeScreen(BaseScreen):
                 "[c] Contacts",
                 "[s] Search",
                 "[r] Relationships",
+                "[y] Rel. Types",
+                "[i] Import",
+                "[e] Export",
                 "[d] Database",
                 "[m] Metadata",
                 "[t] Chat",
@@ -90,6 +93,15 @@ class HomeScreen(BaseScreen):
             elif menu_item.action == "relationships":
                 # Navigate to relationships screen
                 self._navigate_to_screen("relationships")
+            elif menu_item.action == "relationship_types":
+                # Navigate to relationship types screen
+                self._navigate_to_screen("relationship_types")
+            elif menu_item.action == "import":
+                # Navigate to import screen
+                self._navigate_to_screen("import")
+            elif menu_item.action == "export":
+                # Navigate to export screen
+                self._navigate_to_screen("export")
             elif menu_item.action == "database":
                 # Navigate to database screen
                 self._navigate_to_screen("database")

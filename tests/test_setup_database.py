@@ -1,5 +1,6 @@
 from pathlib import Path
-from utils.setup_database import setup_database, initialize_database
+
+from utils.setup_database import initialize_database, setup_database
 
 
 def test_setup_database_functions():
@@ -23,13 +24,13 @@ def test_initialize_database(tmp_path):
         "db_type": "sqlite",
         "db_host": "localhost",
         "db_port": 5432,
-        "db_name": "prt"
+        "db_name": "prt",
     }
-    
+
     # Test that initialize_database works
     success = initialize_database(config, quiet=True)
     assert success
-    
+
     # Check that database file was created
     db_file = Path(config["db_path"])
     assert db_file.exists()

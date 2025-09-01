@@ -80,7 +80,16 @@ class NavigationMenu(ModeAwareWidget):
                 "relationships",
                 icon="👥",
             ),
+            MenuItem(
+                "y",
+                "Relationship Types",
+                "Manage relationship types",
+                "relationship_types",
+                icon="🔗",
+            ),
             MenuItem("s", "Search", "Search contacts and notes", "search", icon="🔍"),
+            MenuItem("i", "Import", "Import contacts from Google Takeout", "import", icon="📥"),
+            MenuItem("e", "Export", "Export data and create directories", "export", icon="📤"),
             MenuItem("d", "Database", "Backup and restore database", "database", icon="💾"),
             MenuItem(
                 "m",

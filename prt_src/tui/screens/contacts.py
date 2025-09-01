@@ -209,11 +209,11 @@ class ContactsScreen(BaseScreen):
 
         if self.nav_service:
             try:
-                self.nav_service.push("add_contact")
+                self.nav_service.push("contact_form", {"mode": "add"})
                 if hasattr(self.app, "switch_screen"):
-                    await self.app.switch_screen("add_contact")
+                    await self.app.switch_screen("contact_form")
             except Exception as e:
-                logger.error(f"Failed to navigate to add_contact screen: {e}")
+                logger.error(f"Failed to navigate to contact_form screen: {e}")
                 if self.notification_service:
                     self.notification_service.show_error("Failed to open add contact screen")
 
@@ -223,11 +223,11 @@ class ContactsScreen(BaseScreen):
 
         if self.nav_service:
             try:
-                self.nav_service.push("edit_contact", {"contact_id": contact_id})
+                self.nav_service.push("contact_form", {"contact_id": contact_id, "mode": "edit"})
                 if hasattr(self.app, "switch_screen"):
-                    await self.app.switch_screen("edit_contact")
+                    await self.app.switch_screen("contact_form")
             except Exception as e:
-                logger.error(f"Failed to navigate to edit_contact screen: {e}")
+                logger.error(f"Failed to navigate to contact_form screen: {e}")
                 if self.notification_service:
                     self.notification_service.show_error("Failed to open edit contact screen")
 
