@@ -295,15 +295,25 @@ class PRTApp(App):
         # Hide current screen
         if self.current_screen:
             await self.current_screen.on_hide()
-            try:
-                container = self.query_one("#main-container")
-                await container.remove()
-            except Exception:
-                pass  # Container may not exist yet
 
-        # Mount new screen
+        # Get the main container and replace its contents instead of removing it
+        try:
+            container = self.query_one("#main-container")
+            # Remove all children from the container
+            await container.remove_children()
+            # Mount the new screen inside the existing container
+            await container.mount(new_screen)
+        except Exception as e:
+            logger.error(f"Failed to switch screen content: {e}")
+            # Fallback: try to mount in a new container if the above fails
+            try:
+                await self.mount(Container(new_screen, id=f"main-container-{screen_name}"))
+            except Exception as fallback_error:
+                logger.error(f"Fallback mounting also failed: {fallback_error}")
+                return
+
+        # Update current screen reference
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id="main-container"))
 
         # Show new screen
         await new_screen.on_show()

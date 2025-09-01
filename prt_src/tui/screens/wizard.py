@@ -320,9 +320,7 @@ class WizardScreen(BaseScreen):
         if key == "enter":
             # Handle enter key for current step
             await self._handle_enter()
-        else:
-            # Let parent handle other keys
-            await super().on_key(event)
+        # Note: Parent Container class doesn't have on_key method, so we don't call super()
 
     async def _handle_enter(self) -> None:
         """Handle enter key based on current step."""
