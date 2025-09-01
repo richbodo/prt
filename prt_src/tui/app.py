@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
@@ -16,6 +17,8 @@ from textual.widgets import Footer, Header, Static
 from prt_src.config import load_config
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
+from prt_src.tui.screens import EscapeIntent, create_screen
+from prt_src.tui.services.navigation import NavigationService
 
 logger = get_logger(__name__)
 
@@ -135,6 +138,21 @@ class PRTApp(App):
         # Check first run status
         self._is_first_run = self.first_run_handler.is_first_run()
 
+        # Initialize navigation service
+        self.nav_service = NavigationService()
+
+        # Current screen reference
+        self.current_screen = None
+
+        # Services to inject into screens (will be expanded in 4A.4)
+        self.services = {
+            "nav_service": self.nav_service,
+            "data_service": None,  # Will be added in 4A.4
+            "notification_service": None,  # Will be added in 4A.4
+            "selection_service": None,  # Will wire Phase 2 service
+            "validation_service": None,  # Will wire Phase 2 service
+        }
+
     @property
     def current_mode(self) -> AppMode:
         """Get the current application mode."""
@@ -183,6 +201,90 @@ class PRTApp(App):
     def toggle_mode(self) -> None:
         """Public method to toggle mode (for testing)."""
         self.action_toggle_mode()
+
+    async def on_key(self, event: events.Key) -> None:
+        """Handle global key events.
+
+        Args:
+            event: Key event
+        """
+        if event.key == "escape":
+            await self.handle_escape()
+
+    async def handle_escape(self) -> None:
+        """Handle ESC key with per-screen intent."""
+        if not self.current_screen:
+            return
+
+        # Get screen's ESC intent
+        intent = self.current_screen.on_escape()
+
+        if intent == EscapeIntent.CONFIRM:
+            # Show discard confirmation dialog
+            if await self.show_discard_dialog():
+                self.nav_service.pop()
+                await self.switch_screen(self.nav_service.get_current_screen())
+        elif intent == EscapeIntent.POP:
+            # Pop navigation stack
+            previous = self.nav_service.pop()
+            if previous:
+                await self.switch_screen(previous)
+        elif intent == EscapeIntent.HOME:
+            # Go to home screen
+            self.nav_service.go_home()
+            await self.switch_screen("home")
+        elif intent == EscapeIntent.CUSTOM:
+            # Let screen handle it
+            self.current_screen.handle_custom_escape()
+        # CANCEL means do nothing
+
+    async def show_discard_dialog(self) -> bool:
+        """Show discard confirmation dialog.
+
+        Returns:
+            True if user confirms discard
+        """
+        # TODO: Implement actual dialog widget
+        # For now, just log and return True
+        logger.info("Would show discard dialog")
+        return True
+
+    async def switch_screen(self, screen_name: str, params: Optional[dict] = None) -> None:
+        """Switch to a different screen.
+
+        Args:
+            screen_name: Name of screen to switch to
+            params: Optional parameters for the screen
+        """
+        params = params or {}
+
+        # Update services with app reference (lazy injection to avoid circular deps)
+        if self.services.get("notification_service"):
+            self.services["notification_service"].set_app(self)
+
+        # Create new screen instance
+        new_screen = create_screen(screen_name, **self.services, **params)
+
+        if not new_screen:
+            logger.error(f"Failed to create screen: {screen_name}")
+            return
+
+        # Hide current screen
+        if self.current_screen:
+            await self.current_screen.on_hide()
+            try:
+                self.query_one("#main-container").remove()
+            except Exception:
+                pass  # Container may not exist yet
+
+        # Mount new screen
+        self.current_screen = new_screen
+        await self.mount(Container(new_screen, id="main-container"))
+
+        # Show new screen
+        await new_screen.on_show()
+
+        logger.info(f"Switched to screen: {screen_name}")
 
 
 # Placeholder for Database extensions
