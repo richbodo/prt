@@ -4,7 +4,6 @@ This module implements the main Textual application with mode management,
 first-run detection, and global keybindings.
 """
 
-from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -19,15 +18,9 @@ from prt_src.db import Database
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import EscapeIntent, create_screen
 from prt_src.tui.services.navigation import NavigationService
+from prt_src.tui.types import AppMode
 
 logger = get_logger(__name__)
-
-
-class AppMode(Enum):
-    """Application mode enumeration."""
-
-    NAVIGATION = "NAV"
-    EDIT = "EDIT"
 
 
 class FirstRunHandler:
@@ -141,14 +134,21 @@ class PRTApp(App):
         # Initialize navigation service
         self.nav_service = NavigationService()
 
+        # Initialize data service
+        from prt_src.api import PRTAPI
+        from prt_src.tui.services.data import DataService
+
+        prt_api = PRTAPI()  # PRTAPI creates its own database connection
+        self.data_service = DataService(prt_api)
+
         # Current screen reference
         self.current_screen = None
 
-        # Services to inject into screens (will be expanded in 4A.4)
+        # Services to inject into screens
         self.services = {
             "nav_service": self.nav_service,
-            "data_service": None,  # Will be added in 4A.4
-            "notification_service": None,  # Will be added in 4A.4
+            "data_service": self.data_service,
+            "notification_service": None,  # Will be added later
             "selection_service": None,  # Will wire Phase 2 service
             "validation_service": None,  # Will wire Phase 2 service
         }
@@ -176,6 +176,13 @@ class PRTApp(App):
             logger.info("First run detected - will show setup")
         else:
             logger.info("Existing installation detected")
+
+        # Navigate to home screen
+        self.set_timer(0.1, self._go_to_home)
+
+    async def _go_to_home(self) -> None:
+        """Navigate to home screen."""
+        await self.switch_screen("home")
 
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
@@ -371,3 +378,14 @@ def extend_database():
 
 # Apply database extensions on import
 extend_database()
+
+
+# Development runner
+def main():
+    """Run the PRT TUI application."""
+    app = PRTApp()
+    app.run()
+
+
+if __name__ == "__main__":
+    main()

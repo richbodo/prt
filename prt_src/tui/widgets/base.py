@@ -14,7 +14,7 @@ from textual.timer import Timer
 from textual.widgets import Button, Label, Static
 
 from prt_src.logging_config import get_logger
-from prt_src.tui.app import AppMode
+from prt_src.tui.types import AppMode
 
 logger = get_logger(__name__)
 

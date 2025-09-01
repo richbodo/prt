@@ -5,7 +5,7 @@ and ESC intent handling. Uses composition over inheritance with
 injected services.
 """
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -28,7 +28,7 @@ class EscapeIntent(Enum):
     CUSTOM = "custom"  # Screen handles ESC itself
 
 
-class BaseScreen(Container, ABC):
+class BaseScreen(Container):
     """Base class for all TUI screens.
 
     Thin base with lifecycle hooks and slot configuration.

@@ -8,7 +8,8 @@ from unittest.mock import Mock, patch
 import pytest
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.tui.app import AppMode, FirstRunHandler, PRTApp
+from prt_src.tui.app import FirstRunHandler, PRTApp
+from prt_src.tui.types import AppMode
 
 
 class TestPRTApp:
