@@ -16,7 +16,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from prt_src.db import create_database
-from utils.setup_database import initialize_database, setup_database
+from utils.setup_database import initialize_database
+from utils.setup_database import setup_database
 
 
 class TestSetupDatabase:

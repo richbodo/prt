@@ -6,14 +6,22 @@ Only shows when no "You" contact exists.
 
 from typing import Optional
 
-from textual import events, on
+from textual import events
+from textual import on
 from textual.app import ComposeResult
-from textual.containers import Center, Container, Horizontal, Vertical
-from textual.widgets import Button, Input, Label, Static
+from textual.containers import Center
+from textual.containers import Container
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -405,7 +413,7 @@ class WizardScreen(BaseScreen):
         name = self.name_input.value.strip()
         if not name:
             if self.notification_service:
-                self.notification_service.show_warning("Please enter your name")
+                await self.notification_service.show_warning("Please enter your name")
             return
 
         try:
@@ -416,14 +424,14 @@ class WizardScreen(BaseScreen):
                     self.you_contact_name = name
                     self.you_contact_created = True
                     if self.notification_service:
-                        self.notification_service.show_success(f"Welcome, {name}!")
+                        await self.notification_service.show_success(f"Welcome, {name}!")
 
                     # Continue to options
                     self.current_step = self.STEP_OPTIONS
                     await self._render_current_step()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create your profile")
+                        await self.notification_service.show_error("Failed to create your profile")
             else:
                 # Fallback to creating through data service
                 contact_data = {
@@ -437,19 +445,19 @@ class WizardScreen(BaseScreen):
                     self.you_contact_name = name
                     self.you_contact_created = True
                     if self.notification_service:
-                        self.notification_service.show_success(f"Welcome, {name}!")
+                        await self.notification_service.show_success(f"Welcome, {name}!")
 
                     # Continue to options
                     self.current_step = self.STEP_OPTIONS
                     await self._render_current_step()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create your profile")
+                        await self.notification_service.show_error("Failed to create your profile")
 
         except Exception as e:
             logger.error(f"Failed to create 'You' contact: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to create your profile")
+                await self.notification_service.show_error("Failed to create your profile")
 
     async def _skip_create_you(self) -> None:
         """Skip creating You contact."""
@@ -459,7 +467,7 @@ class WizardScreen(BaseScreen):
     async def _handle_import_takeout(self) -> None:
         """Handle import Google Takeout option."""
         if self.notification_service:
-            self.notification_service.show_info("Navigating to import screen...")
+            await self.notification_service.show_info("Navigating to import screen...")
 
         # Navigate to import screen
         if self.nav_service:
@@ -473,7 +481,7 @@ class WizardScreen(BaseScreen):
         """Handle load demo data option."""
         try:
             if self.notification_service:
-                self.notification_service.show_info("Loading demo data...")
+                await self.notification_service.show_info("Loading demo data...")
 
             # Load demo fixtures using the test fixtures
             from tests.fixtures import create_fixture_data
@@ -485,12 +493,12 @@ class WizardScreen(BaseScreen):
                 if fixture_data:
                     if self.notification_service:
                         contacts_count = len(fixture_data.get("contacts", []))
-                        self.notification_service.show_success(
+                        await self.notification_service.show_success(
                             f"Loaded {contacts_count} demo contacts with relationships!"
                         )
                 else:
                     if self.notification_service:
-                        self.notification_service.show_warning("Demo data may already exist")
+                        await self.notification_service.show_warning("Demo data may already exist")
 
             # Continue to complete step
             self.current_step = self.STEP_COMPLETE
@@ -499,7 +507,7 @@ class WizardScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load demo data: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to load demo data")
+                await self.notification_service.show_error("Failed to load demo data")
 
             # Still continue to complete step
             self.current_step = self.STEP_COMPLETE
@@ -508,7 +516,7 @@ class WizardScreen(BaseScreen):
     async def _handle_start_empty(self) -> None:
         """Handle start empty option."""
         if self.notification_service:
-            self.notification_service.show_info("Starting with empty database")
+            await self.notification_service.show_info("Starting with empty database")
 
         # Go directly to complete step
         self.current_step = self.STEP_COMPLETE
@@ -517,7 +525,7 @@ class WizardScreen(BaseScreen):
     async def _finish_wizard(self) -> None:
         """Finish wizard and go to home screen."""
         if self.notification_service:
-            self.notification_service.show_success("Setup complete! Welcome to PRT!")
+            await self.notification_service.show_success("Setup complete! Welcome to PRT!")
 
         # Navigate to home screen
         if self.nav_service:

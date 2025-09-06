@@ -3,7 +3,9 @@
 Lightweight TDD for search and filter functionality.
 """
 
-from prt_src.tui.widgets.search_filter import FilterPanel, SearchableList, SearchBar
+from prt_src.tui.widgets.search_filter import FilterPanel
+from prt_src.tui.widgets.search_filter import SearchableList
+from prt_src.tui.widgets.search_filter import SearchBar
 
 
 class TestSearchBar:

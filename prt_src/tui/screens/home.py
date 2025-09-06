@@ -10,8 +10,10 @@ from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
-from prt_src.tui.widgets.navigation_menu import MenuItem, NavigationMenu
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
+from prt_src.tui.widgets.navigation_menu import MenuItem
+from prt_src.tui.widgets.navigation_menu import NavigationMenu
 
 logger = get_logger(__name__)
 

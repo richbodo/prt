@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Optional
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM
+    from transformers import AutoTokenizer
 
 # Default model – can be overridden in tests by monkeypatching the constant
 _MODEL_NAME = "gpt-oss-20b"
 
-_tokenizer: Optional["AutoTokenizer"] = None
-_model: Optional["AutoModelForCausalLM"] = None
+_tokenizer: Optional[AutoTokenizer] = None
+_model: Optional[AutoModelForCausalLM] = None
 _generator = None
 
 
@@ -32,7 +35,9 @@ def _ensure_pipeline(config: Any):
     if _generator is None:
         # Import heavy deps lazily so the module can be imported without them
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+        from transformers import AutoModelForCausalLM
+        from transformers import AutoTokenizer
+        from transformers import pipeline
 
         auth = _get_hf_token(config)
         _tokenizer = AutoTokenizer.from_pretrained(_MODEL_NAME, use_auth_token=auth)

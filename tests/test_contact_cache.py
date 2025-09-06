@@ -4,7 +4,8 @@ import time
 
 import pytest
 
-from prt_src.core.search_cache.contact_cache import CachedContact, ContactSearchCache
+from prt_src.core.search_cache.contact_cache import CachedContact
+from prt_src.core.search_cache.contact_cache import ContactSearchCache
 
 
 @pytest.fixture

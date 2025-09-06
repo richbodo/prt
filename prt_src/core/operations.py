@@ -1,6 +1,8 @@
 """Main operations orchestrator for PRT core business logic."""
 
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 from .contacts import ContactOperations
 from .database import DatabaseOperations

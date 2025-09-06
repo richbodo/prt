@@ -5,7 +5,9 @@ Supports single-key activation and vim-style navigation.
 """
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable
+from typing import List
+from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Vertical

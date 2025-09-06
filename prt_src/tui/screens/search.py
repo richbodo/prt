@@ -4,16 +4,22 @@ Full-text search with filters and export.
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
+from textual.containers import Vertical
 from textual.events import Key
 from textual.widgets import Input
 
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
-from prt_src.tui.widgets.search_filter import SearchResultList, SearchScopeFilter
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
+from prt_src.tui.widgets.search_filter import SearchResultList
+from prt_src.tui.widgets.search_filter import SearchScopeFilter
 
 
 class SearchScreen(BaseScreen):
@@ -182,7 +188,7 @@ class SearchScreen(BaseScreen):
         try:
             if not self.data_service:
                 if self.notification_service:
-                    self.notification_service.show_error("Data service not available")
+                    await self.notification_service.show_error("Data service not available")
                 return
 
             # Show searching status
@@ -217,14 +223,14 @@ class SearchScreen(BaseScreen):
             if self.notification_service:
                 total = search_results.get("total", 0)
                 search_time = search_results.get("stats", {}).get("search_time", 0.0)
-                self.notification_service.show_info(
+                await self.notification_service.show_info(
                     f"Search completed: {total} results in {search_time:.2f}s"
                 )
 
         except Exception as e:
             # Show error
             if self.notification_service:
-                self.notification_service.show_error(f"Search failed: {e}")
+                await self.notification_service.show_error(f"Search failed: {e}")
 
             # Show empty results
             error_results = {

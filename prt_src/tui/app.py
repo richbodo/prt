@@ -9,15 +9,19 @@ from pathlib import Path
 from typing import Optional
 
 from textual import events
-from textual.app import App, ComposeResult
+from textual.app import App
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Footer
+from textual.widgets import Header
+from textual.widgets import Static
 
 from prt_src.config import load_config
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
-from prt_src.tui.screens import EscapeIntent, create_screen
+from prt_src.tui.screens import EscapeIntent
+from prt_src.tui.screens import create_screen
 from prt_src.tui.services.navigation import NavigationService
 from prt_src.tui.types import AppMode
 
@@ -113,7 +117,7 @@ class PRTApp(App):
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
-        
+
         # Track current container for proper cleanup
         self.current_container_id: Optional[str] = None
 
@@ -324,8 +328,8 @@ class PRTApp(App):
         2. 'You' contact is created if missing (on first run)
         """
         try:
-            # Use set_timer to run async initialization after app is mounted
-            self.set_timer(0.05, self._async_initialize_database_data)
+            # Use call_later to run async initialization after app is mounted
+            self.call_later(self._async_initialize_database_data)
         except Exception as e:
             logger.error(f"Failed to schedule database data initialization: {e}")
 

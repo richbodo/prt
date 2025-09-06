@@ -5,8 +5,14 @@ for fast autocomplete suggestions, optimized for 5000+ contacts.
 """
 
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from dataclasses import dataclass
+from dataclasses import field
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 
 import pygtrie
 from lru import LRU

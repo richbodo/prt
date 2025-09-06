@@ -4,10 +4,13 @@ Provides a scrollable list of contacts with vim-style navigation
 and selection support.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Vertical, VerticalScroll
+from textual.containers import Vertical
+from textual.containers import VerticalScroll
 from textual.reactive import reactive
 from textual.widgets import Static
 

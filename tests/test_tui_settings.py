@@ -3,7 +3,9 @@
 Lightweight TDD for settings management functionality.
 """
 
-from prt_src.tui.widgets.settings import SettingItem, SettingsCategory, SettingsScreen
+from prt_src.tui.widgets.settings import SettingItem
+from prt_src.tui.widgets.settings import SettingsCategory
+from prt_src.tui.widgets.settings import SettingsScreen
 
 
 class TestSettingItem:

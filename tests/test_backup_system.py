@@ -8,7 +8,8 @@ from sqlalchemy import text
 
 from prt_src.api import PRTAPI
 from prt_src.db import Database
-from prt_src.models import BackupMetadata, Contact
+from prt_src.models import BackupMetadata
+from prt_src.models import Contact
 
 
 @pytest.fixture
@@ -243,16 +244,12 @@ class TestAutoBackupManagement:
         """Test cleaning up old automatic backups."""
         # Create many automatic backups
         for i in range(15):
-            test_db.create_backup_with_metadata(
-                comment=f"Auto backup {i}", is_auto=True
-            )
+            test_db.create_backup_with_metadata(comment=f"Auto backup {i}", is_auto=True)
             time.sleep(0.01)  # Ensure different timestamps
 
         # Create some manual backups (should not be deleted)
         for i in range(3):
-            test_db.create_backup_with_metadata(
-                comment=f"Manual backup {i}", is_auto=False
-            )
+            test_db.create_backup_with_metadata(comment=f"Manual backup {i}", is_auto=False)
 
         # Initial count
         all_backups = test_db.list_backups()
@@ -336,9 +333,7 @@ class TestBackupSecurity:
         test_db.session.close()
         test_db.connect()
         restored_count = (
-            test_db.session.query(Contact)
-            .filter(Contact.name == "Test Contact")
-            .count()
+            test_db.session.query(Contact).filter(Contact.name == "Test Contact").count()
         )
         assert restored_count == 0
 
@@ -387,7 +382,8 @@ class TestBackupMetadata:
         assert backup["size"] == actual_size
 
         # Add substantial data to change file size
-        from prt_src.models import Contact, Note
+        from prt_src.models import Contact
+        from prt_src.models import Note
 
         for i in range(100):
             contact = Contact(

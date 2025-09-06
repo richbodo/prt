@@ -8,7 +8,10 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError

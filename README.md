@@ -15,16 +15,40 @@ PRT will automatically detect if setup is needed and guide you through the proce
 python -m prt_src.cli setup
 ```
 
-## Development Workflow
+## 🛠️ Development Workflow
 
-Easiest thing to do it to just fire up the venv and make sure everything is installed in one command: source ./init.sh.
+### Quick Setup
+```bash
+source ./init.sh    # One command setup - installs everything!
+```
 
-Before checkin: This project uses [pre-commit](https://pre-commit.com/) to run [ruff](https://docs.astral.sh/ruff/) and [black](https://black.readthedocs.io/en/stable/) on staged files. Run these commands before committing to ensure consistent code style.
+### Essential Make Commands
+PRT includes a comprehensive Makefile for common development tasks:
 
 ```bash
-pre-commit install
-pre-commit run --files <file1> <file2>
+# 🚀 Most Used Commands:
+make run             # Launch PRT TUI interface
+make test            # Run test suite quickly  
+make format          # Format code (black + ruff --fix)
+make clean           # Clean build artifacts and cache
+
+# 📋 See all available commands:
+make help           # Show complete command reference
 ```
+
+### Daily Development
+```bash
+# Quick development cycle
+make run             # Test your changes
+make test            # Verify tests pass
+make format          # Auto-format code
+
+# Or use Python directly:
+python -m prt_src    # Launch TUI
+python -m prt_src --debug    # TUI with debug data
+```
+
+**Pre-commit hooks** automatically run `ruff` and `black` on staged files when you commit.
 
 ## Motivation/Purpose: 
 

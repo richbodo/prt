@@ -5,13 +5,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from prt_src.core import (
-    ContactOperations,
-    DatabaseOperations,
-    Operations,
-    RelationshipOperations,
-    SearchOperations,
-)
+from prt_src.core import ContactOperations
+from prt_src.core import DatabaseOperations
+from prt_src.core import Operations
+from prt_src.core import RelationshipOperations
+from prt_src.core import SearchOperations
 
 
 @pytest.fixture
@@ -470,7 +468,8 @@ class TestPlatformAbstraction:
 
     def test_pagination_helper(self):
         """Pagination helper works correctly."""
-        from prt_src.platforms.base import Platform, PlatformCapabilities
+        from prt_src.platforms.base import Platform
+        from prt_src.platforms.base import PlatformCapabilities
 
         # Create a concrete test implementation
         class TestPlatform(Platform):

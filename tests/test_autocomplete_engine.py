@@ -9,13 +9,11 @@ from unittest.mock import MagicMock
 import pytest
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.core.components.autocomplete import (
-    AutocompleteConfig,
-    AutocompleteContext,
-    AutocompleteEngine,
-    Suggestion,
-    SuggestionSource,
-)
+from prt_src.core.components.autocomplete import AutocompleteConfig
+from prt_src.core.components.autocomplete import AutocompleteContext
+from prt_src.core.components.autocomplete import AutocompleteEngine
+from prt_src.core.components.autocomplete import Suggestion
+from prt_src.core.components.autocomplete import SuggestionSource
 
 
 class TestAutocompleteEngine:

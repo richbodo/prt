@@ -5,6 +5,7 @@ allowing the same business logic to run on different platforms
 (terminal, web, mobile).
 """
 
-from .base import Platform, PlatformCapabilities
+from .base import Platform
+from .base import PlatformCapabilities
 
 __all__ = ["Platform", "PlatformCapabilities"]

@@ -1,12 +1,24 @@
 """TUI widgets for the PRT application."""
 
-from .base import ConfirmDialog, ModeAwareWidget, StatusBar, ToastNotification
-from .contact_detail import ContactDetailView, FieldEditor
-from .contact_list import ContactListWidget, ContactRow
-from .navigation_menu import MenuItem, NavigationMenu
-from .relationship import RelationshipEditor, RelationshipGraph, RelationshipList
-from .search_filter import FilterPanel, SearchableList, SearchBar
-from .settings import SettingItem, SettingsCategory, SettingsScreen
+from .base import ConfirmDialog
+from .base import ModeAwareWidget
+from .base import StatusBar
+from .base import ToastNotification
+from .contact_detail import ContactDetailView
+from .contact_detail import FieldEditor
+from .contact_list import ContactListWidget
+from .contact_list import ContactRow
+from .navigation_menu import MenuItem
+from .navigation_menu import NavigationMenu
+from .relationship import RelationshipEditor
+from .relationship import RelationshipGraph
+from .relationship import RelationshipList
+from .search_filter import FilterPanel
+from .search_filter import SearchableList
+from .search_filter import SearchBar
+from .settings import SettingItem
+from .settings import SettingsCategory
+from .settings import SettingsScreen
 
 __all__ = [
     "ModeAwareWidget",

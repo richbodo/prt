@@ -9,11 +9,13 @@ from typing import Optional
 from textual import events
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import DataTable, LoadingIndicator
+from textual.widgets import DataTable
+from textual.widgets import LoadingIndicator
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -157,7 +159,7 @@ class RelationshipsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load relationships: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load relationships: {e}")
+                await self.notification_service.show_error(f"Failed to load relationships: {e}")
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -195,21 +197,21 @@ class RelationshipsScreen(BaseScreen):
                 await self._handle_edit_relationship(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship selected")
+                    await self.notification_service.show_warning("No relationship selected")
         elif key == "d":
             # Delete selected relationship
             if selected_id:
                 await self._handle_delete_relationship(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship selected")
+                    await self.notification_service.show_warning("No relationship selected")
         elif key == "enter":
             # View relationship details
             if selected_id:
                 await self._handle_view_relationship(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship selected")
+                    await self.notification_service.show_warning("No relationship selected")
         else:
             # Let parent handle other keys
             await super().on_key(event)
@@ -232,10 +234,10 @@ class RelationshipsScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to relationship form: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open relationship form")
+                    await self.notification_service.show_error("Failed to open relationship form")
         else:
             if self.notification_service:
-                self.notification_service.show_error("Navigation service not available")
+                await self.notification_service.show_error("Navigation service not available")
 
     async def _handle_edit_relationship(self, relationship_id: int) -> None:
         """Handle edit relationship action."""
@@ -257,10 +259,10 @@ class RelationshipsScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to relationship form: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open relationship form")
+                    await self.notification_service.show_error("Failed to open relationship form")
         else:
             if self.notification_service:
-                self.notification_service.show_error("Navigation service not available")
+                await self.notification_service.show_error("Navigation service not available")
 
     async def _handle_delete_relationship(self, relationship_id: int) -> None:
         """Handle delete relationship action."""
@@ -286,25 +288,25 @@ class RelationshipsScreen(BaseScreen):
                     success = await self.data_service.delete_relationship(relationship_id)
 
                     if success:
-                        self.notification_service.show_success(f"Deleted {relationship_desc}")
+                        await self.notification_service.show_success(f"Deleted {relationship_desc}")
                         # Reload the relationships list
                         await self._load_relationships()
                     else:
-                        self.notification_service.show_error(
+                        await self.notification_service.show_error(
                             f"Failed to delete {relationship_desc}"
                         )
 
             except Exception as e:
                 logger.error(f"Failed to delete relationship {relationship_id}: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to delete relationship")
+                    await self.notification_service.show_error("Failed to delete relationship")
 
     async def _handle_view_relationship(self, relationship_id: int) -> None:
         """Handle view relationship details action."""
         logger.info(f"View relationship {relationship_id} requested")
 
         if self.notification_service:
-            self.notification_service.show_info(
+            await self.notification_service.show_info(
                 "View relationship details functionality coming soon"
             )
 

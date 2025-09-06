@@ -4,17 +4,26 @@ Displays relationship types in a DataTable with management capabilities includin
 add, edit, delete, and usage count display.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Checkbox, DataTable, Input, LoadingIndicator, Static
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Checkbox
+from textual.widgets import DataTable
+from textual.widgets import Input
+from textual.widgets import LoadingIndicator
+from textual.widgets import Static
 
 from prt_src.core.components.validation import ValidationSystem
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -145,7 +154,9 @@ class RelationshipTypesScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load relationship types: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load relationship types: {e}")
+                await self.notification_service.show_error(
+                    f"Failed to load relationship types: {e}"
+                )
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -183,21 +194,21 @@ class RelationshipTypesScreen(BaseScreen):
                 await self._handle_edit_type(selected_type_key)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship type selected")
+                    await self.notification_service.show_warning("No relationship type selected")
         elif key == "d":
             # Delete selected relationship type
             if selected_type_key:
                 await self._handle_delete_type(selected_type_key)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship type selected")
+                    await self.notification_service.show_warning("No relationship type selected")
         elif key == "enter":
             # View type details
             if selected_type_key:
                 await self._handle_view_type(selected_type_key)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No relationship type selected")
+                    await self.notification_service.show_warning("No relationship type selected")
         else:
             # Let parent handle other keys
             await super().on_key(event)
@@ -226,7 +237,7 @@ class RelationshipTypesScreen(BaseScreen):
 
         if usage_count > 0:
             if self.notification_service:
-                self.notification_service.show_error(
+                await self.notification_service.show_error(
                     f"Cannot delete relationship type '{type_key}' - it is used in {usage_count} relationships"
                 )
             return
@@ -252,20 +263,20 @@ class RelationshipTypesScreen(BaseScreen):
                     success = await self.data_service.delete_relationship_type(type_key)
 
                     if success:
-                        self.notification_service.show_success(
+                        await self.notification_service.show_success(
                             f"Deleted relationship type '{type_key}'"
                         )
                         # Reload the types list
                         await self._load_relationship_types()
                     else:
-                        self.notification_service.show_error(
+                        await self.notification_service.show_error(
                             f"Failed to delete relationship type '{type_key}'"
                         )
 
             except Exception as e:
                 logger.error(f"Failed to delete relationship type {type_key}: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to delete relationship type")
+                    await self.notification_service.show_error("Failed to delete relationship type")
 
     async def _handle_view_type(self, type_key: str) -> None:
         """Handle view relationship type details action."""
@@ -280,7 +291,7 @@ class RelationshipTypesScreen(BaseScreen):
 
         if not type_data:
             if self.notification_service:
-                self.notification_service.show_error("Relationship type not found")
+                await self.notification_service.show_error("Relationship type not found")
             return
 
         # Show type details in a dialog
@@ -308,12 +319,12 @@ class RelationshipTypesScreen(BaseScreen):
                         break
 
                 if not existing_type:
-                    self.notification_service.show_error("Relationship type not found")
+                    await self.notification_service.show_error("Relationship type not found")
                     return
 
             # This is a simplified dialog implementation
             # In a full implementation, you would create a proper form dialog
-            self.notification_service.show_info(
+            await self.notification_service.show_info(
                 f"{title} dialog functionality needs to be implemented with proper form widgets"
             )
 
@@ -327,7 +338,7 @@ class RelationshipTypesScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to show type dialog: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to open type dialog")
+                await self.notification_service.show_error("Failed to open type dialog")
 
     async def _show_type_details_dialog(self, type_data: Dict) -> None:
         """Show dialog with relationship type details."""
@@ -351,7 +362,7 @@ Usage Count: {usage_count}"""
 
             # Show details in an info dialog
             # In a full implementation, you might want a custom dialog widget
-            self.notification_service.show_info(details)
+            await self.notification_service.show_info(details)
 
         except Exception as e:
             logger.error(f"Failed to show type details: {e}")

@@ -1,17 +1,16 @@
 """Tests for relationship management CLI functionality."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from rich.console import Console
 
-from prt_src.cli import (
-    handle_add_relationship,
-    handle_delete_relationship,
-    handle_list_relationship_types,
-    handle_relationships_menu,
-    handle_view_relationships,
-)
+from prt_src.cli import handle_add_relationship
+from prt_src.cli import handle_delete_relationship
+from prt_src.cli import handle_list_relationship_types
+from prt_src.cli import handle_relationships_menu
+from prt_src.cli import handle_view_relationships
 
 
 @pytest.fixture

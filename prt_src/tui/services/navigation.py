@@ -6,7 +6,12 @@ and navigation history tracking.
 
 from collections import deque
 from dataclasses import dataclass
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Deque
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 from prt_src.logging_config import get_logger
 

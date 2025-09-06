@@ -1,9 +1,14 @@
 """Base platform abstraction classes."""
 
-from abc import ABC, abstractmethod
+from abc import ABC
+from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 
 @dataclass
@@ -37,7 +42,6 @@ class Platform(ABC):
         Returns:
             PlatformCapabilities describing what this platform can do
         """
-        pass
 
     @abstractmethod
     def get_input(
@@ -58,7 +62,6 @@ class Platform(ABC):
         Returns:
             User input string
         """
-        pass
 
     @abstractmethod
     def display_output(
@@ -71,7 +74,6 @@ class Platform(ABC):
             style: Optional style (e.g., "error", "success", "warning")
             format: Output format ("text", "table", "json")
         """
-        pass
 
     @abstractmethod
     def get_file_path(
@@ -90,7 +92,6 @@ class Platform(ABC):
         Returns:
             Selected file path or None if cancelled
         """
-        pass
 
     @abstractmethod
     def get_export_path(self, default_name: str, extension: str = ".json") -> Optional[Path]:
@@ -103,7 +104,6 @@ class Platform(ABC):
         Returns:
             Export path or None if cancelled
         """
-        pass
 
     @abstractmethod
     def show_progress(self, message: str, current: int = 0, total: int = 100) -> None:
@@ -114,7 +114,6 @@ class Platform(ABC):
             current: Current progress value
             total: Total value for completion
         """
-        pass
 
     @abstractmethod
     def confirm(self, message: str, default: bool = False) -> bool:
@@ -127,7 +126,6 @@ class Platform(ABC):
         Returns:
             True if confirmed, False otherwise
         """
-        pass
 
     def show_error(self, message: str) -> None:
         """Display error message.
@@ -164,7 +162,6 @@ class Platform(ABC):
     @abstractmethod
     def clear_screen(self) -> None:
         """Clear the display/screen."""
-        pass
 
     def get_clipboard_text(self) -> Optional[str]:
         """Get text from clipboard.
