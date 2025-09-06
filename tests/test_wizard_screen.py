@@ -136,23 +136,37 @@ class TestWizardScreen:
         mock_first_run_handler = MagicMock()
         mock_first_run_handler.create_you_contact.return_value = {"id": 1, "name": "John Doe"}
 
-        with patch("builtins.hasattr", return_value=True):
-            with patch.object(
-                type(wizard_screen), "app", new_callable=lambda: MagicMock()
-            ) as mock_app:
-                mock_app.first_run_handler = mock_first_run_handler
-                wizard_screen._render_current_step = AsyncMock()
+        # Test the logic by mocking the app interaction via monkey patching
+        wizard_screen._render_current_step = AsyncMock()
+        
+        # Create a mock app object and temporarily assign it
+        mock_app = MagicMock()
+        mock_app.first_run_handler = mock_first_run_handler
+        
+        # Temporarily override the app property using setattr
+        original_app_property = type(wizard_screen).app
+        
+        # Create a simple property that returns our mock
+        def mock_app_property(self):
+            return mock_app
+        
+        # Temporarily replace the app property
+        type(wizard_screen).app = property(mock_app_property)
+        
+        try:
+            await wizard_screen._create_you_contact()
 
-                await wizard_screen._create_you_contact()
+            # Check that contact was created
+            assert wizard_screen.you_contact_name == "John Doe"
+            assert wizard_screen.you_contact_created is True
+            assert wizard_screen.current_step == WizardScreen.STEP_OPTIONS
 
-                # Check that contact was created
-                assert wizard_screen.you_contact_name == "John Doe"
-                assert wizard_screen.you_contact_created is True
-                assert wizard_screen.current_step == WizardScreen.STEP_OPTIONS
-
-                mock_services["notification_service"].show_success.assert_called_with(
-                    "Welcome, John Doe!"
-                )
+            mock_services["notification_service"].show_success.assert_called_with(
+                "Welcome, John Doe!"
+            )
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_create_you_contact_fallback_to_data_service(self, wizard_screen, mock_services):
@@ -161,18 +175,25 @@ class TestWizardScreen:
         wizard_screen.name_input = MagicMock()
         wizard_screen.name_input.value = "Jane Smith"
 
-        # Mock app without first_run_handler using patch
-        with patch.object(wizard_screen, "app") as mock_app:
-            # Don't set first_run_handler to simulate fallback
-            mock_app.first_run_handler = None
+        # Mock app without first_run_handler using monkey patching
+        wizard_screen._render_current_step = AsyncMock()
+        
+        # Mock data service
+        mock_services["data_service"].create_contact = AsyncMock(
+            return_value={"id": 2, "name": "Jane Smith"}
+        )
 
-            # Mock data service
-            mock_services["data_service"].create_contact = AsyncMock(
-                return_value={"id": 2, "name": "Jane Smith"}
-            )
-
-            wizard_screen._render_current_step = AsyncMock()
-
+        # Create mock app without first_run_handler to test fallback
+        mock_app = MagicMock()
+        # Remove the first_run_handler attribute entirely so hasattr returns False
+        if hasattr(mock_app, 'first_run_handler'):
+            delattr(mock_app, 'first_run_handler')
+        
+        # Temporarily replace the app property
+        original_app_property = type(wizard_screen).app
+        type(wizard_screen).app = property(lambda self: mock_app)
+        
+        try:
             await wizard_screen._create_you_contact()
 
             # Check that fallback was used
@@ -182,6 +203,9 @@ class TestWizardScreen:
             # Check data service was called with correct data
             expected_data = {"first_name": "Jane", "last_name": "Smith", "is_you": True}
             mock_services["data_service"].create_contact.assert_called_with(expected_data)
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_skip_create_you(self, wizard_screen):
@@ -196,9 +220,15 @@ class TestWizardScreen:
     @pytest.mark.asyncio
     async def test_handle_import_takeout(self, wizard_screen, mock_services):
         """Test handling import takeout option."""
-        with patch.object(wizard_screen, "app") as mock_app:
-            mock_app.switch_screen = AsyncMock()
-
+        # Mock app.switch_screen using monkey patching
+        mock_app = MagicMock()
+        mock_app.switch_screen = AsyncMock()
+        
+        # Temporarily replace the app property
+        original_app_property = type(wizard_screen).app
+        type(wizard_screen).app = property(lambda self: mock_app)
+        
+        try:
             await wizard_screen._handle_import_takeout()
 
             mock_services["notification_service"].show_info.assert_called_with(
@@ -206,6 +236,9 @@ class TestWizardScreen:
             )
             mock_services["nav_service"].push.assert_called_with("import")
             mock_app.switch_screen.assert_called_with("import")
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_handle_load_demo_success(self, wizard_screen, mock_services):
@@ -256,9 +289,15 @@ class TestWizardScreen:
     @pytest.mark.asyncio
     async def test_finish_wizard(self, wizard_screen, mock_services):
         """Test finishing the wizard."""
-        with patch.object(wizard_screen, "app") as mock_app:
-            mock_app.switch_screen = AsyncMock()
-
+        # Mock app.switch_screen using monkey patching
+        mock_app = MagicMock()
+        mock_app.switch_screen = AsyncMock()
+        
+        # Temporarily replace the app property
+        original_app_property = type(wizard_screen).app
+        type(wizard_screen).app = property(lambda self: mock_app)
+        
+        try:
             await wizard_screen._finish_wizard()
 
             mock_services["notification_service"].show_success.assert_called_with(
@@ -266,6 +305,9 @@ class TestWizardScreen:
             )
             mock_services["nav_service"].go_home.assert_called_once()
             mock_app.switch_screen.assert_called_with("home")
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_handle_enter_welcome_step(self, wizard_screen):
@@ -341,16 +383,27 @@ class TestWizardScreen:
         wizard_screen.name_input = MagicMock()
         wizard_screen.name_input.value = "John Doe"
 
-        # Mock app to raise an exception
-        with patch.object(wizard_screen, "app") as mock_app:
-            mock_app.first_run_handler.create_you_contact.side_effect = Exception("Database error")
-
+        # Mock app to raise an exception using monkey patching
+        mock_first_run_handler = MagicMock()
+        mock_first_run_handler.create_you_contact.side_effect = Exception("Database error")
+        
+        mock_app = MagicMock()
+        mock_app.first_run_handler = mock_first_run_handler
+        
+        # Temporarily replace the app property
+        original_app_property = type(wizard_screen).app
+        type(wizard_screen).app = property(lambda self: mock_app)
+        
+        try:
             await wizard_screen._create_you_contact()
 
             # Should show error notification
             mock_services["notification_service"].show_error.assert_called_with(
                 "Failed to create your profile"
             )
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_create_you_contact_single_name(self, wizard_screen, mock_services):
@@ -360,21 +413,30 @@ class TestWizardScreen:
         wizard_screen.name_input.value = "Madonna"
 
         # Mock app without first_run_handler (fallback to data service)
-        with patch.object(wizard_screen, "app") as mock_app:
-            mock_app.first_run_handler = None
+        mock_services["data_service"].create_contact = AsyncMock(
+            return_value={"id": 1, "name": "Madonna"}
+        )
+        wizard_screen._render_current_step = AsyncMock()
 
-            # Mock data service
-            mock_services["data_service"].create_contact = AsyncMock(
-                return_value={"id": 1, "name": "Madonna"}
-            )
-
-            wizard_screen._render_current_step = AsyncMock()
-
+        # Create mock app without first_run_handler to test fallback
+        mock_app = MagicMock()
+        # Remove the first_run_handler attribute entirely so hasattr returns False
+        if hasattr(mock_app, 'first_run_handler'):
+            delattr(mock_app, 'first_run_handler')
+        
+        # Temporarily replace the app property
+        original_app_property = type(wizard_screen).app
+        type(wizard_screen).app = property(lambda self: mock_app)
+        
+        try:
             await wizard_screen._create_you_contact()
 
             # Check data service was called with single name
             expected_data = {"first_name": "Madonna", "last_name": "", "is_you": True}
             mock_services["data_service"].create_contact.assert_called_with(expected_data)
+        finally:
+            # Restore the original app property
+            type(wizard_screen).app = original_app_property
 
     @pytest.mark.asyncio
     async def test_on_show_reset_on_first_run(self, wizard_screen):
