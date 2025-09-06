@@ -113,6 +113,9 @@ class PRTApp(App):
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
+        
+        # Track current container for proper cleanup
+        self.current_container_id: Optional[str] = None
 
         # Load config and initialize database
         try:
@@ -293,18 +296,20 @@ class PRTApp(App):
             logger.error(f"Failed to create screen: {screen_name}")
             return
 
-        # Hide current screen
-        if self.current_screen:
+        # Hide current screen and remove its container
+        if self.current_screen and self.current_container_id:
             await self.current_screen.on_hide()
             try:
-                self.query_one("#main-container").remove()
+                container = self.query_one(f"#{self.current_container_id}")
+                container.remove()
+                logger.debug(f"Removed container: {self.current_container_id}")
             except Exception as e:
-                logger.warning(f"Failed to remove existing container: {e}")
+                logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
 
         # Mount new screen with unique container ID
-        container_id = f"main-container-{uuid.uuid4().hex[:8]}"
+        self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id=container_id))
+        await self.mount(Container(new_screen, id=self.current_container_id))
 
         # Show new screen
         await new_screen.on_show()

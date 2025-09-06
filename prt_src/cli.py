@@ -2711,6 +2711,19 @@ def run_interactive_cli(debug: bool = False):
             smart_continue_prompt("error")
 
 
+def _launch_tui_with_fallback(debug: bool = False) -> None:
+    """Launch TUI with fallback to classic CLI on failure."""
+    try:
+        from prt_src.tui.app import PRTApp
+        
+        app = PRTApp()
+        app.run()
+    except Exception as e:
+        console.print(f"Failed to launch TUI: {e}", style="red")
+        console.print("Falling back to classic CLI...", style="yellow")
+        run_interactive_cli(debug=debug)
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -2722,28 +2735,9 @@ def main(
     if ctx.invoked_subcommand is None:
         if classic:
             run_interactive_cli(debug=debug)
-        elif tui:
-            # Launch TUI explicitly when --tui is used
-            try:
-                from prt_src.tui.app import PRTApp
-
-                app = PRTApp()
-                app.run()
-            except Exception as e:
-                console.print(f"Failed to launch TUI: {e}", style="red")
-                console.print("Falling back to classic CLI...", style="yellow")
-                run_interactive_cli(debug=debug)
         else:
-            # Launch TUI by default (when neither --classic nor --tui specified explicitly)
-            try:
-                from prt_src.tui.app import PRTApp
-
-                app = PRTApp()
-                app.run()
-            except Exception as e:
-                console.print(f"Failed to launch TUI: {e}", style="red")
-                console.print("Falling back to classic CLI...", style="yellow")
-                run_interactive_cli(debug=debug)
+            # Launch TUI by default or when explicitly requested
+            _launch_tui_with_fallback(debug=debug)
 
 
 @app.command()
