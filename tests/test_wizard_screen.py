@@ -16,10 +16,19 @@ class TestWizardScreen:
     @pytest.fixture
     def mock_services(self):
         """Create mock services for testing."""
+        # Create AsyncMock for notification service since its methods are async
+        notification_mock = AsyncMock()
+        # Set up common async methods that return coroutines
+        notification_mock.show_error = AsyncMock()
+        notification_mock.show_success = AsyncMock()
+        notification_mock.show_warning = AsyncMock()
+        notification_mock.show_info = AsyncMock()
+        notification_mock.show_confirm_dialog = AsyncMock()
+        
         return {
             "nav_service": MagicMock(),
-            "data_service": MagicMock(),
-            "notification_service": MagicMock(),
+            "data_service": AsyncMock(),  # Also make data_service async since many methods are async
+            "notification_service": notification_mock,
         }
 
     @pytest.fixture
