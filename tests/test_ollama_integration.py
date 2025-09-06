@@ -2,9 +2,11 @@
 Tests for Ollama LLM integration.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
-from prt_src.llm_ollama import OllamaLLM, Tool
+from prt_src.llm_ollama import OllamaLLM
+from prt_src.llm_ollama import Tool
 
 
 class TestOllamaLLM:

@@ -1,15 +1,15 @@
 """Test unified search API functionality."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
-from prt_src.core.search_index.indexer import EntityType, SearchResult
-from prt_src.core.search_unified import (
-    SearchPriority,
-    UnifiedSearchAPI,
-    UnifiedSearchResult,
-)
+from prt_src.core.search_index.indexer import EntityType
+from prt_src.core.search_index.indexer import SearchResult
+from prt_src.core.search_unified import SearchPriority
+from prt_src.core.search_unified import UnifiedSearchAPI
+from prt_src.core.search_unified import UnifiedSearchResult
 
 
 @pytest.fixture
@@ -374,7 +374,8 @@ class TestUnifiedSearchAPI:
         assert api.contact_cache is None
 
         # Should still work with FTS only - mock to return at least one result
-        from prt_src.core.search_index.indexer import EntityType, SearchResult
+        from prt_src.core.search_index.indexer import EntityType
+        from prt_src.core.search_index.indexer import SearchResult
 
         api.indexer.search = MagicMock(
             return_value=[SearchResult(entity_type=EntityType.CONTACT, entity_id=1, title="Test")]

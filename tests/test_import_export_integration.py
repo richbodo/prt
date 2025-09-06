@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from prt_src.tui.screens import SCREEN_REGISTRY, create_screen
+from prt_src.tui.screens import SCREEN_REGISTRY
+from prt_src.tui.screens import create_screen
 
 
 class TestImportExportIntegration:

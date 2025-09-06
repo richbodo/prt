@@ -5,9 +5,13 @@ tags, notes, and relationships. UI-agnostic and reusable across platforms.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -16,8 +20,6 @@ logger = get_logger(__name__)
 
 class ValidationError(Exception):
     """Custom exception for validation errors."""
-
-    pass
 
 
 @dataclass

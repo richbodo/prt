@@ -5,18 +5,26 @@ contact selection, relationship type selection, and date fields.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Input, LoadingIndicator, Select, Static
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import LoadingIndicator
+from textual.widgets import Select
+from textual.widgets import Static
 
 from prt_src.core.components.autocomplete import AutocompleteEngine
 from prt_src.core.components.validation import ValidationSystem
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -199,14 +207,14 @@ class RelationshipFormScreen(BaseScreen):
                 else:
                     logger.error(f"Relationship {self.relationship_id} not found for editing")
                     if self.notification_service:
-                        self.notification_service.show_error("Relationship not found")
+                        await self.notification_service.show_error("Relationship not found")
 
             logger.info(f"Loaded form data for {self.mode} mode")
 
         except Exception as e:
             logger.error(f"Failed to load form data: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load form: {e}")
+                await self.notification_service.show_error(f"Failed to load form: {e}")
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -387,7 +395,7 @@ class RelationshipFormScreen(BaseScreen):
             if self.validation_message:
                 self.validation_message.update(error_message)
             if self.notification_service:
-                self.notification_service.show_error("Please fix validation errors")
+                await self.notification_service.show_error("Please fix validation errors")
             return
 
         # Clear validation message
@@ -415,7 +423,7 @@ class RelationshipFormScreen(BaseScreen):
                         from_contact_name = self._get_contact_name(form_data["from_contact_id"])
                         to_contact_name = self._get_contact_name(form_data["to_contact_id"])
                         rel_type = form_data["type_key"]
-                        self.notification_service.show_success(
+                        await self.notification_service.show_success(
                             f"Created relationship: {from_contact_name} → {rel_type} → {to_contact_name}"
                         )
 
@@ -423,7 +431,7 @@ class RelationshipFormScreen(BaseScreen):
                     await self._navigate_back()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create relationship")
+                        await self.notification_service.show_error("Failed to create relationship")
 
             elif self.mode == "edit":
                 # Update existing relationship
@@ -437,18 +445,18 @@ class RelationshipFormScreen(BaseScreen):
                 if success:
                     self.clear_unsaved()
                     if self.notification_service:
-                        self.notification_service.show_success("Updated relationship")
+                        await self.notification_service.show_success("Updated relationship")
 
                     # Navigate back to relationships list
                     await self._navigate_back()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to update relationship")
+                        await self.notification_service.show_error("Failed to update relationship")
 
         except Exception as e:
             logger.error(f"Failed to save relationship: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to save relationship: {e}")
+                await self.notification_service.show_error(f"Failed to save relationship: {e}")
 
     def _collect_form_data(self) -> Dict:
         """Collect data from form fields."""
@@ -604,7 +612,7 @@ class RelationshipFormScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate back: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to navigate back")
+                    await self.notification_service.show_error("Failed to navigate back")
 
 
 # Register this screen

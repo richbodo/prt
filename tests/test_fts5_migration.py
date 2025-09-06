@@ -1,7 +1,8 @@
 """Test FTS5 full-text search migration and functionality."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -111,7 +112,7 @@ class TestFTS5Migration:
         assert migration_path.exists(), f"Migration file should exist at {migration_path}"
 
         # Read content
-        with open(migration_path, "r") as f:
+        with open(migration_path) as f:
             content = f.read()
 
         # Check for essential FTS5 elements
@@ -173,7 +174,7 @@ class TestFTS5Integration:
         """Verify trigger names follow convention."""
         migration_path = Path(__file__).parent.parent / "migrations" / "add_fts5_support.sql"
 
-        with open(migration_path, "r") as f:
+        with open(migration_path) as f:
             content = f.read()
 
         expected_triggers = [
@@ -195,7 +196,7 @@ class TestFTS5Integration:
         """Verify indexes are created for FTS join operations."""
         migration_path = Path(__file__).parent.parent / "migrations" / "add_fts5_support.sql"
 
-        with open(migration_path, "r") as f:
+        with open(migration_path) as f:
             content = f.read()
 
         expected_indexes = [

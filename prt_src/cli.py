@@ -11,17 +11,22 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm
+from rich.prompt import Prompt
 from rich.table import Table
 from rich.text import Text
 
-from migrations.setup_database import initialize_database, setup_database
+from migrations.setup_database import initialize_database
+from migrations.setup_database import setup_database
 
 from .api import PRTAPI
-from .config import config_path, data_dir, load_config
+from .config import config_path
+from .config import data_dir
+from .config import load_config
 from .db import create_database
 from .google_contacts import fetch_contacts
-from .google_takeout import find_takeout_files, parse_takeout_contacts
+from .google_takeout import find_takeout_files
+from .google_takeout import parse_takeout_contacts
 from .llm_ollama import start_ollama_chat
 
 # Encryption imports removed as part of Issue #41
@@ -911,7 +916,7 @@ def handle_import_google_takeout(api: PRTAPI, config: dict) -> None:
         console.print(f"❌ File not found: {takeout_path}", style="red")
         return
 
-    if not takeout_path.suffix.lower() == ".zip":
+    if takeout_path.suffix.lower() != ".zip":
         console.print("❌ File must be a zip file", style="red")
         return
 
@@ -2059,7 +2064,7 @@ def _handle_import_relationships_csv(api: PRTAPI) -> None:
         # Get valid contact IDs for validation
         valid_contact_ids = {c["id"] for c in api.list_all_contacts()}
 
-        with open(csv_file, "r", encoding="utf-8") as f:
+        with open(csv_file, encoding="utf-8") as f:
             # Use csv.Sniffer to detect dialect, but limit sample size
             sample = f.read(8192)  # Read first 8KB for dialect detection
             f.seek(0)
@@ -2715,7 +2720,7 @@ def _launch_tui_with_fallback(debug: bool = False) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
         from prt_src.tui.app import PRTApp
-        
+
         app = PRTApp()
         app.run()
     except Exception as e:

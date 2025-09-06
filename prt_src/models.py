@@ -5,22 +5,22 @@ These models define the database structure and are used by Alembic
 to generate and apply migrations.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC
+from datetime import datetime
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Date,
-    DateTime,
-    ForeignKey,
-    Integer,
-    LargeBinary,
-    String,
-    Table,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Boolean
+from sqlalchemy import Column
+from sqlalchemy import Date
+from sqlalchemy import DateTime
+from sqlalchemy import ForeignKey
+from sqlalchemy import Integer
+from sqlalchemy import LargeBinary
+from sqlalchemy import String
+from sqlalchemy import Table
+from sqlalchemy import Text
+from sqlalchemy import UniqueConstraint
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -305,9 +305,7 @@ def add_google_people_columns(table, schema_properties):
         column_name = prop_name.lower().replace(" ", "_").replace("-", "_")
 
         # Determine column type based on property type
-        if prop_info.get("type") == "array":
-            column_type = Text  # Store as JSON string
-        elif prop_info.get("type") == "object":
+        if prop_info.get("type") == "array" or prop_info.get("type") == "object":
             column_type = Text  # Store as JSON string
         else:
             column_type = String(255)  # Default to string

@@ -4,12 +4,19 @@ Displays and allows editing of contact information with
 field-level editing and validation support.
 """
 
-from typing import Callable, Dict, Optional
+from typing import Callable
+from typing import Dict
+from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
+from textual.containers import Vertical
 from textual.reactive import reactive
-from textual.widgets import Button, Input, Label, Static, TextArea
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import Static
+from textual.widgets import TextArea
 
 from prt_src.tui.types import AppMode
 from prt_src.tui.widgets.base import ModeAwareWidget

@@ -4,14 +4,14 @@ TDD approach - writing tests first before implementation.
 Tests cover pagination, alphabetical jumping, position memory, and lazy loading.
 """
 
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.core.components.pagination import (
-    AlphabeticalIndex,
-    PaginationSystem,
-    PositionMemory,
-)
+from prt_src.core.components.pagination import AlphabeticalIndex
+from prt_src.core.components.pagination import PaginationSystem
+from prt_src.core.components.pagination import PositionMemory
 
 
 def create_test_contacts(count: int = 100) -> List[Dict[str, Any]]:

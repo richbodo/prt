@@ -5,7 +5,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from prt_src.logging_config import get_logger, setup_logging
+from prt_src.logging_config import get_logger
+from prt_src.logging_config import setup_logging
 
 
 class TestLoggingConfiguration:

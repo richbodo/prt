@@ -3,24 +3,27 @@
 Manage tags and notes for contacts.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
-from textual import events, on
+from textual import events
+from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical
-from textual.widgets import (
-    Button,
-    DataTable,
-    Input,
-    Label,
-    TabbedContent,
-    TabPane,
-    TextArea,
-)
+from textual.containers import Container
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import DataTable
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import TabbedContent
+from textual.widgets import TabPane
+from textual.widgets import TextArea
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -198,7 +201,7 @@ class MetadataScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load tags: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to load tags")
+                await self.notification_service.show_error("Failed to load tags")
 
     async def _load_notes(self) -> None:
         """Load notes data from the data service."""
@@ -213,7 +216,7 @@ class MetadataScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load notes: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to load notes")
+                await self.notification_service.show_error("Failed to load notes")
 
     async def _populate_tags_table(self) -> None:
         """Populate the tags table with data."""
@@ -283,7 +286,6 @@ class MetadataScreen(BaseScreen):
     def refresh_footer(self) -> None:
         """Refresh footer to update key hints."""
         # Trigger a refresh of the footer
-        pass
 
     @on(DataTable.RowSelected)
     async def on_data_table_row_selected(self, message: DataTable.RowSelected) -> None:
@@ -317,13 +319,13 @@ class MetadataScreen(BaseScreen):
                 await self._show_tag_form(edit_mode=True)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("Please select a tag to edit")
+                    await self.notification_service.show_warning("Please select a tag to edit")
         else:
             if self.selected_note:
                 await self._show_note_form(edit_mode=True)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("Please select a note to edit")
+                    await self.notification_service.show_warning("Please select a note to edit")
 
     async def _handle_delete(self) -> None:
         """Handle delete selected item."""
@@ -332,13 +334,13 @@ class MetadataScreen(BaseScreen):
                 await self._delete_tag()
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("Please select a tag to delete")
+                    await self.notification_service.show_warning("Please select a tag to delete")
         else:
             if self.selected_note:
                 await self._delete_note()
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("Please select a note to delete")
+                    await self.notification_service.show_warning("Please select a note to delete")
 
     async def _handle_tag_selection(self, row_key) -> None:
         """Handle tag row selection."""
@@ -460,7 +462,7 @@ class MetadataScreen(BaseScreen):
         tag_name = self.tag_input.value.strip()
         if not tag_name:
             if self.notification_service:
-                self.notification_service.show_warning("Please enter a tag name")
+                await self.notification_service.show_warning("Please enter a tag name")
             return
 
         try:
@@ -471,26 +473,26 @@ class MetadataScreen(BaseScreen):
                     success = await self.data_service.update_tag(old_name, tag_name)
                     if success:
                         if self.notification_service:
-                            self.notification_service.show_success(
+                            await self.notification_service.show_success(
                                 f"Updated tag '{old_name}' to '{tag_name}'"
                             )
                         await self._load_tags()
                     else:
                         if self.notification_service:
-                            self.notification_service.show_error("Failed to update tag")
+                            await self.notification_service.show_error("Failed to update tag")
                 else:
                     if self.notification_service:
-                        self.notification_service.show_info("No changes to save")
+                        await self.notification_service.show_info("No changes to save")
             else:
                 # Create new tag
                 result = await self.data_service.create_tag(tag_name)
                 if result:
                     if self.notification_service:
-                        self.notification_service.show_success(f"Created tag '{tag_name}'")
+                        await self.notification_service.show_success(f"Created tag '{tag_name}'")
                     await self._load_tags()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create tag")
+                        await self.notification_service.show_error("Failed to create tag")
 
             self._hide_forms()
             self.selected_tag = None
@@ -498,7 +500,7 @@ class MetadataScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error saving tag: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to save tag")
+                await self.notification_service.show_error("Failed to save tag")
 
     async def _save_note(self) -> None:
         """Save note (create or update)."""
@@ -510,12 +512,12 @@ class MetadataScreen(BaseScreen):
 
         if not title:
             if self.notification_service:
-                self.notification_service.show_warning("Please enter a note title")
+                await self.notification_service.show_warning("Please enter a note title")
             return
 
         if not content:
             if self.notification_service:
-                self.notification_service.show_warning("Please enter note content")
+                await self.notification_service.show_warning("Please enter note content")
             return
 
         try:
@@ -526,21 +528,21 @@ class MetadataScreen(BaseScreen):
                     success = await self.data_service.update_note(note_id, title, content)
                     if success:
                         if self.notification_service:
-                            self.notification_service.show_success(f"Updated note '{title}'")
+                            await self.notification_service.show_success(f"Updated note '{title}'")
                         await self._load_notes()
                     else:
                         if self.notification_service:
-                            self.notification_service.show_error("Failed to update note")
+                            await self.notification_service.show_error("Failed to update note")
             else:
                 # Create new note
                 result = await self.data_service.create_note(title, content)
                 if result:
                     if self.notification_service:
-                        self.notification_service.show_success(f"Created note '{title}'")
+                        await self.notification_service.show_success(f"Created note '{title}'")
                     await self._load_notes()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create note")
+                        await self.notification_service.show_error("Failed to create note")
 
             self._hide_forms()
             self.selected_note = None
@@ -548,7 +550,7 @@ class MetadataScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Error saving note: {e}")
             if self.notification_service:
-                self.notification_service.show_error("Failed to save note")
+                await self.notification_service.show_error("Failed to save note")
 
     async def _delete_tag(self) -> None:
         """Delete the selected tag."""
@@ -570,14 +572,14 @@ class MetadataScreen(BaseScreen):
             try:
                 success = await self.data_service.delete_tag(tag_name)
                 if success:
-                    self.notification_service.show_success(f"Deleted tag '{tag_name}'")
+                    await self.notification_service.show_success(f"Deleted tag '{tag_name}'")
                     await self._load_tags()
                     self.selected_tag = None
                 else:
-                    self.notification_service.show_error("Failed to delete tag")
+                    await self.notification_service.show_error("Failed to delete tag")
             except Exception as e:
                 logger.error(f"Error deleting tag: {e}")
-                self.notification_service.show_error("Failed to delete tag")
+                await self.notification_service.show_error("Failed to delete tag")
 
     async def _delete_note(self) -> None:
         """Delete the selected note."""
@@ -593,14 +595,14 @@ class MetadataScreen(BaseScreen):
                 if note_id:
                     success = await self.data_service.delete_note(note_id)
                     if success:
-                        self.notification_service.show_success(f"Deleted note '{note_title}'")
+                        await self.notification_service.show_success(f"Deleted note '{note_title}'")
                         await self._load_notes()
                         self.selected_note = None
                     else:
-                        self.notification_service.show_error("Failed to delete note")
+                        await self.notification_service.show_error("Failed to delete note")
             except Exception as e:
                 logger.error(f"Error deleting note: {e}")
-                self.notification_service.show_error("Failed to delete note")
+                await self.notification_service.show_error("Failed to delete note")
 
 
 # Register this screen

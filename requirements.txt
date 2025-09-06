@@ -1,34 +1,66 @@
-# requirements.txt
-typer
-langchain
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-pytest
-pytest-asyncio
-rich
-sqlalchemy>=2.0.0
-transformers
-accelerate
-torch
-# pysqlcipher3  # Removed as part of Issue #41 - moving away from db-level encryption
-vobject
-requests
-pillow>=10.0.0
-jinja2>=3.0.0
+# PRT Requirements - Organized by Category
+# Install with: pip install -r requirements.txt
 
-# Phase 1 TUI Migration Dependencies
-lru-dict>=1.3.0  # LRU cache for search results
-pygtrie>=2.5.0   # Trie data structure for autocomplete
+# ========================================
+# CORE RUNTIME DEPENDENCIES
+# ========================================
 
-# Phase 3 Textual TUI Dependencies
-textual>=0.47.0       # Modern TUI framework
-textual-dev>=1.3.0    # Development tools for Textual
-pyperclip>=1.8.2      # Cross-platform clipboard support
-aiofiles>=23.2.1      # Async file operations
+# CLI & UI Framework
+typer>=0.12.0                    # Modern CLI framework
+textual>=0.47.0                  # Modern TUI framework
+rich>=13.0.0                     # Enhanced terminal output
 
-# Phase 7 Web Server Dependencies (Future)
-# textual-web>=0.1.0    # Web interface for Textual apps
-# fastapi>=0.100.0      # Modern web framework
-# uvicorn[standard]>=0.23.0  # ASGI server
-# python-multipart>=0.0.6    # Form data parsing
+# Database & ORM
+sqlalchemy>=2.0.0                # Modern Python ORM
+aiofiles>=23.2.1                 # Async file operations
+
+# Search Infrastructure (Phase 1)
+lru-dict>=1.3.0                  # LRU cache for search results
+pygtrie>=2.5.0                   # Trie data structure for autocomplete
+
+# Google Contacts Integration
+google-api-python-client>=2.0.0  # Google API client
+google-auth-httplib2>=0.1.0      # Google auth HTTP transport
+google-auth-oauthlib>=1.0.0      # Google OAuth2 flow
+
+# Data Processing
+vobject>=0.9.6.1                 # vCard/vCalendar parsing
+requests>=2.31.0                 # HTTP requests
+pillow>=10.0.0                   # Image processing
+jinja2>=3.0.0                    # Template engine
+
+# AI/LLM Integration (Optional)
+langchain>=0.1.0                 # LLM framework
+transformers>=4.30.0             # Hugging Face transformers
+accelerate>=0.20.0               # Model acceleration
+torch>=2.0.0                     # PyTorch backend
+
+# ========================================
+# DEVELOPMENT DEPENDENCIES
+# ========================================
+
+# Testing Framework
+pytest>=7.0.0                    # Python testing framework
+pytest-asyncio>=0.21.0           # Async testing support
+
+# Code Quality & Formatting
+pre-commit>=3.0.0                # Git hooks for code quality
+ruff>=0.7.0                      # Fast Python linter
+black>=24.0.0                    # Code formatter
+
+# TUI Development Tools
+textual-dev>=1.3.0               # Textual development tools
+pyperclip>=1.8.2                 # Cross-platform clipboard support
+
+# LLM Evaluation (Optional)
+promptfoo>=0.60.0                # LLM prompt evaluation
+
+# ========================================
+# FUTURE DEPENDENCIES (Phase 7+)
+# ========================================
+
+# Web Server (Commented - Phase 7)
+# textual-web>=0.1.0             # Web interface for Textual apps
+# fastapi>=0.100.0               # Modern web framework  
+# uvicorn[standard]>=0.23.0      # ASGI server
+# python-multipart>=0.0.6        # Form data parsing

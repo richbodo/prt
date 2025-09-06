@@ -4,20 +4,19 @@ TDD approach - writing tests first before implementation.
 Tests cover success cases, failure cases, and edge cases for validation.
 """
 
-from datetime import date, timedelta
+from datetime import date
+from datetime import timedelta
 
 import pytest
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.core.components.validation import (
-    ContactValidator,
-    DataSanitizer,
-    DuplicateDetector,
-    NoteValidator,
-    RelationshipValidator,
-    TagValidator,
-    ValidationSystem,
-)
+from prt_src.core.components.validation import ContactValidator
+from prt_src.core.components.validation import DataSanitizer
+from prt_src.core.components.validation import DuplicateDetector
+from prt_src.core.components.validation import NoteValidator
+from prt_src.core.components.validation import RelationshipValidator
+from prt_src.core.components.validation import TagValidator
+from prt_src.core.components.validation import ValidationSystem
 
 
 class TestDataSanitizer:

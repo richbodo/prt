@@ -4,15 +4,15 @@ TDD approach - writing tests first before implementation.
 Tests cover dual selection for relationships and multi-selection for bulk operations.
 """
 
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.core.components.selection import (
-    SelectionFilter,
-    SelectionMode,
-    SelectionSystem,
-    SortOrder,
-)
+from prt_src.core.components.selection import SelectionFilter
+from prt_src.core.components.selection import SelectionMode
+from prt_src.core.components.selection import SelectionSystem
+from prt_src.core.components.selection import SortOrder
 
 
 def create_test_items(count: int = 50) -> List[Dict[str, Any]]:

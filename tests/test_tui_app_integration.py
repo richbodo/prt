@@ -10,7 +10,8 @@ from unittest.mock import patch
 import pytest
 
 from prt_src.db import Database
-from prt_src.tui.app import AppMode, PRTApp
+from prt_src.tui.app import AppMode
+from prt_src.tui.app import PRTApp
 
 
 class TestAppIntegration:

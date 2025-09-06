@@ -6,7 +6,11 @@ for efficient navigation through large contact lists. UI-agnostic.
 
 import math
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from prt_src.logging_config import get_logger
 

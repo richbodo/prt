@@ -1,6 +1,8 @@
 """Unit tests for the first-run wizard screen."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -121,23 +123,27 @@ class TestWizardScreen:
         wizard_screen.name_input = MagicMock()
         wizard_screen.name_input.value = "John Doe"
 
-        # Mock the app's first_run_handler
-        mock_app = MagicMock()
+        # Mock the app's first_run_handler using patch of the specific attribute access
         mock_first_run_handler = MagicMock()
         mock_first_run_handler.create_you_contact.return_value = {"id": 1, "name": "John Doe"}
-        mock_app.first_run_handler = mock_first_run_handler
-        wizard_screen.app = mock_app
 
-        wizard_screen._render_current_step = AsyncMock()
+        with patch("builtins.hasattr", return_value=True):
+            with patch.object(
+                type(wizard_screen), "app", new_callable=lambda: MagicMock()
+            ) as mock_app:
+                mock_app.first_run_handler = mock_first_run_handler
+                wizard_screen._render_current_step = AsyncMock()
 
-        await wizard_screen._create_you_contact()
+                await wizard_screen._create_you_contact()
 
-        # Check that contact was created
-        assert wizard_screen.you_contact_name == "John Doe"
-        assert wizard_screen.you_contact_created is True
-        assert wizard_screen.current_step == WizardScreen.STEP_OPTIONS
+                # Check that contact was created
+                assert wizard_screen.you_contact_name == "John Doe"
+                assert wizard_screen.you_contact_created is True
+                assert wizard_screen.current_step == WizardScreen.STEP_OPTIONS
 
-        mock_services["notification_service"].show_success.assert_called_with("Welcome, John Doe!")
+                mock_services["notification_service"].show_success.assert_called_with(
+                    "Welcome, John Doe!"
+                )
 
     @pytest.mark.asyncio
     async def test_create_you_contact_fallback_to_data_service(self, wizard_screen, mock_services):
@@ -146,26 +152,27 @@ class TestWizardScreen:
         wizard_screen.name_input = MagicMock()
         wizard_screen.name_input.value = "Jane Smith"
 
-        # Mock app without first_run_handler
-        wizard_screen.app = MagicMock()
-        delattr(wizard_screen.app, "first_run_handler")
+        # Mock app without first_run_handler using patch
+        with patch.object(wizard_screen, "app") as mock_app:
+            # Don't set first_run_handler to simulate fallback
+            mock_app.first_run_handler = None
 
-        # Mock data service
-        mock_services["data_service"].create_contact = AsyncMock(
-            return_value={"id": 2, "name": "Jane Smith"}
-        )
+            # Mock data service
+            mock_services["data_service"].create_contact = AsyncMock(
+                return_value={"id": 2, "name": "Jane Smith"}
+            )
 
-        wizard_screen._render_current_step = AsyncMock()
+            wizard_screen._render_current_step = AsyncMock()
 
-        await wizard_screen._create_you_contact()
+            await wizard_screen._create_you_contact()
 
-        # Check that fallback was used
-        assert wizard_screen.you_contact_name == "Jane Smith"
-        assert wizard_screen.you_contact_created is True
+            # Check that fallback was used
+            assert wizard_screen.you_contact_name == "Jane Smith"
+            assert wizard_screen.you_contact_created is True
 
-        # Check data service was called with correct data
-        expected_data = {"first_name": "Jane", "last_name": "Smith", "is_you": True}
-        mock_services["data_service"].create_contact.assert_called_with(expected_data)
+            # Check data service was called with correct data
+            expected_data = {"first_name": "Jane", "last_name": "Smith", "is_you": True}
+            mock_services["data_service"].create_contact.assert_called_with(expected_data)
 
     @pytest.mark.asyncio
     async def test_skip_create_you(self, wizard_screen):
@@ -180,16 +187,16 @@ class TestWizardScreen:
     @pytest.mark.asyncio
     async def test_handle_import_takeout(self, wizard_screen, mock_services):
         """Test handling import takeout option."""
-        wizard_screen.app = MagicMock()
-        wizard_screen.app.switch_screen = AsyncMock()
+        with patch.object(wizard_screen, "app") as mock_app:
+            mock_app.switch_screen = AsyncMock()
 
-        await wizard_screen._handle_import_takeout()
+            await wizard_screen._handle_import_takeout()
 
-        mock_services["notification_service"].show_info.assert_called_with(
-            "Navigating to import screen..."
-        )
-        mock_services["nav_service"].push.assert_called_with("import")
-        wizard_screen.app.switch_screen.assert_called_with("import")
+            mock_services["notification_service"].show_info.assert_called_with(
+                "Navigating to import screen..."
+            )
+            mock_services["nav_service"].push.assert_called_with("import")
+            mock_app.switch_screen.assert_called_with("import")
 
     @pytest.mark.asyncio
     async def test_handle_load_demo_success(self, wizard_screen, mock_services):
@@ -240,16 +247,16 @@ class TestWizardScreen:
     @pytest.mark.asyncio
     async def test_finish_wizard(self, wizard_screen, mock_services):
         """Test finishing the wizard."""
-        wizard_screen.app = MagicMock()
-        wizard_screen.app.switch_screen = AsyncMock()
+        with patch.object(wizard_screen, "app") as mock_app:
+            mock_app.switch_screen = AsyncMock()
 
-        await wizard_screen._finish_wizard()
+            await wizard_screen._finish_wizard()
 
-        mock_services["notification_service"].show_success.assert_called_with(
-            "Setup complete! Welcome to PRT!"
-        )
-        mock_services["nav_service"].go_home.assert_called_once()
-        wizard_screen.app.switch_screen.assert_called_with("home")
+            mock_services["notification_service"].show_success.assert_called_with(
+                "Setup complete! Welcome to PRT!"
+            )
+            mock_services["nav_service"].go_home.assert_called_once()
+            mock_app.switch_screen.assert_called_with("home")
 
     @pytest.mark.asyncio
     async def test_handle_enter_welcome_step(self, wizard_screen):
@@ -326,17 +333,15 @@ class TestWizardScreen:
         wizard_screen.name_input.value = "John Doe"
 
         # Mock app to raise an exception
-        wizard_screen.app = MagicMock()
-        wizard_screen.app.first_run_handler.create_you_contact.side_effect = Exception(
-            "Database error"
-        )
+        with patch.object(wizard_screen, "app") as mock_app:
+            mock_app.first_run_handler.create_you_contact.side_effect = Exception("Database error")
 
-        await wizard_screen._create_you_contact()
+            await wizard_screen._create_you_contact()
 
-        # Should show error notification
-        mock_services["notification_service"].show_error.assert_called_with(
-            "Failed to create your profile"
-        )
+            # Should show error notification
+            mock_services["notification_service"].show_error.assert_called_with(
+                "Failed to create your profile"
+            )
 
     @pytest.mark.asyncio
     async def test_create_you_contact_single_name(self, wizard_screen, mock_services):
@@ -346,21 +351,21 @@ class TestWizardScreen:
         wizard_screen.name_input.value = "Madonna"
 
         # Mock app without first_run_handler (fallback to data service)
-        wizard_screen.app = MagicMock()
-        delattr(wizard_screen.app, "first_run_handler")
+        with patch.object(wizard_screen, "app") as mock_app:
+            mock_app.first_run_handler = None
 
-        # Mock data service
-        mock_services["data_service"].create_contact = AsyncMock(
-            return_value={"id": 1, "name": "Madonna"}
-        )
+            # Mock data service
+            mock_services["data_service"].create_contact = AsyncMock(
+                return_value={"id": 1, "name": "Madonna"}
+            )
 
-        wizard_screen._render_current_step = AsyncMock()
+            wizard_screen._render_current_step = AsyncMock()
 
-        await wizard_screen._create_you_contact()
+            await wizard_screen._create_you_contact()
 
-        # Check data service was called with single name
-        expected_data = {"first_name": "Madonna", "last_name": "", "is_you": True}
-        mock_services["data_service"].create_contact.assert_called_with(expected_data)
+            # Check data service was called with single name
+            expected_data = {"first_name": "Madonna", "last_name": "", "is_you": True}
+            mock_services["data_service"].create_contact.assert_called_with(expected_data)
 
     @pytest.mark.asyncio
     async def test_on_show_reset_on_first_run(self, wizard_screen):

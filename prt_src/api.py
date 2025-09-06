@@ -8,12 +8,16 @@ provides a consistent interface for all PRT functionality.
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
-from .config import data_dir, load_config
+from .config import data_dir
+from .config import load_config
 from .db import Database
 from .logging_config import get_logger
 from .schema_manager import SchemaManager
@@ -324,7 +328,8 @@ class PRTAPI:
 
     def remove_tag_from_contact(self, contact_id: int, tag_name: str) -> bool:
         """Remove a tag from a contact's relationship."""
-        from .models import Contact, Tag
+        from .models import Contact
+        from .models import Tag
 
         contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
         if not contact or not contact.relationship:
@@ -348,7 +353,8 @@ class PRTAPI:
 
     def remove_note_from_contact(self, contact_id: int, note_title: str) -> bool:
         """Remove a note from a contact's relationship."""
-        from .models import Contact, Note
+        from .models import Contact
+        from .models import Note
 
         contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
         if not contact or not contact.relationship:
@@ -571,7 +577,8 @@ class PRTAPI:
 
     def delete_relationship_type(self, type_key: str) -> bool:
         """Delete a relationship type if not in use."""
-        from .models import ContactRelationship, RelationshipType
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         try:
             # Check if type exists
@@ -704,7 +711,9 @@ class PRTAPI:
 
     def get_relationship_graph(self) -> Dict[str, Any]:
         """Get all relationships in a graph structure."""
-        from .models import Contact, ContactRelationship, RelationshipType
+        from .models import Contact
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         # Get all relationships
         relationships = (

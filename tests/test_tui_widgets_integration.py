@@ -5,13 +5,12 @@ Tests widget interaction and composition.
 
 from unittest.mock import patch
 
-from prt_src.tui.app import AppMode, PRTApp
-from prt_src.tui.widgets.base import (
-    ConfirmDialog,
-    ModeAwareWidget,
-    StatusBar,
-    ToastNotification,
-)
+from prt_src.tui.app import AppMode
+from prt_src.tui.app import PRTApp
+from prt_src.tui.widgets.base import ConfirmDialog
+from prt_src.tui.widgets.base import ModeAwareWidget
+from prt_src.tui.widgets.base import StatusBar
+from prt_src.tui.widgets.base import ToastNotification
 
 
 class TestStatusBarIntegration:

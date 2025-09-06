@@ -7,10 +7,17 @@ integrating FTS5, the search indexer, and contact cache for optimal performance.
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 
 from prt_src.core.search_cache.contact_cache import ContactSearchCache
-from prt_src.core.search_index.indexer import EntityType, SearchIndexer, SearchResult
+from prt_src.core.search_index.indexer import EntityType
+from prt_src.core.search_index.indexer import SearchIndexer
+from prt_src.core.search_index.indexer import SearchResult
 from prt_src.logging_config import get_logger
 
 

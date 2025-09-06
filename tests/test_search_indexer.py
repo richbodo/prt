@@ -6,7 +6,9 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy.exc import OperationalError
 
-from prt_src.core.search_index.indexer import EntityType, SearchIndexer, SearchResult
+from prt_src.core.search_index.indexer import EntityType
+from prt_src.core.search_index.indexer import SearchIndexer
+from prt_src.core.search_index.indexer import SearchResult
 
 
 @pytest.fixture

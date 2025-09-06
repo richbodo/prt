@@ -11,7 +11,8 @@ from textual.app import App
 from textual.timer import Timer
 
 from prt_src.logging_config import get_logger
-from prt_src.tui.widgets.base import ConfirmDialog, ToastNotification
+from prt_src.tui.widgets.base import ConfirmDialog
+from prt_src.tui.widgets.base import ToastNotification
 
 logger = get_logger(__name__)
 

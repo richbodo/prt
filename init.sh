@@ -63,9 +63,14 @@ if [ ! -d "prt_env" ]; then
         echo "Error: Virtual environment not properly activated"
         return 1
     fi
-    # Install requirements with verbose output
+    # Upgrade pip first
+    pip install --upgrade pip
+    
+    # Install all requirements (runtime + development)
+    echo "📦 Installing all dependencies (runtime + development)..."
     pip install -v -r requirements.txt || { echo "Failed to install requirements"; return 1; }
-    echo "Installed required packages"
+    
+    echo "✅ All packages installed successfully"
 else
     # Just activate if it already exists
     source prt_env/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
@@ -76,16 +81,29 @@ if [ -n "$VIRTUAL_ENV" ]; then
     echo "Virtual environment activated! You should see (prt_env) in your prompt."
     echo "If you don't see (prt_env), try running: source prt_env/bin/activate"
 
-    # Install development requirements (including pre-commit)
-    if [ -f "requirements-dev.txt" ]; then
-        pip install -v -r requirements-dev.txt || { echo "Failed to install development requirements"; return 1; }
-        pre-commit install || { echo "Failed to install pre-commit hooks"; return 1; }
+    # Set up pre-commit hooks (dev tools already installed)
+    pre-commit install || { echo "Failed to install pre-commit hooks"; return 1; }
+    echo "🔧 Pre-commit hooks installed"
 
-        # Optionally run pre-commit across the codebase to establish a baseline
-        if [ "${RUN_PRE_COMMIT:-0}" = "1" ]; then
-            pre-commit run --all-files || { echo "pre-commit run failed"; return 1; }
-        fi
+    # Optionally run pre-commit across the codebase to establish a baseline
+    if [ "${RUN_PRE_COMMIT:-0}" = "1" ]; then
+        pre-commit run --all-files || { echo "pre-commit run failed"; return 1; }
     fi
+    
+    # Quick verification that key packages are available
+    echo "🧪 Verifying installation..."
+    python -c "import textual; import sqlalchemy; import typer; print('✅ Core packages verified')" || { echo "❌ Installation verification failed"; return 1; }
+    
+    echo ""
+    echo "🎉 PRT development environment ready!"
+    echo ""
+    echo "🚀 Quick Start:"
+    echo "  python -m prt_src        # Launch modern TUI"  
+    echo "  python -m prt_src --classic  # Classic CLI"
+    echo "  python -m pytest tests/  # Run tests"
+    echo "  make help                # See all make commands"
+    echo ""
+    echo "📚 More info: https://github.com/richbodo/prt"
 else
     echo "Warning: Virtual environment not properly activated"
 fi

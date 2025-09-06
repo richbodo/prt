@@ -7,9 +7,13 @@ Provides two modes:
 UI-agnostic and maintains selection state across pagination.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from prt_src.logging_config import get_logger
 
