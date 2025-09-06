@@ -4,6 +4,7 @@ This module implements the main Textual application with mode management,
 first-run detection, and global keybindings.
 """
 
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -112,17 +113,20 @@ class PRTApp(App):
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
+        
+        # Track current container for proper cleanup
+        self.current_container_id: Optional[str] = None
 
         # Load config and initialize database
         try:
             config = load_config()
             db_path = Path(config["db_path"])
-            self.db = Database(db_path)
+            self.db = TUIDatabase(db_path)
             self.db.connect()
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             # Create a minimal in-memory database for testing
-            self.db = Database(Path(":memory:"))
+            self.db = TUIDatabase(Path(":memory:"))
             self.db.connect()
 
         # Ensure database tables are created
@@ -292,17 +296,20 @@ class PRTApp(App):
             logger.error(f"Failed to create screen: {screen_name}")
             return
 
-        # Hide current screen
-        if self.current_screen:
+        # Hide current screen and remove its container
+        if self.current_screen and self.current_container_id:
             await self.current_screen.on_hide()
             try:
-                self.query_one("#main-container").remove()
-            except Exception:
-                pass  # Container may not exist yet
+                container = self.query_one(f"#{self.current_container_id}")
+                container.remove()
+                logger.debug(f"Removed container: {self.current_container_id}")
+            except Exception as e:
+                logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
 
-        # Mount new screen
+        # Mount new screen with unique container ID
+        self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id="main-container"))
+        await self.mount(Container(new_screen, id=self.current_container_id))
 
         # Show new screen
         await new_screen.on_show()
@@ -342,10 +349,9 @@ class PRTApp(App):
             logger.error(f"Failed to initialize database data: {e}")
 
 
-# Placeholder for Database extensions
-# We'll need to add get_you_contact method to Database class
-def extend_database():
-    """Extend Database class with TUI-specific methods."""
+# TUI Database Extensions
+class TUIDatabase(Database):
+    """Extended Database class with TUI-specific methods."""
 
     def get_you_contact(self):
         """Get the 'You' contact if it exists.
@@ -416,16 +422,6 @@ def extend_database():
             logger.error(f"Error creating contact: {e}")
             self.session.rollback()
             raise
-
-    # Monkey-patch for now, will properly integrate later
-    if not hasattr(Database, "get_you_contact"):
-        Database.get_you_contact = get_you_contact
-    if not hasattr(Database, "create_contact"):
-        Database.create_contact = create_contact
-
-
-# Apply database extensions on import
-extend_database()
 
 
 # Development runner
