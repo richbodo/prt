@@ -2716,6 +2716,7 @@ def main(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
+    tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
     if ctx.invoked_subcommand is None:
