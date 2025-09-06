@@ -2722,8 +2722,19 @@ def main(
     if ctx.invoked_subcommand is None:
         if classic:
             run_interactive_cli(debug=debug)
+        elif tui:
+            # Launch TUI explicitly when --tui is used
+            try:
+                from prt_src.tui.app import PRTApp
+
+                app = PRTApp()
+                app.run()
+            except Exception as e:
+                console.print(f"Failed to launch TUI: {e}", style="red")
+                console.print("Falling back to classic CLI...", style="yellow")
+                run_interactive_cli(debug=debug)
         else:
-            # Launch TUI by default
+            # Launch TUI by default (when neither --classic nor --tui specified explicitly)
             try:
                 from prt_src.tui.app import PRTApp
 

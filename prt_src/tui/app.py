@@ -4,6 +4,7 @@ This module implements the main Textual application with mode management,
 first-run detection, and global keybindings.
 """
 
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -117,12 +118,12 @@ class PRTApp(App):
         try:
             config = load_config()
             db_path = Path(config["db_path"])
-            self.db = Database(db_path)
+            self.db = TUIDatabase(db_path)
             self.db.connect()
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             # Create a minimal in-memory database for testing
-            self.db = Database(Path(":memory:"))
+            self.db = TUIDatabase(Path(":memory:"))
             self.db.connect()
 
         # Ensure database tables are created
@@ -297,12 +298,13 @@ class PRTApp(App):
             await self.current_screen.on_hide()
             try:
                 self.query_one("#main-container").remove()
-            except Exception:
-                pass  # Container may not exist yet
+            except Exception as e:
+                logger.warning(f"Failed to remove existing container: {e}")
 
-        # Mount new screen
+        # Mount new screen with unique container ID
+        container_id = f"main-container-{uuid.uuid4().hex[:8]}"
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id="main-container"))
+        await self.mount(Container(new_screen, id=container_id))
 
         # Show new screen
         await new_screen.on_show()
@@ -342,10 +344,9 @@ class PRTApp(App):
             logger.error(f"Failed to initialize database data: {e}")
 
 
-# Placeholder for Database extensions
-# We'll need to add get_you_contact method to Database class
-def extend_database():
-    """Extend Database class with TUI-specific methods."""
+# TUI Database Extensions
+class TUIDatabase(Database):
+    """Extended Database class with TUI-specific methods."""
 
     def get_you_contact(self):
         """Get the 'You' contact if it exists.
@@ -416,16 +417,6 @@ def extend_database():
             logger.error(f"Error creating contact: {e}")
             self.session.rollback()
             raise
-
-    # Monkey-patch for now, will properly integrate later
-    if not hasattr(Database, "get_you_contact"):
-        Database.get_you_contact = get_you_contact
-    if not hasattr(Database, "create_contact"):
-        Database.create_contact = create_contact
-
-
-# Apply database extensions on import
-extend_database()
 
 
 # Development runner
