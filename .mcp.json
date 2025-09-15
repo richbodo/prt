@@ -5,7 +5,7 @@
         "command": "uv",
         "args": [
           "--directory",
-          "/Users/richardbodo/.screenpipe/mcp",
+          "~/.screenpipe/mcp",
           "run",
           "screenpipe-mcp",
           "--port",

@@ -72,10 +72,10 @@ class ContactsScreen(BaseScreen):
                 id="contacts-table", cursor_type="row", zebra_stripes=True, show_cursor=True
             )
             self.contacts_table.add_columns(
-                ("name", "Name"),
-                ("email", "Email"),
-                ("phone", "Phone"),
-                ("last_interaction", "Last Interaction"),
+                "Name",
+                "Email",
+                "Phone",
+                "Last Interaction",
             )
             yield self.contacts_table
 
@@ -129,7 +129,6 @@ class ContactsScreen(BaseScreen):
 
                     # Add row to table
                     self.contacts_table.add_row(
-                        str(contact.get("id", "")),  # Hidden ID column
                         name,
                         email,
                         phone,

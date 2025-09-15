@@ -331,7 +331,8 @@ class PRTApp(App):
         logger.info("Showing simple exit confirmation")
 
         # Create a simple confirmation overlay
-        from textual.containers import Center, Vertical
+        from textual.containers import Center
+        from textual.containers import Vertical
         from textual.widgets import Label
 
         # Create result tracker
@@ -352,13 +353,18 @@ class PRTApp(App):
             classes="exit-confirmation-overlay",
         )
 
-        # Mount the confirmation overlay
-        await self.mount(confirmation_widget)
+        # Mount the confirmation overlay with error handling
+        try:
+            await self.mount(confirmation_widget)
+            # Set up a simple key handler for this confirmation
+            self._waiting_for_exit_confirmation = True
+            logger.info("Exit confirmation mounted - waiting for Y/N response")
+        except Exception as e:
+            logger.error(f"Failed to mount exit confirmation dialog: {e}")
+            # Fallback: just exit without confirmation if dialog fails
+            logger.warning("Dialog failed - falling back to immediate exit")
+            return True
 
-        # Set up a simple key handler for this confirmation
-        self._waiting_for_exit_confirmation = True
-
-        logger.info("Exit confirmation mounted - waiting for Y/N response")
         return False  # For now, return False to avoid infinite loops
 
     async def _handle_exit_confirmed(self) -> None:
