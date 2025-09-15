@@ -189,7 +189,9 @@ When Ollama is running, I provide intelligent responses with direct database acc
                     self._has_input = False
                 return
 
-        await super().on_key(event)
+        # Don't call super().on_key() as BaseScreen doesn't have it
+        # Let other key events be handled by the focused widgets
+        pass
 
     def _display_message(self, message: ChatMessage) -> None:
         """Display a message in the chat log.

@@ -601,3 +601,44 @@ Footer {
 .chat-input:focus {
     border: solid $primary;
 }
+
+/* Exit Confirmation Overlay */
+.exit-confirmation-overlay {
+    layer: dialog;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.confirm-center {
+    width: 100%;
+    height: 100%;
+    align: center middle;
+}
+
+.confirm-content {
+    width: 50;
+    height: 10;
+    background: $panel;
+    border: thick $primary;
+    padding: 2;
+}
+
+.confirm-title {
+    text-style: bold;
+    text-align: center;
+    color: $text;
+    margin-bottom: 1;
+}
+
+.confirm-message {
+    text-align: center;
+    color: $text;
+    margin-bottom: 1;
+}
+
+.confirm-hint {
+    text-align: center;
+    color: $text-muted;
+    text-style: italic;
+}

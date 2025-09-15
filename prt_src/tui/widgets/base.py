@@ -6,7 +6,7 @@ status display, notifications, and confirmations.
 
 from typing import Callable, Optional, Set
 
-from textual import on
+from textual import events, on
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
@@ -294,6 +294,21 @@ class ConfirmDialog(Container):
         if self.on_cancel:
             self.on_cancel()
         self.dismiss()
+
+    async def on_key(self, event: events.Key) -> None:
+        """Handle Y/N key presses for quick confirmation."""
+        if event.key in ["y", "Y"]:
+            logger.info("Y key pressed - confirming")
+            self.handle_confirm()
+        elif event.key in ["n", "N"]:
+            logger.info("N key pressed - cancelling")
+            self.handle_cancel()
+        elif event.key == "escape":
+            logger.info("ESC key pressed - cancelling")
+            self.handle_cancel()
+        else:
+            # Let other keys be handled normally
+            await super().on_key(event)
 
     def dismiss(self) -> None:
         """Dismiss the dialog."""
