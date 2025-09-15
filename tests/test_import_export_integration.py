@@ -1,10 +1,12 @@
 """Integration tests for import and export screens."""
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
 
-from prt_src.tui.screens import SCREEN_REGISTRY, create_screen
+from prt_src.tui.screens import SCREEN_REGISTRY
+from prt_src.tui.screens import create_screen
 
 
 class TestImportExportIntegration:
@@ -24,7 +26,7 @@ class TestImportExportIntegration:
         mock_services = {
             "nav_service": MagicMock(),
             "data_service": MagicMock(),
-            "notification_service": MagicMock(),
+            "notification_service": AsyncMock(),
             "selection_service": MagicMock(),
             "validation_service": MagicMock(),
         }
@@ -40,7 +42,7 @@ class TestImportExportIntegration:
         mock_services = {
             "nav_service": MagicMock(),
             "data_service": MagicMock(),
-            "notification_service": MagicMock(),
+            "notification_service": AsyncMock(),
             "selection_service": MagicMock(),
             "validation_service": MagicMock(),
         }
@@ -75,7 +77,7 @@ class TestImportExportIntegration:
         mock_app = MagicMock()
 
         home_screen = HomeScreen(
-            nav_service=mock_nav_service, data_service=MagicMock(), notification_service=MagicMock()
+            nav_service=mock_nav_service, data_service=AsyncMock(), notification_service=AsyncMock()
         )
         # Mock the app attribute for the async switch
         home_screen._app = mock_app

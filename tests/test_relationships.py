@@ -11,15 +11,13 @@ from datetime import date
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from prt_src.models import (
-    Contact,
-    ContactMetadata,  # Test backward compat alias
-    ContactRelationship,
-    Note,
-    Relationship,
-    RelationshipType,
-    Tag,
-)
+from prt_src.models import Contact
+from prt_src.models import ContactMetadata  # Test backward compat alias
+from prt_src.models import ContactRelationship
+from prt_src.models import Note
+from prt_src.models import Relationship
+from prt_src.models import RelationshipType
+from prt_src.models import Tag
 
 
 def test_sample_contact_relationships_loaded(test_db):

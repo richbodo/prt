@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from utils.setup_database import initialize_database, setup_database
+from utils.setup_database import initialize_database
+from utils.setup_database import setup_database
 
 
 def test_setup_database_functions():

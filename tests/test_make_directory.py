@@ -22,7 +22,8 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
-from make_directory import DirectoryGenerator, app
+from make_directory import DirectoryGenerator
+from make_directory import app
 from typer.testing import CliRunner
 
 
@@ -299,8 +300,6 @@ def notes_export_dir(tmp_path):
 
 class TestDirectoryGenerator:
     """Test the DirectoryGenerator class functionality."""
-
-    pass
 
 
 class TestValidation:

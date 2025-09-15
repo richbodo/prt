@@ -3,7 +3,10 @@
 Wraps PRTAPI to provide data access for screens.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from prt_src.api import PRTAPI
 from prt_src.logging_config import get_logger
@@ -430,7 +433,8 @@ class DataService:
             Dictionary with search results grouped by entity type
         """
         try:
-            from prt_src.core.search_unified import EntityType, UnifiedSearchAPI
+            from prt_src.core.search_unified import EntityType
+            from prt_src.core.search_unified import UnifiedSearchAPI
 
             # Map string types to EntityType enum
             type_mapping = {

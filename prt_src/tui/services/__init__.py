@@ -4,8 +4,10 @@ Composable services that can be injected into screens.
 """
 
 from prt_src.tui.services.data import DataService
-from prt_src.tui.services.navigation import NavEntry, NavigationService
-from prt_src.tui.services.notification import NotificationService, NotificationType
+from prt_src.tui.services.navigation import NavEntry
+from prt_src.tui.services.navigation import NavigationService
+from prt_src.tui.services.notification import NotificationService
+from prt_src.tui.services.notification import NotificationType
 
 __all__ = [
     "NavigationService",

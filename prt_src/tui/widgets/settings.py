@@ -4,12 +4,23 @@ Provides a comprehensive settings interface with categories,
 validation, and persistence.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
+from textual.containers import Vertical
 from textual.reactive import reactive
-from textual.widgets import Button, Input, Label, Select, Static, Switch
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import Select
+from textual.widgets import Static
+from textual.widgets import Switch
 
 from prt_src.tui.widgets.base import ModeAwareWidget
 

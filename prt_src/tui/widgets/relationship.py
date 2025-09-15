@@ -4,12 +4,21 @@ Provides widgets for viewing, editing, and visualizing relationships
 between contacts.
 """
 
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Input, Label, Select, Static
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import Select
+from textual.widgets import Static
 
 from prt_src.tui.widgets.base import ModeAwareWidget
 
@@ -222,7 +231,6 @@ class RelationshipList(ModeAwareWidget):
         """Handle add new relationship button."""
         # This would typically open a dialog or switch to edit mode
         # For now, just a placeholder
-        pass
 
     def load_relationships(self, relationships: List[Dict]) -> None:
         """Load relationships into the list.

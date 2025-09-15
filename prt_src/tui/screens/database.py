@@ -4,16 +4,25 @@ Game-style backup/restore with slots.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Button, DataTable, Label, Rule
+from textual.containers import Container
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import DataTable
+from textual.widgets import Label
+from textual.widgets import Rule
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -95,7 +104,7 @@ class DatabaseScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load database stats: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load database stats: {e}")
+                await self.notification_service.show_error(f"Failed to load database stats: {e}")
 
     def _update_stats_display(self) -> None:
         """Update the statistics display with current data."""
@@ -186,30 +195,30 @@ class DatabaseScreen(BaseScreen):
 
         try:
             if self.notification_service:
-                self.notification_service.show_info("Creating database backup...")
+                await self.notification_service.show_info("Creating database backup...")
 
             backup_info = await self.data_service.create_backup()
 
             if backup_info:
                 if self.notification_service:
-                    self.notification_service.show_success(
+                    await self.notification_service.show_success(
                         f"Backup created successfully: {backup_info.get('filename', 'Unknown')}"
                     )
                 await self._load_database_stats()  # Refresh display
             else:
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to create backup")
+                    await self.notification_service.show_error("Failed to create backup")
 
         except Exception as e:
             logger.error(f"Backup failed: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Backup failed: {e}")
+                await self.notification_service.show_error(f"Backup failed: {e}")
 
     async def _handle_restore(self) -> None:
         """Handle restoring from a backup."""
         if not self.data_service or not self._backups:
             if self.notification_service:
-                self.notification_service.show_warning("No backups available to restore from")
+                await self.notification_service.show_warning("No backups available to restore from")
             return
 
         try:
@@ -220,26 +229,26 @@ class DatabaseScreen(BaseScreen):
 
             if not backup_id:
                 if self.notification_service:
-                    self.notification_service.show_error("Invalid backup ID")
+                    await self.notification_service.show_error("Invalid backup ID")
                 return
 
             if self.notification_service:
-                self.notification_service.show_info(f"Restoring from backup {backup_id}...")
+                await self.notification_service.show_info(f"Restoring from backup {backup_id}...")
 
             success = await self.data_service.restore_backup(backup_id)
 
             if success:
                 if self.notification_service:
-                    self.notification_service.show_success("Database restored successfully")
+                    await self.notification_service.show_success("Database restored successfully")
                 await self._load_database_stats()  # Refresh display
             else:
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to restore database")
+                    await self.notification_service.show_error("Failed to restore database")
 
         except Exception as e:
             logger.error(f"Restore failed: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Restore failed: {e}")
+                await self.notification_service.show_error(f"Restore failed: {e}")
 
     async def _handle_export(self) -> None:
         """Handle exporting data."""
@@ -248,26 +257,26 @@ class DatabaseScreen(BaseScreen):
 
         try:
             if self.notification_service:
-                self.notification_service.show_info("Exporting database...")
+                await self.notification_service.show_info("Exporting database...")
 
             export_path = await self.data_service.export_data()
 
             if export_path:
                 if self.notification_service:
-                    self.notification_service.show_success(f"Data exported to: {export_path}")
+                    await self.notification_service.show_success(f"Data exported to: {export_path}")
             else:
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to export data")
+                    await self.notification_service.show_error("Failed to export data")
 
         except Exception as e:
             logger.error(f"Export failed: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Export failed: {e}")
+                await self.notification_service.show_error(f"Export failed: {e}")
 
     async def _handle_import(self) -> None:
         """Handle importing data."""
         if self.notification_service:
-            self.notification_service.show_info("Import functionality not yet implemented")
+            await self.notification_service.show_info("Import functionality not yet implemented")
 
     async def _handle_vacuum(self) -> None:
         """Handle database vacuum/optimization."""
@@ -276,22 +285,22 @@ class DatabaseScreen(BaseScreen):
 
         try:
             if self.notification_service:
-                self.notification_service.show_info("Optimizing database...")
+                await self.notification_service.show_info("Optimizing database...")
 
             success = await self.data_service.vacuum_database()
 
             if success:
                 if self.notification_service:
-                    self.notification_service.show_success("Database optimized successfully")
+                    await self.notification_service.show_success("Database optimized successfully")
                 await self._load_database_stats()  # Refresh display
             else:
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to optimize database")
+                    await self.notification_service.show_error("Failed to optimize database")
 
         except Exception as e:
             logger.error(f"Vacuum failed: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Vacuum failed: {e}")
+                await self.notification_service.show_error(f"Vacuum failed: {e}")
 
     def compose(self) -> ComposeResult:
         """Compose database screen layout."""

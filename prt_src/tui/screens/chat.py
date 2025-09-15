@@ -5,16 +5,22 @@ Natural language interface with command detection.
 
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Input, LoadingIndicator, RichLog
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Input
+from textual.widgets import LoadingIndicator
+from textual.widgets import RichLog
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 

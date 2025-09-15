@@ -19,12 +19,17 @@ def run_promptfoo_scenario(path: Path) -> dict:
     try:
         for base in COMMANDS:
             try:
-                subprocess.run(base + ["-c", str(path), "-o", str(output_path)], check=True)
+                # Add timeout to prevent hanging
+                subprocess.run(
+                    base + ["-c", str(path), "-o", str(output_path)],
+                    check=True,
+                    timeout=60,  # 1 minute timeout
+                )
                 break
-            except (subprocess.CalledProcessError, FileNotFoundError):
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
                 continue
         else:
-            raise RuntimeError("promptfoo CLI is not available")
+            raise RuntimeError("promptfoo CLI is not available or timed out")
 
         with output_path.open("r", encoding="utf-8") as f:
             return json.load(f)

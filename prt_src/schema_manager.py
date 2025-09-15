@@ -414,7 +414,7 @@ class SchemaManager:
             if not migration_path.exists():
                 raise RuntimeError(f"Migration file not found: {migration_path}")
 
-            with open(migration_path, "r") as f:
+            with open(migration_path) as f:
                 sql_content = f.read()
 
             # Execute SQL statements one by one (split by semicolon)

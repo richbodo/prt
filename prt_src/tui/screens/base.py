@@ -7,7 +7,9 @@ injected services.
 
 from abc import abstractmethod
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -80,7 +82,6 @@ class BaseScreen(Container):
         Returns:
             Screen identifier (e.g., "home", "contacts")
         """
-        pass
 
     def get_header_config(self) -> Optional[Dict[str, Any]]:
         """Get header slot configuration.
@@ -149,7 +150,6 @@ class BaseScreen(Container):
         Called when on_escape() returns CUSTOM.
         Override in screens that need special ESC handling.
         """
-        pass
 
     def has_unsaved_changes(self) -> bool:
         """Check if screen has unsaved changes.

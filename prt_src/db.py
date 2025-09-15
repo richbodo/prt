@@ -1,14 +1,26 @@
 import json
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Tuple
+from typing import Union
 
-from sqlalchemy import and_, case, create_engine, func, or_, text
+from sqlalchemy import and_
+from sqlalchemy import case
+from sqlalchemy import create_engine
+from sqlalchemy import func
+from sqlalchemy import or_
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import aliased, sessionmaker
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm import sessionmaker
 
 from .logging_config import get_logger
-from .models import Contact, ContactRelationship, RelationshipType
+from .models import Contact
+from .models import ContactRelationship
+from .models import RelationshipType
 
 
 class Database:
@@ -364,7 +376,8 @@ class Database:
 
     def add_relationship_tag(self, contact_id: int, tag_name: str):
         """Add a tag to a contact's relationship."""
-        from .models import Contact, Tag
+        from .models import Contact
+        from .models import Tag
 
         # Get or create the tag
         tag_id = self.add_tag(tag_name)
@@ -397,7 +410,8 @@ class Database:
 
     def add_relationship_note(self, contact_id: int, note_title: str, note_content: str):
         """Add a note to a contact's relationship."""
-        from .models import Contact, Note
+        from .models import Contact
+        from .models import Note
 
         # Get or create the note
         note_id = self.add_note(note_title, note_content)
@@ -512,7 +526,8 @@ class Database:
         end_date=None,
     ):
         """Create a relationship between two contacts."""
-        from .models import ContactRelationship, RelationshipType
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         # Get the relationship type
         rel_type = (
@@ -579,7 +594,9 @@ class Database:
 
     def get_contact_relationships(self, contact_id: int) -> List[Dict[str, Any]]:
         """Get all relationships for a contact."""
-        from .models import Contact, ContactRelationship, RelationshipType
+        from .models import Contact
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         # Get relationships where contact is 'from'
         relationships_from = (
@@ -647,7 +664,9 @@ class Database:
         """Get all relationships in the database."""
         from sqlalchemy.orm import aliased
 
-        from .models import Contact, ContactRelationship, RelationshipType
+        from .models import Contact
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         # Create aliases for the Contact table to handle self-joins
         FromContact = aliased(Contact)
@@ -693,7 +712,8 @@ class Database:
 
     def delete_contact_relationship(self, from_contact_id: int, to_contact_id: int, type_key: str):
         """Delete a relationship between two contacts (and its inverse if applicable)."""
-        from .models import ContactRelationship, RelationshipType
+        from .models import ContactRelationship
+        from .models import RelationshipType
 
         # Get the relationship type
         rel_type = (

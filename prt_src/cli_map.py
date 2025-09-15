@@ -6,7 +6,9 @@ and interactive menu hierarchy as a tree.
 """
 
 import inspect
-from typing import Any, Dict, List
+from typing import Any
+from typing import Dict
+from typing import List
 
 import typer
 from rich.console import Console

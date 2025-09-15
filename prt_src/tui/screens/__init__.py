@@ -4,10 +4,13 @@ Pre-registers all screens to enable parallel development
 without conflicts.
 """
 
-from typing import Dict, Optional, Type
+from typing import Dict
+from typing import Optional
+from typing import Type
 
 from prt_src.logging_config import get_logger
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -119,10 +122,8 @@ except ImportError as e:
 
 # Import screens to register them (Phase 5 Contact Management Forms)
 try:
-    from . import (
-        contact_detail,  # Contact Detail Screen (Task 5.3)
-        contact_form,  # Contact Form Screen (Task 5.4)
-    )
+    from . import contact_detail  # Contact Detail Screen (Task 5.3)
+    from . import contact_form  # Contact Form Screen (Task 5.4)
 
     # Make imports accessible
     _ = contact_detail
@@ -135,10 +136,8 @@ except ImportError as e:
 
 # Import screens to register them (Phase 5 Relationship Management - Task 5.5 & 5.6)
 try:
-    from . import (
-        relationship_form,  # Relationship Form Screen (Task 5.5)
-        relationship_types,  # Relationship Types Screen (Task 5.6)
-    )
+    from . import relationship_form  # Relationship Form Screen (Task 5.5)
+    from . import relationship_types  # Relationship Types Screen (Task 5.6)
 
     # Make imports accessible
     _ = relationship_form
@@ -177,3 +176,27 @@ except ImportError as e:
     import logging
 
     logging.getLogger(__name__).warning(f"Failed to import wizard screen: {e}")
+
+# Import core navigation screens
+try:
+    from . import chat  # Chat/LLM Screen
+    from . import contacts  # Contacts List Screen
+    from . import database  # Database Screen
+    from . import home  # Home/Dashboard Screen
+    from . import metadata  # Metadata Screen
+    from . import relationships  # Relationships Screen
+    from . import search  # Search Screen
+
+    # Make imports accessible
+    _ = home
+    _ = contacts
+    _ = search
+    _ = relationships
+    _ = metadata
+    _ = database
+    _ = chat
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import core screens: {e}")

@@ -141,7 +141,7 @@ def _test_contact_search_export(api: PRTAPI, fixtures: dict):
 
     # Load and validate JSON
     json_file = export_dir / "contacts_search_results.json"
-    with open(json_file, "r") as f:
+    with open(json_file) as f:
         export_data = json.load(f)
 
     # Validate JSON structure
@@ -184,7 +184,7 @@ def _test_tag_search_export(api: PRTAPI, fixtures: dict):
 
     # Load and validate JSON
     json_file = export_dir / "tags_search_results.json"
-    with open(json_file, "r") as f:
+    with open(json_file) as f:
         export_data_loaded = json.load(f)
 
     # Validate JSON structure
@@ -230,7 +230,7 @@ def _test_note_search_export(api: PRTAPI, fixtures: dict):
 
         # Load and validate JSON
         json_file = export_dir / "notes_search_results.json"
-        with open(json_file, "r") as f:
+        with open(json_file) as f:
             export_data_loaded = json.load(f)
 
         # Validate JSON structure
@@ -352,3 +352,50 @@ def _validate_exported_image(export_dir: Path, contact: dict):
         assert (
             header == b"\xff\xd8\xff"
         ), f"File should start with JPEG magic bytes, got {header.hex()}"
+
+
+def test_cli_router_classic_flag():
+    """Test CLI router behavior with --classic flag."""
+    runner = CliRunner()
+
+    # Test --classic flag shows help without TUI attempt
+    result = runner.invoke(app, ["--classic", "--help"])
+    assert result.exit_code == 0
+    assert "Personal Relationship Toolkit" in result.output
+
+
+def test_cli_router_tui_flag():
+    """Test CLI router behavior with --tui flag."""
+    runner = CliRunner()
+
+    # Test --tui flag attempts TUI launch (will fail in test environment)
+    # We expect failure but should see the fallback message
+    result = runner.invoke(app, ["--tui", "--help"])
+    assert result.exit_code == 0
+
+
+def test_cli_router_default_behavior():
+    """Test CLI router default behavior (should attempt TUI)."""
+    runner = CliRunner()
+
+    # Test default behavior attempts TUI (will fail in test environment)
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+
+
+def test_launch_tui_with_fallback_import_error():
+    """Test _launch_tui_with_fallback handles import errors gracefully."""
+    from unittest.mock import patch
+
+    from prt_src.cli import _launch_tui_with_fallback
+
+    # Mock the import to raise an ImportError
+    with patch("prt_src.cli.console") as mock_console:
+        with patch("builtins.__import__", side_effect=ImportError("Mock TUI import error")):
+            _launch_tui_with_fallback(debug=False)
+
+            # Verify error message was printed
+            mock_console.print.assert_any_call(
+                "Failed to launch TUI: Mock TUI import error", style="red"
+            )
+            mock_console.print.assert_any_call("Falling back to classic CLI...", style="yellow")

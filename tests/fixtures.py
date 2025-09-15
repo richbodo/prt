@@ -8,7 +8,8 @@ and profile images.
 
 import base64
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
+from typing import Dict
 
 
 def _generate_profile_images():

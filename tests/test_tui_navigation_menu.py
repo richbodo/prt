@@ -3,7 +3,8 @@
 Comprehensive tests for the home screen navigation menu.
 """
 
-from prt_src.tui.widgets.navigation_menu import MenuItem, NavigationMenu
+from prt_src.tui.widgets.navigation_menu import MenuItem
+from prt_src.tui.widgets.navigation_menu import NavigationMenu
 
 
 class TestMenuItem:

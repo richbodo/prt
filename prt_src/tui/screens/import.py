@@ -5,17 +5,28 @@ Handles importing contacts from Google Takeout zip files.
 
 import asyncio
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Button, Input, Label, ProgressBar, Rule, Static
+from textual.containers import Container
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Input
+from textual.widgets import Label
+from textual.widgets import ProgressBar
+from textual.widgets import Rule
+from textual.widgets import Static
 
-from prt_src.google_takeout import GoogleTakeoutParser, parse_takeout_contacts
+from prt_src.google_takeout import GoogleTakeoutParser
+from prt_src.google_takeout import parse_takeout_contacts
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -150,7 +161,7 @@ class ImportScreen(BaseScreen):
                 self._clear_preview()
                 return
 
-            if not path.suffix.lower() == ".zip":
+            if path.suffix.lower() != ".zip":
                 self._show_file_status("⚠️ File should be a ZIP archive", "warning")
             else:
                 self._show_file_status("✅ File found", "success")

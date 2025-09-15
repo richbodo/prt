@@ -8,7 +8,11 @@ including VCard parsing and profile image extraction.
 import mimetypes
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import vobject
 

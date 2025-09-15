@@ -3,7 +3,8 @@
 Lightweight TDD approach - start with basic tests, then expand.
 """
 
-from prt_src.tui.widgets.contact_list import ContactListWidget, ContactRow
+from prt_src.tui.widgets.contact_list import ContactListWidget
+from prt_src.tui.widgets.contact_list import ContactRow
 
 
 class TestContactListWidget:

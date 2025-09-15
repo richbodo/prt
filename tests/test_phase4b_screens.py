@@ -3,6 +3,7 @@
 Tests all 7 screens implemented in Phase 4B.
 """
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 from prt_src.tui.screens.base import EscapeIntent
@@ -24,7 +25,7 @@ def mock_services():
     nav_service.get_breadcrumb.return_value = ["Home", "Test"]
 
     data_service = MagicMock(spec=DataService)
-    notification_service = MagicMock(spec=NotificationService)
+    notification_service = AsyncMock(spec=NotificationService)
 
     return {
         "nav_service": nav_service,

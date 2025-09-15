@@ -4,16 +4,23 @@ Shows full contact information with relationships, tags, and notes.
 Provides edit and delete functionality.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict
+from typing import List
+from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, DataTable, LoadingIndicator, Static
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import DataTable
+from textual.widgets import LoadingIndicator
+from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -138,7 +145,7 @@ class ContactDetailScreen(BaseScreen):
         else:
             logger.error("No contact_id provided to contact detail screen")
             if self.notification_service:
-                self.notification_service.show_error("No contact ID provided")
+                await self.notification_service.show_error("No contact ID provided")
 
     async def on_show(self) -> None:
         """Refresh contact data when screen becomes visible."""
@@ -163,7 +170,7 @@ class ContactDetailScreen(BaseScreen):
             if not self.contact_data:
                 logger.error(f"Contact {self.contact_id} not found")
                 if self.notification_service:
-                    self.notification_service.show_error("Contact not found")
+                    await self.notification_service.show_error("Contact not found")
                 return
 
             # Update contact info display
@@ -182,7 +189,7 @@ class ContactDetailScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load contact {self.contact_id}: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load contact: {e}")
+                await self.notification_service.show_error(f"Failed to load contact: {e}")
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -324,7 +331,7 @@ class ContactDetailScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to edit contact screen: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open edit contact screen")
+                    await self.notification_service.show_error("Failed to open edit contact screen")
 
     async def _handle_delete_contact(self) -> None:
         """Handle delete contact action."""
@@ -347,16 +354,16 @@ class ContactDetailScreen(BaseScreen):
                     success = await self.data_service.delete_contact(self.contact_id)
 
                     if success:
-                        self.notification_service.show_success(f"Deleted {name}")
+                        await self.notification_service.show_success(f"Deleted {name}")
                         # Navigate back to contacts list
                         await self._handle_back()
                     else:
-                        self.notification_service.show_error(f"Failed to delete {name}")
+                        await self.notification_service.show_error(f"Failed to delete {name}")
 
             except Exception as e:
                 logger.error(f"Failed to delete contact {self.contact_id}: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to delete contact")
+                    await self.notification_service.show_error("Failed to delete contact")
 
     async def _handle_back(self) -> None:
         """Handle back navigation."""
@@ -370,7 +377,7 @@ class ContactDetailScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate back: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to go back")
+                    await self.notification_service.show_error("Failed to go back")
 
 
 # Register this screen

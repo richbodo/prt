@@ -4,7 +4,8 @@ Lightweight TDD approach for contact detail display and editing.
 """
 
 from prt_src.tui.app import AppMode
-from prt_src.tui.widgets.contact_detail import ContactDetailView, FieldEditor
+from prt_src.tui.widgets.contact_detail import ContactDetailView
+from prt_src.tui.widgets.contact_detail import FieldEditor
 
 
 class TestContactDetailView:

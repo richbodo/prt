@@ -7,12 +7,10 @@ from textual.widgets import Static
 
 # These imports will fail initially - that's expected in TDD
 from prt_src.tui.app import AppMode
-from prt_src.tui.widgets.base import (
-    ConfirmDialog,
-    ModeAwareWidget,
-    StatusBar,
-    ToastNotification,
-)
+from prt_src.tui.widgets.base import ConfirmDialog
+from prt_src.tui.widgets.base import ModeAwareWidget
+from prt_src.tui.widgets.base import StatusBar
+from prt_src.tui.widgets.base import ToastNotification
 
 
 class TestModeAwareWidget:

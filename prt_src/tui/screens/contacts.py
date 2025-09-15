@@ -8,11 +8,13 @@ from typing import Optional
 from textual import events
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.widgets import DataTable, LoadingIndicator
+from textual.widgets import DataTable
+from textual.widgets import LoadingIndicator
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -140,7 +142,7 @@ class ContactsScreen(BaseScreen):
         except Exception as e:
             logger.error(f"Failed to load contacts: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load contacts: {e}")
+                await self.notification_service.show_error(f"Failed to load contacts: {e}")
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -178,21 +180,21 @@ class ContactsScreen(BaseScreen):
                 await self._handle_edit_contact(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No contact selected")
+                    await self.notification_service.show_warning("No contact selected")
         elif key == "d":
             # Delete selected contact
             if selected_id:
                 await self._handle_delete_contact(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No contact selected")
+                    await self.notification_service.show_warning("No contact selected")
         elif key == "enter":
             # View contact details
             if selected_id:
                 await self._handle_view_contact(selected_id)
             else:
                 if self.notification_service:
-                    self.notification_service.show_warning("No contact selected")
+                    await self.notification_service.show_warning("No contact selected")
         elif key == "forward_slash":
             # Focus search box
             await self._handle_search_focus()
@@ -212,7 +214,7 @@ class ContactsScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to contact_form screen: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open add contact screen")
+                    await self.notification_service.show_error("Failed to open add contact screen")
 
     async def _handle_edit_contact(self, contact_id: int) -> None:
         """Handle edit contact action."""
@@ -226,7 +228,7 @@ class ContactsScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to contact_form screen: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open edit contact screen")
+                    await self.notification_service.show_error("Failed to open edit contact screen")
 
     async def _handle_delete_contact(self, contact_id: int) -> None:
         """Handle delete contact action."""
@@ -249,16 +251,18 @@ class ContactsScreen(BaseScreen):
                     success = await self.data_service.delete_contact(contact_id)
 
                     if success:
-                        self.notification_service.show_success(f"Deleted {contact_name}")
+                        await self.notification_service.show_success(f"Deleted {contact_name}")
                         # Reload the contacts list
                         await self._load_contacts()
                     else:
-                        self.notification_service.show_error(f"Failed to delete {contact_name}")
+                        await self.notification_service.show_error(
+                            f"Failed to delete {contact_name}"
+                        )
 
             except Exception as e:
                 logger.error(f"Failed to delete contact {contact_id}: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to delete contact")
+                    await self.notification_service.show_error("Failed to delete contact")
 
     async def _handle_view_contact(self, contact_id: int) -> None:
         """Handle view contact details action."""
@@ -272,14 +276,16 @@ class ContactsScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate to contact_detail screen: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to open contact details screen")
+                    await self.notification_service.show_error(
+                        "Failed to open contact details screen"
+                    )
 
     async def _handle_search_focus(self) -> None:
         """Handle focus search box action."""
         logger.info("Search focus requested")
         # TODO: Implement search box focus when header search is implemented
         if self.notification_service:
-            self.notification_service.show_info("Search functionality coming soon")
+            await self.notification_service.show_info("Search functionality coming soon")
 
 
 # Register this screen

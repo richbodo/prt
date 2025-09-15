@@ -4,17 +4,27 @@ Provides add/edit functionality for contacts with validation.
 Includes fields for basic contact info, tag selection, and notes.
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Checkbox, Input, LoadingIndicator, Static, TextArea
+from textual.containers import Horizontal
+from textual.containers import Vertical
+from textual.widgets import Button
+from textual.widgets import Checkbox
+from textual.widgets import Input
+from textual.widgets import LoadingIndicator
+from textual.widgets import Static
+from textual.widgets import TextArea
 
 from prt_src.core.components.validation import ValidationSystem
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
-from prt_src.tui.screens.base import BaseScreen, EscapeIntent
+from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 
 logger = get_logger(__name__)
 
@@ -184,14 +194,14 @@ class ContactFormScreen(BaseScreen):
                 else:
                     logger.error(f"Contact {self.contact_id} not found for editing")
                     if self.notification_service:
-                        self.notification_service.show_error("Contact not found")
+                        await self.notification_service.show_error("Contact not found")
 
             logger.info(f"Loaded form data for {self.mode} mode")
 
         except Exception as e:
             logger.error(f"Failed to load form data: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to load form: {e}")
+                await self.notification_service.show_error(f"Failed to load form: {e}")
         finally:
             # Hide loading indicator
             if self.loading_indicator:
@@ -348,7 +358,7 @@ class ContactFormScreen(BaseScreen):
             if self.validation_message:
                 self.validation_message.update(error_message)
             if self.notification_service:
-                self.notification_service.show_error("Please fix validation errors")
+                await self.notification_service.show_error("Please fix validation errors")
             return
 
         # Clear validation message
@@ -373,13 +383,13 @@ class ContactFormScreen(BaseScreen):
                     self.clear_unsaved()
                     if self.notification_service:
                         name = f"{save_data.get('first_name', '')} {save_data.get('last_name', '')}".strip()
-                        self.notification_service.show_success(f"Created contact: {name}")
+                        await self.notification_service.show_success(f"Created contact: {name}")
 
                     # Navigate back to contacts list
                     await self._navigate_back()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to create contact")
+                        await self.notification_service.show_error("Failed to create contact")
 
             elif self.mode == "edit":
                 # Update existing contact
@@ -393,18 +403,18 @@ class ContactFormScreen(BaseScreen):
                     self.clear_unsaved()
                     if self.notification_service:
                         name = f"{save_data.get('first_name', '')} {save_data.get('last_name', '')}".strip()
-                        self.notification_service.show_success(f"Updated contact: {name}")
+                        await self.notification_service.show_success(f"Updated contact: {name}")
 
                     # Navigate back to contact detail or contacts list
                     await self._navigate_back()
                 else:
                     if self.notification_service:
-                        self.notification_service.show_error("Failed to update contact")
+                        await self.notification_service.show_error("Failed to update contact")
 
         except Exception as e:
             logger.error(f"Failed to save contact: {e}")
             if self.notification_service:
-                self.notification_service.show_error(f"Failed to save contact: {e}")
+                await self.notification_service.show_error(f"Failed to save contact: {e}")
 
     def _collect_form_data(self) -> Dict:
         """Collect data from form fields."""
@@ -489,7 +499,7 @@ class ContactFormScreen(BaseScreen):
             except Exception as e:
                 logger.error(f"Failed to navigate back: {e}")
                 if self.notification_service:
-                    self.notification_service.show_error("Failed to navigate back")
+                    await self.notification_service.show_error("Failed to navigate back")
 
 
 # Register this screen

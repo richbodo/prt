@@ -4,19 +4,24 @@ This module implements the main Textual application with mode management,
 first-run detection, and global keybindings.
 """
 
+import uuid
 from pathlib import Path
 from typing import Optional
 
 from textual import events
-from textual.app import App, ComposeResult
+from textual.app import App
+from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Footer
+from textual.widgets import Header
+from textual.widgets import Static
 
 from prt_src.config import load_config
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
-from prt_src.tui.screens import EscapeIntent, create_screen
+from prt_src.tui.screens import EscapeIntent
+from prt_src.tui.screens import create_screen
 from prt_src.tui.services.navigation import NavigationService
 from prt_src.tui.types import AppMode
 
@@ -114,16 +119,19 @@ class PRTApp(App):
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
 
+        # Track current container for proper cleanup
+        self.current_container_id: Optional[str] = None
+
         # Load config and initialize database
         try:
             config = load_config()
             db_path = Path(config["db_path"])
-            self.db = Database(db_path)
+            self.db = TUIDatabase(db_path)
             self.db.connect()
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             # Create a minimal in-memory database for testing
-            self.db = Database(Path(":memory:"))
+            self.db = TUIDatabase(Path(":memory:"))
             self.db.connect()
 
         # Ensure database tables are created
@@ -400,8 +408,8 @@ class PRTApp(App):
             logger.error(f"Failed to create screen: {screen_name}")
             return
 
-        # Hide current screen
-        if self.current_screen:
+        # Hide current screen and remove its container
+        if self.current_screen and self.current_container_id:
             await self.current_screen.on_hide()
 
         # Get the main container and replace its contents instead of removing it
@@ -415,13 +423,16 @@ class PRTApp(App):
             logger.error(f"Failed to switch screen content: {e}")
             # Fallback: try to mount in a new container if the above fails
             try:
-                await self.mount(Container(new_screen, id=f"main-container-{screen_name}"))
-            except Exception as fallback_error:
-                logger.error(f"Fallback mounting also failed: {fallback_error}")
-                return
+                container = self.query_one(f"#{self.current_container_id}")
+                container.remove()
+                logger.debug(f"Removed container: {self.current_container_id}")
+            except Exception as e:
+                logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
 
-        # Update current screen reference
+        # Mount new screen with unique container ID
+        self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
         self.current_screen = new_screen
+        await self.mount(Container(new_screen, id=self.current_container_id))
 
         # Show new screen
         await new_screen.on_show()
@@ -436,8 +447,8 @@ class PRTApp(App):
         2. 'You' contact is created if missing (on first run)
         """
         try:
-            # Use set_timer to run async initialization after app is mounted
-            self.set_timer(0.05, self._async_initialize_database_data)
+            # Use call_later to run async initialization after app is mounted
+            self.call_later(self._async_initialize_database_data)
         except Exception as e:
             logger.error(f"Failed to schedule database data initialization: {e}")
 
@@ -461,10 +472,9 @@ class PRTApp(App):
             logger.error(f"Failed to initialize database data: {e}")
 
 
-# Placeholder for Database extensions
-# We'll need to add get_you_contact method to Database class
-def extend_database():
-    """Extend Database class with TUI-specific methods."""
+# TUI Database Extensions
+class TUIDatabase(Database):
+    """Extended Database class with TUI-specific methods."""
 
     def get_you_contact(self):
         """Get the 'You' contact if it exists.
@@ -535,16 +545,6 @@ def extend_database():
             logger.error(f"Error creating contact: {e}")
             self.session.rollback()
             raise
-
-    # Monkey-patch for now, will properly integrate later
-    if not hasattr(Database, "get_you_contact"):
-        Database.get_you_contact = get_you_contact
-    if not hasattr(Database, "create_contact"):
-        Database.create_contact = create_contact
-
-
-# Apply database extensions on import
-extend_database()
 
 
 # Development runner

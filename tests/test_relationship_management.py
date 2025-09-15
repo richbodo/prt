@@ -6,7 +6,8 @@ and related data service methods.
 
 import unittest
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 # Note: These tests would normally use actual imports
 # For this demonstration, we're creating mock tests that show

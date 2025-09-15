@@ -3,12 +3,14 @@
 Lightweight TDD approach - start with basic tests, then expand.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
 # These imports will fail initially - that's expected in TDD
-from prt_src.tui.app import FirstRunHandler, PRTApp
+from prt_src.tui.app import FirstRunHandler
+from prt_src.tui.app import PRTApp
 from prt_src.tui.types import AppMode
 
 

@@ -4,14 +4,20 @@ This module provides foundational widgets that handle mode management,
 status display, notifications, and confirmations.
 """
 
-from typing import Callable, Optional, Set
+from typing import Callable
+from typing import Optional
+from typing import Set
 
 from textual import events, on
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container
+from textual.containers import Horizontal
+from textual.containers import Vertical
 from textual.reactive import reactive
 from textual.timer import Timer
-from textual.widgets import Button, Label, Static
+from textual.widgets import Button
+from textual.widgets import Label
+from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.types import AppMode

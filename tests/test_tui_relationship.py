@@ -3,7 +3,9 @@
 Lightweight TDD for relationship management functionality.
 """
 
-from prt_src.tui.widgets.relationship import RelationshipEditor, RelationshipGraph, RelationshipList
+from prt_src.tui.widgets.relationship import RelationshipEditor
+from prt_src.tui.widgets.relationship import RelationshipGraph
+from prt_src.tui.widgets.relationship import RelationshipList
 
 
 class TestRelationshipEditor:
