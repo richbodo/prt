@@ -66,7 +66,7 @@ class WizardScreen(BaseScreen):
         if self.current_step == self.STEP_WELCOME:
             # Skip to complete step
             self.current_step = self.STEP_COMPLETE
-            self.call_later(self._render_current_step)
+            self.call_after_refresh(self._render_current_step)
 
     def get_header_config(self) -> dict:
         """Configure header with title."""
@@ -105,12 +105,14 @@ class WizardScreen(BaseScreen):
         with Center(id="wizard-center"):
             with Container(id="wizard-container", classes="wizard-main"):
                 # Content container will be dynamically populated based on current step
-                with Container(id="wizard-content") as self.content_container:
+                with Container(id="wizard-content"):
                     yield Static("Loading...", id="wizard-loading")
 
     async def on_mount(self) -> None:
         """Initialize wizard when screen is mounted."""
         await super().on_mount()
+        # Get the content container reference
+        self.content_container = self.query_one("#wizard-content", Container)
         await self._render_current_step()
 
     async def on_show(self) -> None:
@@ -326,9 +328,7 @@ class WizardScreen(BaseScreen):
         if key == "enter":
             # Handle enter key for current step
             await self._handle_enter()
-        else:
-            # Let parent handle other keys
-            await super().on_key(event)
+        # Note: Parent Container class doesn't have on_key method, so we don't call super()
 
     async def _handle_enter(self) -> None:
         """Handle enter key based on current step."""

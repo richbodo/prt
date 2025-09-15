@@ -9,6 +9,7 @@ from typing import Callable
 from typing import List
 from typing import Optional
 
+from textual import events
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.reactive import reactive
@@ -121,7 +122,7 @@ class NavigationMenu(ModeAwareWidget):
                 if item.action == self.current_section:
                     row_class += " current"
 
-                row = Static(item.display_text, classes=row_class)
+                row = Static(item.display_text, classes=row_class, id=f"menu-item-{i}")
                 if item.description:
                     row.tooltip = item.description
                 self.menu_rows.append(row)
@@ -233,9 +234,28 @@ class NavigationMenu(ModeAwareWidget):
             if result is not None:
                 return True
 
-        return super().handle_key(key)
+        # If navigation menu didn't handle it, return False so parent can handle
+        return False
 
     def on_mount(self) -> None:
         """Called when the widget is mounted."""
         # Initialize selection state
         self._update_selection()
+
+    async def on_click(self, event: events.Click) -> None:
+        """Handle mouse clicks on menu items."""
+        # Find which widget was clicked and get its ID
+        clicked_widget = event.widget
+        if (
+            hasattr(clicked_widget, "id")
+            and clicked_widget.id
+            and clicked_widget.id.startswith("menu-item-")
+        ):
+            try:
+                item_index = int(clicked_widget.id.split("-")[-1])
+                if 0 <= item_index < len(self.menu_items):
+                    self.selected_index = item_index
+                    self._update_selection()
+                    self._activate_current()
+            except (ValueError, IndexError):
+                pass

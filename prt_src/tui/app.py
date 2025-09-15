@@ -105,6 +105,7 @@ class PRTApp(App):
     BINDINGS = [
         Binding("escape", "toggle_mode", "Toggle Mode", priority=True),
         Binding("q", "quit", "Quit", show=False),  # Only in NAV mode
+        Binding("x", "exit_with_confirmation", "(x)exit", priority=True),  # Universal exit
         Binding("?", "help", "Help"),
     ]
 
@@ -194,11 +195,11 @@ class PRTApp(App):
         if self._is_first_run:
             logger.info("First run detected - showing wizard")
             # Navigate to wizard screen
-            self.set_timer(0.1, self._go_to_wizard)
+            self.call_after_refresh(self._go_to_wizard)
         else:
             logger.info("Existing installation detected")
             # Navigate to home screen
-            self.set_timer(0.1, self._go_to_home)
+            self.call_after_refresh(self._go_to_home)
 
     async def _go_to_home(self) -> None:
         """Navigate to home screen."""
@@ -229,6 +230,20 @@ class PRTApp(App):
         # Will implement help screen later
         logger.info("Help requested")
 
+    def action_exit_with_confirmation(self) -> None:
+        """Exit with confirmation dialog (universal X key binding - works in any mode)."""
+        logger.info(
+            f"X key pressed - current mode: {self.current_mode.value} - exit confirmation requested"
+        )
+        # Schedule async confirmation dialog (works regardless of mode)
+        self.call_after_refresh(self._handle_exit_confirmation)
+
+    async def _handle_exit_confirmation(self) -> None:
+        """Handle the async part of exit confirmation."""
+        confirmed = await self.show_exit_confirmation()
+        if confirmed:
+            self.exit()
+
     def toggle_mode(self) -> None:
         """Public method to toggle mode (for testing)."""
         self.action_toggle_mode()
@@ -239,8 +254,35 @@ class PRTApp(App):
         Args:
             event: Key event
         """
+        logger.info(f"APP LEVEL - Key pressed: '{event.key}', mode: {self.current_mode.value}")
+
+        # Handle exit confirmation if waiting for response
+        if hasattr(self, "_waiting_for_exit_confirmation") and self._waiting_for_exit_confirmation:
+            if event.key in ["y", "Y"]:
+                logger.info("Y pressed - confirming exit")
+                await self._handle_exit_confirmed()
+                return
+            elif event.key in ["n", "N", "escape"]:
+                logger.info("N/ESC pressed - cancelling exit")
+                await self._handle_exit_cancelled()
+                return
+
+        # Test all our key bindings manually
         if event.key == "escape":
+            logger.info("ESC key - calling handle_escape")
             await self.handle_escape()
+        elif event.key == "q":
+            logger.info("Q key pressed - calling quit action")
+            self.action_quit()
+        elif event.key == "x":
+            logger.info("X key pressed - calling exit action")
+            self.action_exit_with_confirmation()
+        elif event.key == "question_mark":  # ? key is actually 'question_mark'
+            logger.info("? key pressed - calling help action")
+            self.action_help()
+        else:
+            logger.info(f"Unhandled key: {event.key}")
+            # Key not handled - that's ok
 
     async def handle_escape(self) -> None:
         """Handle ESC key with per-screen intent."""
@@ -280,6 +322,78 @@ class PRTApp(App):
         logger.info("Would show discard dialog")
         return True
 
+    async def show_exit_confirmation(self) -> bool:
+        """Show exit confirmation dialog with Y/N prompt, defaulting to N.
+
+        Returns:
+            True if user confirms exit (Y), False if cancelled (N or ESC)
+        """
+        logger.info("Showing simple exit confirmation")
+
+        # Create a simple confirmation overlay
+        from textual.containers import Center
+        from textual.containers import Vertical
+        from textual.widgets import Label
+
+        # Create result tracker
+        self._exit_result = {"confirmed": False, "responded": False}
+
+        # Create simple confirmation widget
+        confirmation_widget = Container(
+            Center(
+                Vertical(
+                    Label("Exit PRT?", classes="confirm-title"),
+                    Label("Y = Yes, (N) = No (default)", classes="confirm-message"),
+                    Label("ESC = Cancel", classes="confirm-hint"),
+                    classes="confirm-content",
+                ),
+                classes="confirm-center",
+            ),
+            id="exit-confirmation",
+            classes="exit-confirmation-overlay",
+        )
+
+        # Mount the confirmation overlay with error handling
+        try:
+            await self.mount(confirmation_widget)
+            # Set up a simple key handler for this confirmation
+            self._waiting_for_exit_confirmation = True
+            logger.info("Exit confirmation mounted - waiting for Y/N response")
+        except Exception as e:
+            logger.error(f"Failed to mount exit confirmation dialog: {e}")
+            # Fallback: just exit without confirmation if dialog fails
+            logger.warning("Dialog failed - falling back to immediate exit")
+            return True
+
+        return False  # For now, return False to avoid infinite loops
+
+    async def _handle_exit_confirmed(self) -> None:
+        """Handle confirmed exit."""
+        logger.info("Exit confirmed - closing application")
+        self._waiting_for_exit_confirmation = False
+
+        # Remove confirmation dialog
+        try:
+            confirmation = self.query_one("#exit-confirmation")
+            await confirmation.remove()
+        except Exception:
+            pass
+
+        # Exit the application
+        self.exit()
+
+    async def _handle_exit_cancelled(self) -> None:
+        """Handle cancelled exit."""
+        logger.info("Exit cancelled - returning to application")
+        self._waiting_for_exit_confirmation = False
+
+        # Remove confirmation dialog
+        try:
+            confirmation = self.query_one("#exit-confirmation")
+            await confirmation.remove()
+        except Exception:
+            pass
+
     async def switch_screen(self, screen_name: str, params: Optional[dict] = None) -> None:
         """Switch to a different screen.
 
@@ -303,17 +417,39 @@ class PRTApp(App):
         # Hide current screen and remove its container
         if self.current_screen and self.current_container_id:
             await self.current_screen.on_hide()
+
+        # Get the main container and replace its contents instead of removing it
+        mount_successful = False
+        try:
+            container = self.query_one("#main-container")
+            # Remove all children from the container
+            await container.remove_children()
+            # Mount the new screen inside the existing container
+            await container.mount(new_screen)
+            mount_successful = True
+            logger.debug("Successfully mounted screen in existing main-container")
+        except Exception as e:
+            logger.error(f"Failed to switch screen content: {e}")
+            # Fallback: try to mount in a new container if the above fails
             try:
-                container = self.query_one(f"#{self.current_container_id}")
-                container.remove()
-                logger.debug(f"Removed container: {self.current_container_id}")
+                if self.current_container_id:
+                    container = self.query_one(f"#{self.current_container_id}")
+                    await container.remove()
+                    logger.debug(f"Removed container: {self.current_container_id}")
             except Exception as e:
                 logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
 
-        # Mount new screen with unique container ID
-        self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
+        # Only mount new screen with unique container ID if the main container approach failed
+        if not mount_successful:
+            self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
+            await self.mount(Container(new_screen, id=self.current_container_id))
+            logger.debug(f"Mounted screen in new container: {self.current_container_id}")
+        else:
+            # Keep using the main container
+            self.current_container_id = "main-container"
+
+        # Update current screen reference
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id=self.current_container_id))
 
         # Show new screen
         await new_screen.on_show()

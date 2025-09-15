@@ -1,0 +1,18 @@
+{
+  "mcp": {
+    "servers": {
+      "screenpipe": {
+        "command": "uv",
+        "args": [
+          "--directory",
+          "~/.screenpipe/mcp",
+          "run",
+          "screenpipe-mcp",
+          "--port",
+          "3030"
+        ],
+        "description": "Screen capture and analysis for TUI debugging"
+      }
+    }
+  }
+}

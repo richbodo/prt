@@ -49,6 +49,7 @@ class HomeScreen(BaseScreen):
                 "[t] Chat",
                 "[?] Help",
                 "[q] Quit",
+                "[x] Exit (universal)",
             ],
             "pager": None,
             "statusRight": None,
@@ -159,12 +160,26 @@ class HomeScreen(BaseScreen):
         Args:
             event: Key event
         """
+        logger.info(f"HOME SCREEN - Key pressed: '{event.key}'")
+
         if self.navigation_menu:
             # Delegate key handling to navigation menu
-            if self.navigation_menu.handle_key(event.key):
+            handled = self.navigation_menu.handle_key(event.key)
+            logger.info(f"Navigation menu handled '{event.key}': {handled}")
+            if handled:
                 return
 
-        # Fall back to parent handling
+        # If navigation menu didn't handle it, let the app handle it
+        logger.info(f"HOME SCREEN - Key '{event.key}' not handled by nav menu, checking app level")
+
+        # Check if this is an app-level key binding
+        if event.key in ["x", "q", "question_mark"]:
+            logger.info(f"HOME SCREEN - Delegating '{event.key}' to app level")
+            # Don't call super().on_key() - let the app's key binding system handle it
+            return
+
+        # For other keys, fall back to parent handling
+        logger.info(f"HOME SCREEN - Falling back to parent for key: '{event.key}'")
         await super().on_key(event)
 
 

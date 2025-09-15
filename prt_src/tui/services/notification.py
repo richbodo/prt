@@ -6,7 +6,6 @@ Provides toast notifications and dialog management.
 from enum import Enum
 from typing import Optional
 
-from textual import work
 from textual.app import App
 from textual.timer import Timer
 
@@ -97,7 +96,10 @@ class NotificationService:
         Args:
             message: Info message
         """
-        work(self.show_toast)(message, NotificationType.INFO)
+        if self.app:
+            self.app.call_later(self.show_toast, message, NotificationType.INFO)
+        else:
+            logger.warning(f"No app instance - cannot show info toast: {message}")
 
     def show_success(self, message: str) -> None:
         """Show success toast.
@@ -105,7 +107,10 @@ class NotificationService:
         Args:
             message: Success message
         """
-        work(self.show_toast)(message, NotificationType.SUCCESS)
+        if self.app:
+            self.app.call_later(self.show_toast, message, NotificationType.SUCCESS)
+        else:
+            logger.warning(f"No app instance - cannot show success toast: {message}")
 
     def show_warning(self, message: str) -> None:
         """Show warning toast.
@@ -113,7 +118,10 @@ class NotificationService:
         Args:
             message: Warning message
         """
-        work(self.show_toast)(message, NotificationType.WARNING)
+        if self.app:
+            self.app.call_later(self.show_toast, message, NotificationType.WARNING)
+        else:
+            logger.warning(f"No app instance - cannot show warning toast: {message}")
 
     def show_error(self, message: str) -> None:
         """Show error toast.
@@ -121,7 +129,10 @@ class NotificationService:
         Args:
             message: Error message
         """
-        work(self.show_toast)(message, NotificationType.ERROR)
+        if self.app:
+            self.app.call_later(self.show_toast, message, NotificationType.ERROR)
+        else:
+            logger.error(f"No app instance - cannot show error toast: {message}")
 
     async def show_confirm_dialog(
         self,

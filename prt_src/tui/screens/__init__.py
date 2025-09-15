@@ -94,6 +94,32 @@ __all__ = [
 # Screen imports will be added here as they're implemented
 # Each screen module will call register_screen() when imported
 
+# Import core screens to register them
+try:
+    from . import (
+        chat,  # Chat/AI interface screen
+        contacts,  # Contacts management screen
+        database,  # Database management screen
+        home,  # Home Screen with navigation menu
+        metadata,  # Metadata management screen
+        relationships,  # Relationships management
+        search,  # Search screen with filters
+    )
+
+    # Make imports accessible
+    _ = home
+    _ = contacts
+    _ = search
+    _ = relationships
+    _ = database
+    _ = chat
+    _ = metadata
+except ImportError as e:
+    # Handle import errors gracefully during development
+    import logging
+
+    logging.getLogger(__name__).warning(f"Failed to import core screens: {e}")
+
 # Import screens to register them (Phase 5 Contact Management Forms)
 try:
     from . import contact_detail  # Contact Detail Screen (Task 5.3)

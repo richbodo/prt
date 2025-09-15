@@ -374,7 +374,9 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                         {
                             "role": "tool",
                             "tool_call_id": tool_result["tool_call_id"],
-                            "content": json.dumps(tool_result["result"]),
+                            "content": json.dumps(
+                                tool_result["result"], default=self._json_serializer
+                            ),
                         }
                     )
 
@@ -426,6 +428,23 @@ Remember: You can only use the tools listed above. You cannot access files, run 
     def clear_history(self):
         """Clear the conversation history."""
         self.conversation_history = []
+
+    def _json_serializer(self, obj):
+        """Custom JSON serializer to handle non-serializable objects like bytes.
+
+        Args:
+            obj: Object to serialize
+
+        Returns:
+            Serializable representation of the object
+        """
+        if isinstance(obj, bytes):
+            return f"<binary data: {len(obj)} bytes>"
+        elif hasattr(obj, "__dict__"):
+            # For objects with attributes, return a dict representation (excluding private attrs)
+            return {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
+        else:
+            return str(obj)
 
 
 def chat_with_ollama(api: PRTAPI, message: str = None) -> str:

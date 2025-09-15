@@ -1,7 +1,6 @@
----
-description: ByteRover MCP Custom Instructions
-alwaysApply: true
----
+[byterover-mcp]
+
+[byterover-mcp]
 
 # Byterover MCP Server Tools Reference
 
