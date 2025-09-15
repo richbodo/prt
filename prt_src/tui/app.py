@@ -419,26 +419,37 @@ class PRTApp(App):
             await self.current_screen.on_hide()
 
         # Get the main container and replace its contents instead of removing it
+        mount_successful = False
         try:
             container = self.query_one("#main-container")
             # Remove all children from the container
             await container.remove_children()
             # Mount the new screen inside the existing container
             await container.mount(new_screen)
+            mount_successful = True
+            logger.debug("Successfully mounted screen in existing main-container")
         except Exception as e:
             logger.error(f"Failed to switch screen content: {e}")
             # Fallback: try to mount in a new container if the above fails
             try:
-                container = self.query_one(f"#{self.current_container_id}")
-                container.remove()
-                logger.debug(f"Removed container: {self.current_container_id}")
+                if self.current_container_id:
+                    container = self.query_one(f"#{self.current_container_id}")
+                    await container.remove()
+                    logger.debug(f"Removed container: {self.current_container_id}")
             except Exception as e:
                 logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
 
-        # Mount new screen with unique container ID
-        self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
+        # Only mount new screen with unique container ID if the main container approach failed
+        if not mount_successful:
+            self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
+            await self.mount(Container(new_screen, id=self.current_container_id))
+            logger.debug(f"Mounted screen in new container: {self.current_container_id}")
+        else:
+            # Keep using the main container
+            self.current_container_id = "main-container"
+
+        # Update current screen reference
         self.current_screen = new_screen
-        await self.mount(Container(new_screen, id=self.current_container_id))
 
         # Show new screen
         await new_screen.on_show()
