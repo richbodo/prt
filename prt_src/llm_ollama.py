@@ -5,6 +5,7 @@ This module provides integration with Ollama for running GPT-OSS-20B locally
 with tool calling capabilities for PRT operations.
 """
 
+import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -49,8 +50,10 @@ class OllamaLLM:
             True if Ollama is available and responsive, False otherwise
         """
         try:
-            # Try to get the models list as a quick health check
-            response = requests.get(f"{self.base_url.replace('/v1', '')}/api/tags", timeout=timeout)
+            # Run the synchronous request in a thread pool to avoid blocking the event loop
+            response = await asyncio.to_thread(
+                requests.get, f"{self.base_url.replace('/v1', '')}/api/tags", timeout=timeout
+            )
             return response.status_code == 200
         except (requests.exceptions.RequestException, requests.exceptions.Timeout):
             return False
