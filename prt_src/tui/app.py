@@ -187,7 +187,11 @@ class PRTApp(App):
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
         yield Header()
-        yield Container(Static("Welcome to PRT!", id="welcome"), id="main-container")
+        yield Container(
+            Static("Welcome to PRT!", id="welcome"),
+            id="main-container",
+            classes="main-container",
+        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -442,7 +446,13 @@ class PRTApp(App):
         # Only mount new screen with unique container ID if the main container approach failed
         if not mount_successful:
             self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
-            await self.mount(Container(new_screen, id=self.current_container_id))
+            await self.mount(
+                Container(
+                    new_screen,
+                    id=self.current_container_id,
+                    classes="main-container",
+                )
+            )
             logger.debug(f"Mounted screen in new container: {self.current_container_id}")
         else:
             # Keep using the main container
