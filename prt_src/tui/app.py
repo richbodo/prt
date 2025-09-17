@@ -186,7 +186,11 @@ class PRTApp(App):
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
         yield Header()
-        yield Container(Static("Welcome to PRT!", id="welcome"), id="main-container")
+        yield Container(
+            Static("Welcome to PRT!", id="welcome"),
+            id="main-container",
+            classes="main-container",
+        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -428,7 +432,7 @@ class PRTApp(App):
         except Exception as e:
             logger.error(f"Failed to switch screen: {e}")
             return
-
+          
         # Update current screen reference
         self.current_screen = new_screen
         self.current_container_id = "main-container"

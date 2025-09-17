@@ -1,19 +1,21 @@
 # Personal Relationship Toolkit (PRT)
 
-## QuickStart
+## Quick Start for Developers
 
-The `init.sh` file sets up a virtual environment for development and installs required dependencies. On macOS it uses Homebrew; on Debian-based Linux it uses `apt`. Init.sh also installs development tools with `pip install -r requirements-dev.txt`.
-
-```bash
-source ./init.sh
-python -m prt_src.cli
-```
-
-PRT will automatically detect if setup is needed and guide you through the process. If you prefer to run setup manually:
+Most contributors work out of the repository root and keep the virtual environment active while they iterate with Cursor, Codex, or Claude. Use either the shell scripts (good for interactive shells) or Make targets (good for automation) — they run the same logic.
 
 ```bash
-python -m prt_src.cli setup
+# First time / start of day
+source ./init.sh       # or: make init
+
+# Launch the modern TUI
+python -m prt_src      # or: make tui
+
+# End of day
+source ./uninit.sh     # or: make uninit
 ```
+
+Need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[Developer Environment & Workflow Guide](docs/DEV_SETUP.md)**.
 
 ## 🛠️ Development Workflow
 
@@ -27,13 +29,13 @@ PRT includes a comprehensive Makefile for common development tasks:
 
 ```bash
 # 🚀 Most Used Commands:
-make run             # Launch PRT TUI interface
-make test            # Run test suite quickly  
+make tui             # Launch PRT TUI interface
+make test            # Run test suite quickly
 make format          # Format code (black + ruff --fix)
 make clean           # Clean build artifacts and cache
 
 # 📋 See all available commands:
-make help           # Show complete command reference
+make help            # Show complete command reference
 ```
 
 ### Daily Development
@@ -48,7 +50,23 @@ python -m prt_src    # Launch TUI
 python -m prt_src --debug    # TUI with debug data
 ```
 
-**Pre-commit hooks** automatically run `ruff` and `black` on staged files when you commit.
+**Pre-commit hooks** automatically run `ruff` and `black` on staged files when you commit. The init script installs them for you.
+
+## Documentation Map
+
+Looking for something specific? Start with this map.
+
+| Doc | Status | What you’ll find |
+| --- | --- | --- |
+| `docs/DEV_SETUP.md` | ✅ Current | Start/end-of-day workflow, Git tips, AI helper pointers. |
+| `docs/INSTALL.md` | 🕰️ Historical | Legacy SQLCipher installation notes (kept for reference). |
+| `docs/DB_MANAGEMENT.md` | 🕰️ Historical | Older encryption/database flows superseded by app-level encryption. |
+| `docs/TUI_Specification.md` | ✅ Current | Feature and UX expectations for the modern TUI. |
+| `docs/TUI_Key_Bindings.md` | ✅ Current | Shortcut reference for manual testing. |
+| `ROADMAP.md` | ✅ Current | Current milestone planning. |
+| `CLAUDE.md`, `CLAUDE_TUI_MIGRATION.plan` | 🕰️ Historical | Narrative planning archives for context. |
+
+> ℹ️ Sections below this point capture a detailed CLI reference and historical notes. They’re still useful, but check the timestamps and comments inside the documents for freshness.
 
 ## Motivation/Purpose: 
 
