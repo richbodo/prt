@@ -39,6 +39,24 @@ class OllamaLLM:
         self.tools = self._create_tools()
         self.conversation_history = []
 
+    async def health_check(self, timeout: float = 2.0) -> bool:
+        """Quick health check to see if Ollama is responsive.
+
+        Args:
+            timeout: Timeout in seconds for the health check
+
+        Returns:
+            True if Ollama is available and responsive, False otherwise
+        """
+        try:
+            # Try to get the models list as a quick health check
+            response = requests.get(f"{self.base_url.replace('/v1', '')}/api/tags", timeout=timeout)
+            return response.status_code == 200
+        except (requests.exceptions.RequestException, requests.exceptions.Timeout):
+            return False
+        except Exception:
+            return False
+
     def _create_tools(self) -> List[Tool]:
         """Create the available tools for the LLM."""
         return [

@@ -3,6 +3,8 @@
 Natural language interface with command detection.
 """
 
+import asyncio
+import contextlib
 import re
 from datetime import datetime
 from typing import Any
@@ -14,13 +16,15 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.containers import Vertical
 from textual.widgets import Input
-from textual.widgets import LoadingIndicator
+from textual.widgets import Label
 from textual.widgets import RichLog
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
 from prt_src.tui.screens.base import BaseScreen
 from prt_src.tui.screens.base import EscapeIntent
+from prt_src.tui.services.llm_status import LLMStatus
+from prt_src.tui.services.llm_status import LLMStatusChecker
 
 logger = get_logger(__name__)
 
@@ -56,6 +60,10 @@ class ChatScreen(BaseScreen):
         self.command_history = []
         self.command_index = 0
 
+        # Initialize LLM status checker
+        self.llm_status_checker = LLMStatusChecker()
+        self.llm_status_checker.add_status_callback(self._on_llm_status_change)
+
         # Hide chrome for full-screen chat
         self.hide_chrome()
 
@@ -72,10 +80,8 @@ class ChatScreen(BaseScreen):
         else:
             # Go home if no input (with null check)
             if self.nav_service:
-                try:
+                with contextlib.suppress(Exception):
                     self.nav_service.go_home()
-                except Exception:
-                    pass  # Navigation service may not be available
 
     def _clear_input(self) -> None:
         """Clear the chat input field."""
@@ -86,6 +92,13 @@ class ChatScreen(BaseScreen):
     def compose(self) -> ComposeResult:
         """Compose chat screen layout."""
         with Vertical(classes="chat-container"):
+            # Status bar at top
+            with Horizontal(classes="chat-status-bar"):
+                self.status_label = Label(
+                    "⚠️ LLM: Checking...", classes="llm-status llm-status-checking"
+                )
+                yield self.status_label
+
             # Chat history area (takes most of the screen)
             self.chat_log = RichLog(
                 highlight=True,
@@ -96,11 +109,6 @@ class ChatScreen(BaseScreen):
 
             # Input area at bottom
             with Horizontal(classes="chat-input-container"):
-                # Loading indicator (initially hidden)
-                self.loading_indicator = LoadingIndicator(classes="chat-loading")
-                self.loading_indicator.display = False
-                yield self.loading_indicator
-
                 # Chat input field
                 self.chat_input = Input(
                     placeholder="Enter your query... (e.g., 'Show me contacts I haven't talked to recently')",
@@ -115,14 +123,15 @@ class ChatScreen(BaseScreen):
         # Focus the input field
         self.chat_input.focus()
 
-        # Display welcome message
+        # Start LLM status checking
+        await self.llm_status_checker.get_status(force_check=True)
+        await self.llm_status_checker.start_background_monitoring()
+
+        # Display welcome message (without confusing "if available" text)
         welcome_msg = """
 [bold blue]🤖 PRT Chat Assistant[/bold blue]
 
 Welcome to the PRT natural language interface! I can help you with your contacts and relationships.
-
-[yellow]🔗 Enhanced with Ollama AI (if available)[/yellow]
-When Ollama is running, I provide intelligent responses with direct database access.
 
 • [green]Contacts:[/green] "Show me contacts I haven't talked to recently"
 • [green]Notes:[/green] "Add a note about John's birthday"
@@ -134,6 +143,47 @@ When Ollama is running, I provide intelligent responses with direct database acc
 """
         self.chat_log.write(welcome_msg)
 
+    async def on_unmount(self) -> None:
+        """Called when screen is unmounted."""
+        # Stop background monitoring and cleanup
+        await self.llm_status_checker.stop_background_monitoring()
+        self.llm_status_checker.remove_status_callback(self._on_llm_status_change)
+        await super().on_unmount()
+
+    def _on_llm_status_change(self, status: LLMStatus) -> None:
+        """Handle LLM status changes.
+
+        Args:
+            status: New LLM status
+        """
+        if hasattr(self, "status_label") and self.status_label:
+            text, css_class = self.llm_status_checker.get_status_display(status)
+            self.status_label.update(text)
+
+            # Update CSS class
+            self.status_label.remove_class("llm-status-online")
+            self.status_label.remove_class("llm-status-offline")
+            self.status_label.remove_class("llm-status-checking")
+            self.status_label.remove_class("llm-status-error")
+            self.status_label.add_class(css_class)
+
+    async def _can_submit_query(self) -> tuple[bool, str]:
+        """Check if query can be submitted based on LLM status.
+
+        Returns:
+            Tuple of (can_submit, reason_if_not)
+        """
+        status = await self.llm_status_checker.get_status()
+
+        if status == LLMStatus.OFFLINE:
+            return False, "LLM is offline. Falling back to local processing..."
+        elif status == LLMStatus.ERROR:
+            return False, "LLM connection error. Using local processing..."
+        elif status == LLMStatus.CHECKING:
+            return False, "Still checking LLM status. Please wait..."
+        else:  # ONLINE
+            return True, ""
+
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""
         if event.input != self.chat_input:
@@ -143,26 +193,47 @@ When Ollama is running, I provide intelligent responses with direct database acc
         if not query:
             return
 
+        # Check if we can submit the query
+        can_submit, reason = await self._can_submit_query()
+
         # Add to command history
         if query not in self.command_history:
             self.command_history.append(query)
         self.command_index = len(self.command_history)
 
-        # Clear input and show typing indicator
+        # Clear input
         self.chat_input.value = ""
         self._has_input = False
-        self._show_typing_indicator()
 
         # Add user message to chat
         user_msg = ChatMessage(query, is_user=True)
         self.message_history.append(user_msg)
         self._display_message(user_msg)
 
-        # Process the query
-        await self._process_query(query)
+        # Show status message if can't use LLM
+        if not can_submit and reason:
+            status_msg = ChatMessage(f"[yellow]{reason}[/yellow]", is_user=False)
+            self.message_history.append(status_msg)
+            self._display_message(status_msg)
 
-        # Hide typing indicator
-        self._hide_typing_indicator()
+        # Show progress in the chat log itself
+        progress_messages = [
+            "🤔 Pondering your request...",
+            "🧠 Consulting the knowledge base...",
+            "💭 Formulating response...",
+            "🔍 Searching through contacts...",
+            "📝 Crafting the perfect reply...",
+        ]
+        import random
+
+        progress_msg = random.choice(progress_messages)
+        self.chat_log.write(f"[dim italic]{progress_msg}[/dim italic]")
+
+        # Small delay to ensure UI renders the progress message
+        await asyncio.sleep(0.1)
+
+        # Process the query
+        await self._process_query(query, use_llm=can_submit)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Handle input changes."""
@@ -197,7 +268,6 @@ When Ollama is running, I provide intelligent responses with direct database acc
 
         # Don't call super().on_key() as BaseScreen doesn't have it
         # Let other key events be handled by the focused widgets
-        pass
 
     def _display_message(self, message: ChatMessage) -> None:
         """Display a message in the chat log.
@@ -216,14 +286,6 @@ When Ollama is running, I provide intelligent responses with direct database acc
                 f"[bold green]Assistant[/bold green] [{timestamp}]: {message.content}"
             )
 
-    def _show_typing_indicator(self) -> None:
-        """Show typing indicator."""
-        self.loading_indicator.display = True
-
-    def _hide_typing_indicator(self) -> None:
-        """Hide typing indicator."""
-        self.loading_indicator.display = False
-
     def _clear_chat(self) -> None:
         """Clear the chat history."""
         self.chat_log.clear()
@@ -239,18 +301,22 @@ When Ollama is running, I provide intelligent responses with direct database acc
         )
         self.chat_log.write(welcome_msg)
 
-    async def _process_query(self, query: str) -> None:
+    async def _process_query(self, query: str, use_llm: bool = True) -> None:
         """Process a natural language query.
 
         Args:
             query: User's natural language query
+            use_llm: Whether to attempt LLM processing or fall back to local
         """
         try:
-            # Try Ollama integration first if available
-            result = await self._try_ollama_query(query)
+            result = None
+
+            # Try Ollama integration if LLM is available
+            if use_llm:
+                result = await self._try_ollama_query(query)
 
             if result is None:
-                # Fallback to local processing if Ollama isn't available
+                # Fallback to local processing
                 intent, params = self._parse_query(query)
                 result = await self._execute_command(intent, params, query)
 

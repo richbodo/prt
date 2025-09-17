@@ -4,7 +4,6 @@ This module implements the main Textual application with mode management,
 first-run detection, and global keybindings.
 """
 
-import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -414,42 +413,25 @@ class PRTApp(App):
             logger.error(f"Failed to create screen: {screen_name}")
             return
 
-        # Hide current screen and remove its container
-        if self.current_screen and self.current_container_id:
+        # Hide current screen
+        if self.current_screen:
             await self.current_screen.on_hide()
 
-        # Get the main container and replace its contents instead of removing it
-        mount_successful = False
+        # Simplified mounting: Always reuse the main container
         try:
             container = self.query_one("#main-container")
-            # Remove all children from the container
+            # Clear the container completely
             await container.remove_children()
-            # Mount the new screen inside the existing container
+            # Mount the new screen
             await container.mount(new_screen)
-            mount_successful = True
-            logger.debug("Successfully mounted screen in existing main-container")
+            logger.debug(f"Mounted {screen_name} in main-container")
         except Exception as e:
-            logger.error(f"Failed to switch screen content: {e}")
-            # Fallback: try to mount in a new container if the above fails
-            try:
-                if self.current_container_id:
-                    container = self.query_one(f"#{self.current_container_id}")
-                    await container.remove()
-                    logger.debug(f"Removed container: {self.current_container_id}")
-            except Exception as e:
-                logger.warning(f"Failed to remove container {self.current_container_id}: {e}")
-
-        # Only mount new screen with unique container ID if the main container approach failed
-        if not mount_successful:
-            self.current_container_id = f"main-container-{uuid.uuid4().hex[:8]}"
-            await self.mount(Container(new_screen, id=self.current_container_id))
-            logger.debug(f"Mounted screen in new container: {self.current_container_id}")
-        else:
-            # Keep using the main container
-            self.current_container_id = "main-container"
+            logger.error(f"Failed to switch screen: {e}")
+            return
 
         # Update current screen reference
         self.current_screen = new_screen
+        self.current_container_id = "main-container"
 
         # Show new screen
         await new_screen.on_show()
