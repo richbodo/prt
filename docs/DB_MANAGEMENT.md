@@ -2,6 +2,8 @@
 
 This guide covers advanced database configuration, encryption setup, and management using PRT's CLI tools.
 
+> **Status:** Historical reference. The current roadmap favors application-level encryption and the lighter workflow in [docs/DEV_SETUP.md](./DEV_SETUP.md). Use the commands below if you need to inspect or migrate legacy SQLCipher deployments.
+
 ## Table of Contents
 
 - [Database Configuration](#database-configuration)

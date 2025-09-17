@@ -2,6 +2,8 @@
 
 This document provides installation instructions for macOS and Linux. Windows is currently not supported.
 
+> **Status:** Historical. The project now prefers the lighter-weight workflow documented in [docs/DEV_SETUP.md](./DEV_SETUP.md). Keep this guide for reference if you need to reproduce the old SQLCipher-based environment.
+
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
@@ -37,41 +39,18 @@ If you don't have Homebrew installed:
 xcode-select --install
 ```
 
-#### 3. Install SQLCipher
-```bash
-brew install sqlcipher
-```
-
-#### 4. Clone PRT Repository
+#### 3. Clone PRT Repository
 ```bash
 git clone https://github.com/richbodo/prt.git
 cd prt
 ```
 
-#### 5. Create Virtual Environment
+#### 4. Create Virtual Environment
 ```bash
 source ./init.sh
 ```
 
-#### 6. Install Development Tools
-```bash
-pip install -r requirements-dev.txt
-```
-
-#### 7. Install pysqlcipher3
-```bash
-# Get SQLCipher installation path
-SQLCIPHER_PATH=$(brew --prefix sqlcipher)
-
-# Set environment variables for compilation
-export CFLAGS="-I$SQLCIPHER_PATH/include"
-export LDFLAGS="-L$SQLCIPHER_PATH/lib"
-
-# Install pysqlcipher3
-pip install pysqlcipher3
-```
-
-#### 8. Set Up Database
+#### 5. Set Up Database
 ```bash
 python -m prt_src.cli setup
 ```
@@ -85,7 +64,7 @@ Tested on Ubuntu 22.04+. Other Debian-based distributions should work with minor
 1. **Update system and install dependencies**
    ```bash
    sudo apt-get update
-   sudo apt-get install -y python3 python3-venv python3-dev build-essential git libsqlcipher-dev pkg-config
+   sudo apt-get install -y python3 python3-venv python3-dev build-essential git pkg-config
    ```
 
 2. **Clone PRT repository**
@@ -100,20 +79,7 @@ Tested on Ubuntu 22.04+. Other Debian-based distributions should work with minor
    source prt_env/bin/activate
    ```
 
-4. **Install Python dependencies**
-   ```bash
-   python -m pip install -r requirements.txt
-   python -m pip install -r requirements-dev.txt
-   ```
-
-5. **Install pysqlcipher3 linked against SQLCipher**
-   ```bash
-   export CFLAGS="$(pkg-config --cflags sqlcipher)"
-   export LDFLAGS="$(pkg-config --libs sqlcipher)"
-   python -m pip install pysqlcipher3
-   ```
-
-6. **Initialize PRT**
+4. **Initialize PRT**
    ```bash
    python -m prt_src.cli setup
    ```
