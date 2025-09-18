@@ -15,9 +15,9 @@ from textual import events
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.containers import Vertical
-from textual.widgets import Input
 from textual.widgets import Label
 from textual.widgets import RichLog
+from textual.widgets import TextArea
 
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import register_screen
@@ -27,6 +27,41 @@ from prt_src.tui.services.llm_status import LLMStatus
 from prt_src.tui.services.llm_status import LLMStatusChecker
 
 logger = get_logger(__name__)
+
+
+class ChatTextArea(TextArea):
+    """Custom TextArea that handles Enter key for chat submission."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.chat_screen = None
+
+    def set_chat_screen(self, chat_screen):
+        """Set reference to the chat screen for callbacks."""
+        self.chat_screen = chat_screen
+
+    async def on_key(self, event: events.Key) -> None:
+        """Handle key events for chat submission."""
+        # Check for Enter key, but not Shift+Enter (which would be "shift+enter")
+        if event.key == "enter":
+            # Submit the query
+            if self.chat_screen and hasattr(self.chat_screen, "_submit_query"):
+                try:
+                    await self.chat_screen._submit_query()
+                    event.prevent_default()
+                    event.stop()
+                    return
+                except Exception as e:
+                    logger.error(f"Error in chat submission: {e}")
+                    # Still prevent default to avoid adding newline
+                    event.prevent_default()
+                    event.stop()
+                    return
+        elif event.key == "shift+enter":
+            # Let Shift+Enter create a new line by not preventing default
+            return
+        # For all other keys, don't call super() as TextArea doesn't have on_key method
+        # Just let the event propagate normally
 
 
 class ChatMessage:
@@ -86,7 +121,7 @@ class ChatScreen(BaseScreen):
     def _clear_input(self) -> None:
         """Clear the chat input field."""
         if hasattr(self, "chat_input"):
-            self.chat_input.value = ""
+            self.chat_input.text = ""
             self._has_input = False
 
     def compose(self) -> ComposeResult:
@@ -99,7 +134,17 @@ class ChatScreen(BaseScreen):
                 )
                 yield self.status_label
 
-            # Chat history area (takes most of the screen)
+            # Input area right below status bar
+            with Horizontal(classes="chat-input-container"):
+                # Chat input field - using custom ChatTextArea for better text wrapping and Enter handling
+                self.chat_input = ChatTextArea(
+                    text="",  # Start empty
+                    classes="chat-input",
+                    show_line_numbers=False,  # Hide line numbers for chat
+                )
+                yield self.chat_input
+
+            # Chat history area (takes remaining space)
             self.chat_log = RichLog(
                 highlight=True,
                 markup=True,
@@ -107,18 +152,12 @@ class ChatScreen(BaseScreen):
             )
             yield self.chat_log
 
-            # Input area at bottom
-            with Horizontal(classes="chat-input-container"):
-                # Chat input field
-                self.chat_input = Input(
-                    placeholder="Enter your query... (e.g., 'Show me contacts I haven't talked to recently')",
-                    classes="chat-input",
-                )
-                yield self.chat_input
-
     async def on_mount(self) -> None:
         """Called when screen is mounted."""
         await super().on_mount()
+
+        # Set up the chat screen reference for the custom TextArea
+        self.chat_input.set_chat_screen(self)
 
         # Focus the input field
         self.chat_input.focus()
@@ -127,10 +166,8 @@ class ChatScreen(BaseScreen):
         await self.llm_status_checker.get_status(force_check=True)
         await self.llm_status_checker.start_background_monitoring()
 
-        # Display welcome message (without confusing "if available" text)
+        # Display welcome message with all the helpful content restored
         welcome_msg = """
-[bold blue]🤖 PRT Chat Assistant[/bold blue]
-
 Welcome to the PRT natural language interface! I can help you with your contacts and relationships.
 
 • [green]Contacts:[/green] "Show me contacts I haven't talked to recently"
@@ -139,7 +176,7 @@ Welcome to the PRT natural language interface! I can help you with your contacts
 • [green]Search:[/green] "Find everyone tagged as 'work'"
 • [green]Database:[/green] "How many contacts do I have?"
 
-[dim]Press Ctrl+L to clear chat, Up/Down arrows to browse history, ESC to go back[/dim]
+[dim]Press Enter to send, Shift+Enter for new line, Ctrl+L to clear chat, Up/Down arrows to browse history, ESC to go back[/dim]
 """
         self.chat_log.write(welcome_msg)
 
@@ -184,12 +221,21 @@ Welcome to the PRT natural language interface! I can help you with your contacts
         else:  # ONLINE
             return True, ""
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle input submission."""
-        if event.input != self.chat_input:
+    async def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        """Handle text area changes."""
+        if event.text_area != self.chat_input:
             return
 
-        query = self.chat_input.value.strip()
+        self._has_input = len(self.chat_input.text.strip()) > 0
+
+    async def _submit_query(self) -> None:
+        """Submit the current query."""
+        # Check if chat_input exists (defensive programming)
+        if not hasattr(self, "chat_input") or not self.chat_input:
+            logger.error("chat_input not available in _submit_query")
+            return
+
+        query = self.chat_input.text.strip()
         if not query:
             return
 
@@ -202,7 +248,7 @@ Welcome to the PRT natural language interface! I can help you with your contacts
         self.command_index = len(self.command_history)
 
         # Clear input
-        self.chat_input.value = ""
+        self.chat_input.text = ""
         self._has_input = False
 
         # Add user message to chat
@@ -235,35 +281,41 @@ Welcome to the PRT natural language interface! I can help you with your contacts
         # Process the query
         await self._process_query(query, use_llm=can_submit)
 
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """Handle input changes."""
-        if event.input != self.chat_input:
-            return
-
-        self._has_input = len(self.chat_input.value.strip()) > 0
-
     async def on_key(self, event: events.Key) -> None:
         """Handle key events."""
         # Handle Ctrl+L to clear chat
         if event.key == "ctrl+l":
             self._clear_chat()
+            event.prevent_default()
             return
+
+        # Handle Enter to submit query when input is focused (but not Shift+Enter)
+        if event.key == "enter" and self.chat_input.has_focus and not event.shift:
+            await self._submit_query()
+            event.prevent_default()
+            event.stop()
+            return
+            # If Shift+Enter, let the default behavior happen (new line)
 
         # Handle Up/Down arrows for command history when input is focused
         if self.chat_input.has_focus and self.command_history:
             if event.key == "up" and self.command_index > 0:
                 self.command_index -= 1
-                self.chat_input.value = self.command_history[self.command_index]
+                self.chat_input.text = self.command_history[self.command_index]
                 self._has_input = True
+                event.prevent_default()
+                event.stop()
                 return
             elif event.key == "down":
                 if self.command_index < len(self.command_history) - 1:
                     self.command_index += 1
-                    self.chat_input.value = self.command_history[self.command_index]
+                    self.chat_input.text = self.command_history[self.command_index]
                 else:
                     self.command_index = len(self.command_history)
-                    self.chat_input.value = ""
+                    self.chat_input.text = ""
                     self._has_input = False
+                event.prevent_default()
+                event.stop()
                 return
 
         # Don't call super().on_key() as BaseScreen doesn't have it
