@@ -111,6 +111,7 @@ Use this section to jump to deeper context quickly. `✅` marks docs kept up to 
 | `docs/ENCRYPTION_IMPLEMENTATION.md` | 🕰️ | Design discussion for future encryption work. |
 | `docs/TUI_Specification.md` | ✅ | Requirements and flows for the modern TUI. |
 | `docs/TUI_Key_Bindings.md` | ✅ | Comprehensive list of TUI shortcuts for manual testing. |
+| `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md` | ✅ | Automated TUI debugging system with visual analysis. |
 | `CLAUDE.md` / `CLAUDE_TUI_MIGRATION.plan` | 🕰️ | Narrative planning archives kept for context. |
 | `ROADMAP.md` | ✅ | High-level milestone planning. |
 | `PHASE_A_C_COMPLETION.md` | 🕰️ | Closure notes on earlier phases. |
@@ -138,3 +139,47 @@ python -m prt_src --classic
 ```
 
 If you find yourself repeating a command three times, consider adding a Make target or shell alias and document it here.
+
+## 11. TUI Debugging System
+
+### **Automated Textual Debug Workflow**
+For TUI development and debugging, use the comprehensive debug system in `docs/TUI/DEBUGGING/`:
+
+```bash
+# Setup (2-terminal workflow)
+# Terminal 1: Start debug console
+textual console --port 7342 -v
+
+# Terminal 2: Run TUI with debugging
+textual run --dev --port 7342 python -m prt_src
+```
+
+### **Interactive Debug Features**
+When the TUI is running with debug mode:
+- **`d`** - Toggle visual debug borders (containers, scrollable regions)
+- **`l`** - Log comprehensive layout analysis with widget tree
+- **`n`** - Test notification system with different severity levels
+- **`s`** - Trigger screenshot capture (requires screenpipe integration)
+- **`r`** - Test responsive behavior at multiple screen sizes
+
+### **Debug Capabilities**
+- **Layout Analysis**: Complete widget tree with size/style information
+- **Issue Detection**: Automatic overflow, sizing, and responsive problem identification
+- **Visual Debugging**: CSS borders and highlights for layout visualization
+- **Performance Monitoring**: Render time tracking and widget count analysis
+- **Screenpipe Integration**: Visual state capture correlated with app state
+
+### **When to Use TUI Debugging**
+- Layout issues (widgets not appearing, incorrect sizing)
+- Container and scrolling problems
+- Screen resizing and responsive behavior issues
+- Performance optimization and bottleneck identification
+- Visual regression testing during development
+
+### **Documentation References**
+- **Main Guide**: `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md`
+- **Demo App**: `docs/TUI/DEBUGGING/textual_debug_demo.py`
+- **Development Tips**: `docs/TUI/TUI_Dev_Tips.md`
+- **Common Patterns**: Widget inheritance, CSS debugging, container management
+
+This debug system transforms TUI development from manual trial-and-error into a systematic, automated workflow with real-time visual feedback and comprehensive analysis.
