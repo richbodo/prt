@@ -11,7 +11,8 @@ This guide consolidates everything you need to get productive quickly on PRT. It
 | Python 3.10+ | macOS ships with an older Python; install via [Homebrew](https://brew.sh) or `pyenv`. |
 | Git | Required for version control. `xcode-select --install` on macOS installs Git. |
 | Homebrew (macOS) / apt (Debian/Ubuntu) | Needed for system packages. |
-| Optional: [Cursor](https://cursor.sh), OpenAI Codex, Claude Code | Works great alongside this repository. |
+| Optional: [Cursor](https://cursor.sh), OpenAI Codex, Claude Code | Works great alongside this repository - used in development |
+| LLM Interface | We are using ollama various LLM models (gptoss20b, vaultgemma), so you will need to get one of those running and available to use the chat feature |
 
 ## 2. Start-of-Day Setup
 
@@ -52,15 +53,6 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 
 > **Cursor/LLM tip:** Paste the table above into your prompt or keep it pinned in a scratchpad so Codex/Claude can cite the correct commands for you.
 
-## 5. Recommended Workflow with AI Helpers
-
-1. **Frame the task** – Describe the goal, related modules (e.g., `prt_src/contacts`), and reference docs to your AI helper.
-2. **Retrieve context quickly** – Use `make help`, skim `docs/DEV_SETUP.md`, and consult the doc map in the README (below).
-3. **Let the AI draft changes** – Provide file paths and expectations; ask for focused diffs.
-4. **Run targeted checks** – Use `make lint` / `make test` locally. For UI work, run `make tui` to verify behavior.
-5. **Iterate** – Commit early with small chunks; ask AI to adjust failing tests or refine docs.
-6. **Before submitting** – Ensure a clean `git status`, run `make check`, and summarize changes in the PR template.
-
 ## 6. Git Quick Reference
 
 | Task | Command |
@@ -87,8 +79,6 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 
 ## 8. Documentation Map & Freshness
 
-Use this section to jump to deeper context quickly. `✅` marks docs kept up to date; `🕰️` indicates historical notes that may be stale.
-
 | Doc | Status | Why you’d read it |
 | --- | --- | --- |
 | `README.md` | USE | High-level project overview and links into the doc set. |
@@ -99,14 +89,6 @@ Use this section to jump to deeper context quickly. `✅` marks docs kept up to 
 | `docs/TUI_Key_Bindings.md` | NEEDS WORK | Comprehensive list of TUI shortcuts for manual testing. |
 | `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md` | NEEDS WORK | Automated TUI debugging system with visual analysis. |
 | `ROADMAP.md` | USE | High-level milestone planning. |
-
-## 9. Backlog & Optional Improvements (from Issue #101)
-
-* 🟨 Add `.vscode/settings.json` with recommended formatters + type checking.
-* 🟨 Configure a GitHub Actions workflow running `pytest` + `ruff`.
-* 🟨 Enable Dependabot for pip dependencies (needs repo admin).
-
-When you’re ready, spin each bullet into its own task so AI helpers can drive implementation while you review.
 
 ## 10. Handy Snippets
 
@@ -120,8 +102,6 @@ python -m prt_src db-status
 # Import Google Takeout export interactively - many things are not in the TUI yet
 python -m prt_src --classic
 ```
-
-If you find yourself repeating a command three times, consider adding a Make target or shell alias and document it here.
 
 ## 11. TUI Debugging System
 
@@ -153,7 +133,7 @@ When the TUI is running with debug mode:
 - **Issue Detection**: Automatic overflow, sizing, and responsive problem identification
 - **Visual Debugging**: CSS borders and highlights for layout visualization
 - **Performance Monitoring**: Render time tracking and widget count analysis
-- **Screenpipe Integration**: Visual state capture correlated with app state
+- **Screenpipe Integration**: Visual state capture correlated with app state (manually start screenpipe and guide LLMs to grab screenshots)
 
 ### **When to Use TUI Debugging**
 - Layout issues (widgets not appearing, incorrect sizing)
