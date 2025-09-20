@@ -61,12 +61,6 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 5. **Iterate** – Commit early with small chunks; ask AI to adjust failing tests or refine docs.
 6. **Before submitting** – Ensure a clean `git status`, run `make check`, and summarize changes in the PR template.
 
-### Prompt Patterns That Work Well
-
-* "Update `docs/DEV_SETUP.md` to include Git tips from README" – references file + action.
-* "Add pytest for \`prt_src/models.py\` covering edge cases in Issue #37" – includes location + intent.
-* "Summarize `docs/ENCRYPTION_IMPLEMENTATION.md` in 5 bullets" – great for quick knowledge extraction.
-
 ## 6. Git Quick Reference
 
 | Task | Command |
@@ -81,13 +75,6 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Discard tracked/untracked files | `git clean -fd` (dangerous – double check!) |
 | Create topic branch | `git checkout -b feature/name` |
 | Pull latest | `git pull --rebase origin main` |
-
-**Git habits for single-developer + AI loops**
-
-* Commit after each logical milestone (passing tests, doc updates, etc.).
-* Let AI draft commit messages, but read them carefully.
-* Keep `main` clean; rebase or fast-forward frequently.
-* Use `git stash --include-untracked` if you need to switch tasks quickly.
 
 ## 7. Recovering a Broken Environment
 
@@ -104,18 +91,14 @@ Use this section to jump to deeper context quickly. `✅` marks docs kept up to 
 
 | Doc | Status | Why you’d read it |
 | --- | --- | --- |
-| `README.md` | ✅ | High-level project overview and links into the doc set. |
-| `docs/DEV_SETUP.md` | ✅ | (This file) Day-to-day workflow, Git tips, AI helper guidance. |
-| `docs/INSTALL.md` | 🕰️ | Legacy SQLCipher install steps. Prefer the quick setup above. |
-| `docs/DB_MANAGEMENT.md` | 🕰️ | Historical encryption/DB operations. New approach favors app-level encryption. |
-| `docs/ENCRYPTION_IMPLEMENTATION.md` | 🕰️ | Design discussion for future encryption work. |
-| `docs/TUI_Specification.md` | ✅ | Requirements and flows for the modern TUI. |
-| `docs/TUI_Key_Bindings.md` | ✅ | Comprehensive list of TUI shortcuts for manual testing. |
-| `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md` | ✅ | Automated TUI debugging system with visual analysis. |
-| `CLAUDE.md` / `CLAUDE_TUI_MIGRATION.plan` | 🕰️ | Narrative planning archives kept for context. |
-| `ROADMAP.md` | ✅ | High-level milestone planning. |
-| `PHASE_A_C_COMPLETION.md` | 🕰️ | Closure notes on earlier phases. |
-| `docs/PRD/` | 🕰️ | Legacy product requirement drafts. |
+| `README.md` | USE | High-level project overview and links into the doc set. |
+| `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, AI helper guidance. |
+| `docs/INSTALL.md` | NEEDS WORK | Legacy SQLCipher install steps. Prefer the quick setup above. |
+| `docs/ENCRYPTION_IMPLEMENTATION.md` | NEEDS WORK | Design discussion for future encryption work. |
+| `docs/TUI_Specification.md` | NEEDS WORK | Requirements and flows for the modern TUI. |
+| `docs/TUI_Key_Bindings.md` | NEEDS WORK | Comprehensive list of TUI shortcuts for manual testing. |
+| `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md` | NEEDS WORK | Automated TUI debugging system with visual analysis. |
+| `ROADMAP.md` | USE | High-level milestone planning. |
 
 ## 9. Backlog & Optional Improvements (from Issue #101)
 
@@ -134,7 +117,7 @@ make check
 # Snapshot database status from the CLI
 python -m prt_src db-status
 
-# Import Google Takeout export interactively
+# Import Google Takeout export interactively - many things are not in the TUI yet
 python -m prt_src --classic
 ```
 
@@ -143,6 +126,9 @@ If you find yourself repeating a command three times, consider adding a Make tar
 ## 11. TUI Debugging System
 
 ### **Automated Textual Debug Workflow**
+
+WORK IN PROGRESS - WORTH A TRY
+
 For TUI development and debugging, use the comprehensive debug system in `docs/TUI/DEBUGGING/`:
 
 ```bash
@@ -176,10 +162,10 @@ When the TUI is running with debug mode:
 - Performance optimization and bottleneck identification
 - Visual regression testing during development
 
-### **Documentation References**
+### **TUI DEBUG Documentation References**
 - **Main Guide**: `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md`
 - **Demo App**: `docs/TUI/DEBUGGING/textual_debug_demo.py`
 - **Development Tips**: `docs/TUI/TUI_Dev_Tips.md`
 - **Common Patterns**: Widget inheritance, CSS debugging, container management
 
-This debug system transforms TUI development from manual trial-and-error into a systematic, automated workflow with real-time visual feedback and comprehensive analysis.
+
