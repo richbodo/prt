@@ -2,7 +2,7 @@
 
 ## Quick Start for Developers
 
-Most contributors work out of the repository root and keep the virtual environment active while they iterate with Cursor, Codex, or Claude. Use either the shell scripts (good for interactive shells) or Make targets (good for automation) — they run the same logic.
+Right now we work out of the repository root and keep the virtual environment active while iterating with Cursor, Codex, or Claude. Use the shell scripts init.sh and uninit.sh - the make file is not usable at the moment.  
 
 ```bash
 # First time / start of day
