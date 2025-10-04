@@ -1,6 +1,11 @@
 # 🚀 Automated Textual Development & Debugging Workflow
 
-A comprehensive automated workflow for testing and debugging Textual applications with focus on layout issues, containers, scrolling, and screen resizing.
+## STATUS: PARTIAL SUCCESS - LLM can see TUI but cannot interact
+
+**Breakthrough**: LLM can see TUI interface through screenpipe when terminal is in foreground.
+**Limitation**: Background terminals created by LLM are not interactive (no color, no input reception).
+**Next**: Need to establish proper interactive terminal connection for full testing capability.
+
 
 ## 🎯 Overview
 
@@ -34,24 +39,29 @@ A complete demo showing the workflow in action:
 
 ### Step 1: Setup Environment
 ```bash
-cd /Users/richardbodo/src/prt
-source prt_env/bin/activate
+source ./init.sh
 ```
 
 ### Step 2: Start Debug Console
 ```bash
-# Terminal 1 - Start the debug console
-textual console --port 7342 -v
+textual console
 ```
 
-### Step 3: Run Your App with Debugging
+### Step 3: Run Your App with Debugging (Separate Terminal)
 ```bash
-# Terminal 2 - Run your app with full debugging
-textual run --dev --port 7342 your_app.py
-
-# Or run the demo
-textual run --dev --port 7342 textual_debug_demo.py
+# In a separate terminal window (must run source ./init.sh first):
+textual run --dev prt_src.tui.app:PRTApp
 ```
+
+**Note**: Start the debug console first, then run the app with debugging enabled.
+
+### ⚠️ **Critical Terminal Management Note**
+**The TUI must be either exited or killed before the terminal it is running on can be accessed to run terminal commands.**
+
+- **Terminal is blocked** when TUI is running in foreground
+- **Must exit TUI first** (press `q` or `Ctrl+C`) to run additional commands
+- **Use 2-terminal setup** to avoid this issue
+- **Debug console terminal** remains available for commands while TUI runs
 
 ### Step 4: Use Interactive Debugging
 In the running app, use these keybindings:
@@ -65,15 +75,21 @@ In the running app, use these keybindings:
 ## 🔧 Advanced Usage
 
 ### Automated Workflow
-```python
-from textual_debug_workflow import run_debug_workflow
+```bash
+# Setup environment first (always start here)
+source ./init.sh
 
-# Run complete automated debugging workflow
-await run_debug_workflow("my_app.py", 
-                         console_port=7342,
-                         enable_screenpipe=True,
-                         auto_screenshot=True,
-                         verbose_logging=True)
+# Then run debug workflow
+python -c "
+from textual_debug_workflow import run_debug_workflow
+import asyncio
+
+asyncio.run(run_debug_workflow('python -m prt_src', 
+                              console_port=7342,
+                              enable_screenpipe=True,
+                              auto_screenshot=True,
+                              verbose_logging=True))
+"
 ```
 
 ### Custom Test Scenarios

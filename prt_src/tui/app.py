@@ -103,6 +103,7 @@ class PRTApp(App):
     # Keybindings
     BINDINGS = [
         Binding("escape", "toggle_mode", "Toggle Mode", priority=True),
+        Binding("n", "toggle_top_nav", "Toggle Nav Menu", priority=True),
         Binding("q", "quit", "Quit", show=False),  # Only in NAV mode
         Binding("x", "exit_with_confirmation", "(x)exit", priority=True),  # Universal exit
         Binding("?", "help", "Help"),
@@ -173,6 +174,14 @@ class PRTApp(App):
             "validation_service": None,  # Will wire Phase 2 service
         }
 
+        # Initialize nav menu state (Issue #114)
+        self.nav_menu_open = False
+        self.nav_dropdown = None
+
+        # Set initial header title (Issue #114)
+        self.title = "(N)av menu closed"
+        self.sub_title = "Personal Relationship Tracker"
+
     @property
     def current_mode(self) -> AppMode:
         """Get the current application mode."""
@@ -185,7 +194,21 @@ class PRTApp(App):
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
+        # Use standard header (Issue #114)
         yield Header()
+
+        # Nav dropdown (initially hidden) (Issue #114)
+        from textual.containers import Vertical
+
+        self.nav_dropdown = Vertical(
+            Static("(B)ack to previous screen", classes="nav-dropdown-item"),
+            Static("(H)ome screen", classes="nav-dropdown-item"),
+            Static("(?)Help screen", classes="nav-dropdown-item"),
+            id="nav-dropdown",
+            classes="nav-dropdown hidden",
+        )
+        yield self.nav_dropdown
+
         yield Container(
             Static("Welcome to PRT!", id="welcome"),
             id="main-container",
@@ -228,10 +251,81 @@ class PRTApp(App):
         if self.current_mode == AppMode.NAVIGATION:
             self.exit()
 
+    async def action_toggle_top_nav(self) -> None:
+        """Toggle the top nav dropdown menu (Issue #114)."""
+        self.nav_menu_open = not self.nav_menu_open
+
+        # Update header title based on state
+        if self.nav_menu_open:
+            self.title = "(N)av menu open"
+            self.sub_title = "(B)ack | (H)ome | (?)Help"
+            # Show dropdown menu
+            await self._show_nav_dropdown()
+        else:
+            self.title = "(N)av menu closed"
+            self.sub_title = "Personal Relationship Tracker"
+            # Hide dropdown menu
+            await self._hide_nav_dropdown()
+
+        logger.info(f"Nav menu {'opened' if self.nav_menu_open else 'closed'}")
+
+    async def _handle_nav_menu_key(self, key: str) -> bool:
+        """Handle navigation menu key selection (Issue #114).
+
+        Args:
+            key: The pressed key
+
+        Returns:
+            True if key was handled, False otherwise
+        """
+        # Only handle keys when menu is open
+        if not self.nav_menu_open:
+            return False
+
+        if key == "b":
+            # Back to previous screen
+            previous_screen = self.nav_service.pop()
+            if previous_screen:
+                await self.switch_screen(previous_screen)
+            else:
+                await self.switch_screen("home")
+            # Close menu
+            await self.action_toggle_top_nav()
+            return True
+        elif key == "h":
+            # Home screen
+            await self.switch_screen("home")
+            # Close menu
+            await self.action_toggle_top_nav()
+            return True
+        elif key == "question_mark":
+            # Help screen
+            await self.switch_screen("help")
+            # Close menu
+            await self.action_toggle_top_nav()
+            return True
+
+        return False
+
+    async def _show_nav_dropdown(self) -> None:
+        """Show the nav dropdown menu (Issue #114)."""
+        if self.nav_dropdown:
+            self.nav_dropdown.remove_class("hidden")
+            self.nav_dropdown.add_class("visible")
+            logger.info("Nav dropdown shown")
+
+    async def _hide_nav_dropdown(self) -> None:
+        """Hide the nav dropdown menu (Issue #114)."""
+        if self.nav_dropdown:
+            self.nav_dropdown.remove_class("visible")
+            self.nav_dropdown.add_class("hidden")
+            logger.info("Nav dropdown hidden")
+
     def action_help(self) -> None:
         """Show help screen."""
-        # Will implement help screen later
-        logger.info("Help requested")
+        # Navigate to help screen (Issue #114)
+        self.call_after_refresh(lambda: self.switch_screen("help"))
+        logger.info("Navigating to help screen")
 
     def action_exit_with_confirmation(self) -> None:
         """Exit with confirmation dialog (universal X key binding - works in any mode)."""
@@ -258,6 +352,15 @@ class PRTApp(App):
             event: Key event
         """
         logger.info(f"APP LEVEL - Key pressed: '{event.key}', mode: {self.current_mode.value}")
+
+        # Handle top nav menu keys when open (Issue #114)
+        if self.nav_menu_open and event.key in ["b", "h", "question_mark"]:
+            handled = await self._handle_nav_menu_key(event.key)
+            if handled:
+                logger.info(f"Nav menu handled key: {event.key}")
+                event.prevent_default()
+                event.stop()
+                return
 
         # Handle exit confirmation if waiting for response
         if hasattr(self, "_waiting_for_exit_confirmation") and self._waiting_for_exit_confirmation:
@@ -432,7 +535,7 @@ class PRTApp(App):
         except Exception as e:
             logger.error(f"Failed to switch screen: {e}")
             return
-          
+
         # Update current screen reference
         self.current_screen = new_screen
         self.current_container_id = "main-container"

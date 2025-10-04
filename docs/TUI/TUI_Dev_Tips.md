@@ -233,6 +233,31 @@ logger.info(f"Total containers: {len(all_containers)}")
 - Progress indicators may mount in **wrong container** if container switching occurs
 - Always verify widget is in the **intended container hierarchy**
 
+## TUI Terminal Access
+
+### **Critical Development Note**
+**The TUI must be either exited or killed before the terminal it is running on can be accessed to run terminal commands.**
+
+When the TUI is running in a terminal:
+- **Terminal is blocked** - Cannot run additional commands in the same terminal
+- **Must exit TUI first** - Press `q` to quit or `Ctrl+C` to force exit
+- **Use separate terminals** - Debug console in Terminal 1, TUI in Terminal 2
+- **Background processes** - Use `&` to run TUI in background if needed
+
+### **Debug Workflow Terminal Management**
+```bash
+# Recommended 2-terminal setup:
+# Terminal 1: Debug console (always available for commands)
+textual console --port 7342 -v
+
+# Terminal 2: TUI application (blocks terminal when running)
+textual run --dev --port 7342 python -m prt_src
+
+# To run commands while TUI is active:
+# - Use Terminal 1 (debug console)
+# - Or exit TUI first (press 'q'), run commands, restart TUI
+```
+
 ## Best Practices
 
 1. **Follow existing patterns** in the codebase
@@ -244,6 +269,7 @@ logger.info(f"Total containers: {len(all_containers)}")
 7. **Verify widget mounting** before complex operations
 8. **Avoid container proliferation** - reuse containers when possible
 9. **Debug container count** when seeing multiple borders
+10. **Always use 2-terminal setup** for TUI debugging to avoid blocking
 
 ## Framework-Specific Notes
 

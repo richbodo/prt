@@ -16,6 +16,64 @@ Header.edit-mode {
     background: $warning;
 }
 
+/* Nav Dropdown Menu (Issue #114) */
+.nav-dropdown {
+    dock: top;
+    height: 4;
+    width: 30;
+    background: $panel;
+    border: round $border;
+    padding: 1;
+    margin-left: 1;
+    layer: overlay;
+}
+
+.nav-dropdown.hidden {
+    display: none;
+}
+
+.nav-dropdown.visible {
+    display: block;
+}
+
+.nav-dropdown-item {
+    padding: 0 1;
+    margin-bottom: 1;
+    background: $surface;
+    color: $text;
+}
+
+.nav-dropdown-item:hover {
+    background: $primary;
+    color: $text-primary;
+}
+
+/* Help Screen Styles (Issue #114) */
+.help-container {
+    padding: 2;
+    overflow-y: auto;
+}
+
+.help-title {
+    text-style: bold;
+    text-align: center;
+    margin-bottom: 2;
+    color: $primary;
+}
+
+.help-section-title {
+    text-style: bold;
+    margin-top: 2;
+    margin-bottom: 1;
+    color: $accent;
+}
+
+.help-item {
+    padding: 0 2;
+    margin-bottom: 1;
+    color: $text;
+}
+
 /* Main container */
 #main-container, .main-container {
     width: 100%;

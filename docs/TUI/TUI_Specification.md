@@ -12,7 +12,36 @@ This document defines the expected behavior, navigation flow, and screen specifi
 
 ### Mode System
 - **Navigation Mode**: Default mode for browsing and selection (j/k navigation, single-key actions)
-- **Edit Mode**: Text input mode for forms and search (ESC toggles back to navigation)
+- **Edit Mode**: Text input mode for forms and search 
+
+## Bottom Nav
+esc Toggle Nav/Edit modes
+x Exit Application
+? Help
+
+## Top Nav
+
+The Top Nav Menu Bar is a single line menu bar, always present at the top of the app screens.
+
+It has only one menu dropdown on the far left.  To the right of that, in the same single line top menu bar, a mode indicator is shown as a text string: "Mode: Edit" or "Mode: Nav"
+
+### Drop down menu on the upper left corner
+
+The drop down menu, in the furthest upper left of the screen, instead of an icon, is identified by a text string: when closed the text reads "(N)av menu closed", and when open "(N)av menu open".  When in Nav mode, the letter N toggles the menu.  If the user presses "N" or "n" or clicks on the text string in the upper left corner, them menu opens or closes.
+
+The items on the menu are:
+
+(H)ome - go to the home screen
+(B)ack - go back to the previous screen
+
+### Bottom Nav
+
+The Bottom Nav menu bar is a single line menu bar, always present at the bottom of all app screens
+
+The Bottom Nav has only four items on it:
+
+(esc) Toggle Mode (n) Toggle Nav Menu (x) Exit (?) Help
+
 
 ## Screen Specifications
 
@@ -20,7 +49,7 @@ This document defines the expected behavior, navigation flow, and screen specifi
 **Purpose**: Main navigation hub with menu-driven interface
 **Layout**: Centered welcome message with navigation menu below
 **Navigation**:
-- **Key Bindings**: `c` (Contacts), `s` (Search), `r` (Relationships), `y` (Rel. Types), `i` (Import), `e` (Export), `d` (Database), `m` (Metadata), `t` (Chat), `?` (Help), `q` (Quit)
+- **Key Bindings**: `s` (Search), `r` (Relationships), `d` (Database),  `c` (Chat)
 - **ESC Behavior**: Does nothing (no dead ends)
 - **Entry Points**: App startup (existing installation), returning from other screens
 
@@ -32,15 +61,6 @@ This document defines the expected behavior, navigation flow, and screen specifi
 - **Key Bindings**: `Enter` (continue), `ESC` (skip/back depending on step)
 - **ESC Behavior**: Custom handling per step (skip setup or go home)
 - **Entry Points**: App startup (first run only)
-
-### 3. Contacts Screen (`contacts`)
-**Purpose**: Browse and manage contacts in a data table
-**Layout**: DataTable with columns for Name, Email, Phone, Last Interaction
-**Navigation**:
-- **Key Bindings**: `a` (add), `e` (edit), `d` (delete), `Enter` (view details), `/` (search), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, search results, relationship management
-- **Modes**: View mode (default), Search mode (with `/` key)
 
 ### 4. Search Screen (`search`)
 **Purpose**: Full-text search with scope filters and export capabilities
@@ -74,6 +94,15 @@ This document defines the expected behavior, navigation flow, and screen specifi
 - **Key Bindings**: `b` (backup), `r` (restore), `e` (export), `i` (import), `v` (vacuum), `ESC` (back)
 - **ESC Behavior**: POP (return to previous screen)
 - **Entry Points**: Home screen
+
+### 3. Contacts Screen (`contacts`)
+**Purpose**: Browse and manage contacts in a data table
+**Layout**: DataTable with columns for Name, Email, Phone, Last Interaction
+**Navigation**:
+- **Key Bindings**: `a` (add), `e` (edit), `d` (delete), `Enter` (view details), `/` (search), `ESC` (back)
+- **ESC Behavior**: POP (return to previous screen)
+- **Entry Points**: Home screen, search results, relationship management
+- **Modes**: View mode (default), Search mode (with `/` key)
 
 ### 8. Contact Detail Screen (`contact_detail`)
 **Purpose**: View detailed information about a specific contact
@@ -127,7 +156,7 @@ This document defines the expected behavior, navigation flow, and screen specifi
 **Purpose**: Natural language interface for querying and managing contacts
 **Layout**: Chat history with input field and results preview
 **Navigation**:
-- **Key Bindings**: Natural language input, command shortcuts, `ESC` (back)
+- **Key Bindings**: 
 - **ESC Behavior**: POP (return to previous screen)
 - **Entry Points**: Home screen
 

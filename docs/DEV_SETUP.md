@@ -112,6 +112,9 @@ WORK IN PROGRESS - WORTH A TRY
 For TUI development and debugging, use the comprehensive debug system in `docs/TUI/DEBUGGING/`:
 
 ```bash
+# Setup environment first (always start here)
+source ./init.sh
+
 # Setup (2-terminal workflow)
 # Terminal 1: Start debug console
 textual console --port 7342 -v
