@@ -1,8 +1,8 @@
 # Developer Environment & Workflow Guide
 
-This guide consolidates everything you need to get productive quickly on PRT. It covers the daily environment workflow, recommended Make targets, shortcuts for AI-assisted development, and quick Git references. It is designed to complement the historical/legacy documents that still live in the repository.
+This guide consolidates everything you need to get productive quickly on PRT. It covers the daily environment workflow, shortcuts for AI-assisted development, and quick Git references. It is designed to complement the historical/legacy documents that still live in the repository.
 
-> **Tip:** If you prefer sourcing shell scripts, keep using `source ./init.sh` and `source ./uninit.sh`. Every command described below also works via `make` so automations and editors like Cursor can run the same flows non-interactively.
+> **Tip:** If you prefer sourcing shell scripts, keep using `source ./init.sh` and `source ./uninit.sh`. The make file is totally broken right now.
 
 ## 1. Prerequisites
 
