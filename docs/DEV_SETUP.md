@@ -2,8 +2,6 @@
 
 This guide consolidates everything you need to get productive quickly on PRT. It covers the daily environment workflow, shortcuts for AI-assisted development, and quick Git references. It is designed to complement the historical/legacy documents that still live in the repository.
 
-> **Tip:** If you prefer sourcing shell scripts, keep using `source ./init.sh` and `source ./uninit.sh`. The make file is totally broken right now.
-
 ## 1. Prerequisites
 
 | Requirement | Notes |
@@ -17,9 +15,7 @@ This guide consolidates everything you need to get productive quickly on PRT. It
 ## 2. Start-of-Day Setup
 
 1. Open a shell in the project root (`prt`).
-2. Choose one of the following:
-   * `source ./init.sh` – Sets up/activates the `prt_env` virtual environment in your current shell.
-   * `make init` – Runs the same logic in a single shell process (handy for automation).
+2. Run `source ./init.sh` – Sets up/activates the `prt_env` virtual environment in your current shell.
 3. When the environment finishes:
    * `(prt_env)` prefix should be in your prompt.
    * Pre-commit hooks are installed.
@@ -30,7 +26,6 @@ If you see activation issues, run `source prt_env/bin/activate` manually. The in
 ## 3. End-of-Day Cleanup
 
 * `source ./uninit.sh` – Deactivates the environment in your current shell and clears old SQLCipher variables.
-* `make uninit` – Same clean-up flow, executed through Make.
 
 If your shell still shows `(prt_env)`, run `deactivate` manually.
 
@@ -38,18 +33,17 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 
 | Intent | Command |
 | --- | --- |
-| Launch TUI | `make tui` or `python -m prt_src` |
-| Run classic CLI | `make run-classic` or `python -m prt_src --classic` |
-| Debug TUI with fixtures | `make run-debug` or `python -m prt_src --debug` |
-| Quick tests | `make test` (runs `pytest -x`) |
-| Full tests | `make all-tests` (runs `pytest -v`) |
-| Coverage report | `make coverage` |
-| Lint | `make lint` (`ruff check`) |
-| Auto-fix formatting | `make format` (`ruff --fix` + `black`) |
-| All quality checks | `make check` (lint + tests) |
-| Clean caches/builds | `make clean` |
-| Check outdated packages | `make deps-check` |
-| Run pre-commit everywhere | `make pre-commit-all` |
+| Launch TUI | `python -m prt_src` |
+| Run classic CLI | `python -m prt_src --classic` |
+| Debug TUI with fixtures | `python -m prt_src --debug` |
+| Quick tests | `./prt_env/bin/python -m pytest tests/ -x` |
+| Full tests | `./prt_env/bin/python -m pytest tests/ -v` |
+| Coverage report | `./prt_env/bin/python -m pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
+| Lint | `./prt_env/bin/ruff check prt_src/ tests/` |
+| Auto-fix formatting | `./prt_env/bin/ruff check --fix prt_src/ tests/ && ./prt_env/bin/black prt_src/ tests/` |
+| Clean caches/builds | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; find . -type f -name "*.pyc" -delete` |
+| Check outdated packages | `./prt_env/bin/pip list --outdated` |
+| Run pre-commit everywhere | `./prt_env/bin/pre-commit run --all-files` |
 
 > **Cursor/LLM tip:** Paste the table above into your prompt or keep it pinned in a scratchpad so Codex/Claude can cite the correct commands for you.
 
@@ -72,7 +66,7 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 
 1. `source ./uninit.sh`
 2. `rm -rf prt_env`
-3. Re-run `source ./init.sh` (or `make init`)
+3. Re-run `source ./init.sh`
 4. If pip installs fail, confirm Homebrew/apt availability and rerun.
 
 For persistent issues, check `requirements.txt` for pinned versions and install manually inside the venv.
@@ -94,7 +88,7 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 
 ```bash
 # Run lint + tests in one go
-make check
+./prt_env/bin/ruff check prt_src/ tests/ && ./prt_env/bin/python -m pytest tests/
 
 # Snapshot database status from the CLI
 python -m prt_src db-status

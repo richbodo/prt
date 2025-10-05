@@ -2,17 +2,17 @@
 
 ## Quick Start for Developers
 
-Right now we work out of the repository root and keep the virtual environment active while iterating with Cursor, Codex, or Claude. Use the shell scripts init.sh and uninit.sh - the make file is not usable at the moment.  
+Right now we work out of the repository root and keep the virtual environment active while iterating with Cursor, Codex, or Claude. Use the shell scripts init.sh and uninit.sh.
 
 ```bash
 # First time / start of day
-source ./init.sh       # or: make init
+source ./init.sh
 
 # Launch the modern TUI
-python -m prt_src      # or: make tui
+python -m prt_src
 
 # End of day
-source ./uninit.sh     # or: make uninit
+source ./uninit.sh
 ```
 
 Need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[Developer Environment & Workflow Guide](docs/DEV_SETUP.md)**.
@@ -24,30 +24,14 @@ Need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[
 source ./init.sh    # One command setup - installs everything!
 ```
 
-### Essential Make Commands
-PRT includes a comprehensive Makefile for common development tasks:
-
-```bash
-# 🚀 Most Used Commands:
-make tui             # Launch PRT TUI interface
-make test            # Run test suite quickly
-make format          # Format code (black + ruff --fix)
-make clean           # Clean build artifacts and cache
-
-# 📋 See all available commands:
-make help            # Show complete command reference
-```
-
 ### Daily Development
 ```bash
 # Quick development cycle
-make run             # Test your changes
-make test            # Verify tests pass
-make format          # Auto-format code
-
-# Or use Python directly:
-python -m prt_src    # Launch TUI
-python -m prt_src --debug    # TUI with debug data
+python -m prt_src                 # Launch TUI
+python -m prt_src --debug         # TUI with debug data
+python -m pytest tests/           # Run test suite
+./prt_env/bin/ruff check --fix prt_src/ tests/   # Lint and auto-fix
+./prt_env/bin/black prt_src/ tests/              # Format code
 ```
 
 **Pre-commit hooks** automatically run `ruff` and `black` on staged files when you commit. The init script installs them for you.
