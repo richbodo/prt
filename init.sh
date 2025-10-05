@@ -101,7 +101,6 @@ if [ -n "$VIRTUAL_ENV" ]; then
     echo "  python -m prt_src        # Launch modern TUI"  
     echo "  python -m prt_src --classic  # Classic CLI"
     echo "  python -m pytest tests/  # Run tests"
-    echo "  make help                # See all make commands"
     echo ""
     echo "📚 More info: https://github.com/richbodo/prt"
 else
