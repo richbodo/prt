@@ -15,7 +15,9 @@ python -m prt_src
 source ./uninit.sh
 ```
 
-Need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[Developer Environment & Workflow Guide](docs/DEV_SETUP.md)**.
+The basic workflow is below.  If you need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[Developer Environment & Workflow Guide](docs/DEV_SETUP.md)**.
+
+Note that this project is LICENSE.md GPLv3, and has the most basic CONTRIBUTING.md and pull request template I could find that just avoids patent and copyright violations.  There is also a CODE_OF_CONDUCT.md which is just the basic mozilla one.
 
 ## 🛠️ Development Workflow
 
