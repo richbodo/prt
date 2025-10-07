@@ -14,228 +14,89 @@ This document defines the expected behavior, navigation flow, and screen specifi
 - **Navigation Mode**: Default mode for browsing and selection (j/k navigation, single-key actions)
 - **Edit Mode**: Text input mode for forms and search 
 
-## Bottom Nav
-esc Toggle Nav/Edit modes
-x Exit Application
-? Help
+## Bottom Nav (aka Status Bar)
 
-## Top Nav
+Bottom Nav is a single line high.  Three options are present on the bottom nav, left justified:
 
-The Top Nav Menu Bar is a single line menu bar, always present at the top of the app screens.
+(esc) Toggle Nav/Edit modes
+(x) Exit Application
+(?) Help
 
-It has only one menu dropdown on the far left.  To the right of that, in the same single line top menu bar, a mode indicator is shown as a text string: "Mode: Edit" or "Mode: Nav"
+Esc always works to change modes.  When in Nav mode, the other two work as well.
 
-### Drop down menu on the upper left corner
+To the right of those options, status text can be displayed as actions are taken by any screen.
 
-The drop down menu, in the furthest upper left of the screen, instead of an icon, is identified by a text string: when closed the text reads "(N)av menu closed", and when open "(N)av menu open".  When in Nav mode, the letter N toggles the menu.  If the user presses "N" or "n" or clicks on the text string in the upper left corner, them menu opens or closes.
+## Top Nav (aka Menu Bar)
+
+The Top Nav Menu Bar is a single line menu bar, always present at the top of each screen in the app UI.  
+
+Left justified, it has a drop down menu.  The drop down menu is described in the next section. 
+
+To the right of that, in the same single line top menu bar, is the name of the screen the user is currently on, i.e. HOME.  To the right of that, a mode indicator is shown as a text string.  The only mode text strings are: "Mode: Edit" or "Mode: Nav"
+
+### Drop down menu on Top Nav
+
+The drop down menu, in the furthest upper left corner of the screen, instead of an icon, is identified by a text string: when closed the text reads "(N)av menu closed", and when open "(N)av menu open".  When in Nav mode, the letter N toggles the menu.  If the user presses "N" or "n" or clicks on the text string in the upper left corner, them menu opens or closes.
 
 The items on the menu are:
 
 (H)ome - go to the home screen
 (B)ack - go back to the previous screen
 
-### Bottom Nav
-
-The Bottom Nav menu bar is a single line menu bar, always present at the bottom of all app screens
-
-The Bottom Nav has only four items on it:
-
-(esc) Toggle Mode (n) Toggle Nav Menu (x) Exit (?) Help
-
-
 ## Screen Specifications
 
-### 1. Home Screen (`home`)
-**Purpose**: Main navigation hub with menu-driven interface
-**Layout**: Centered welcome message with navigation menu below
-**Navigation**:
-- **Key Bindings**: `s` (Search), `r` (Relationships), `d` (Database),  `c` (Chat)
-- **ESC Behavior**: Does nothing (no dead ends)
-- **Entry Points**: App startup (existing installation), returning from other screens
+There are currently only five screens supported by the TUI
 
-### 2. Wizard Screen (`wizard`)
-**Purpose**: First-run setup wizard for new installations
-**Layout**: Multi-step wizard with welcome, "You" contact creation, and options
-**Navigation**:
-- **Steps**: Welcome → Create "You" Contact → Options → Complete
-- **Key Bindings**: `Enter` (continue), `ESC` (skip/back depending on step)
-- **ESC Behavior**: Custom handling per step (skip setup or go home)
-- **Entry Points**: App startup (first run only)
+### Home
 
-### 4. Search Screen (`search`)
-**Purpose**: Full-text search with scope filters and export capabilities
-**Layout**: Search input at top, filters on left, results on right
-**Navigation**:
-- **Key Bindings**: `/` (focus search), `Tab` (cycle filters), `Enter` (select result), `ESC` (back)
-- **ESC Behavior**: POP if showing results, HOME if empty search
-- **Entry Points**: Home screen, contacts screen search mode
-- **Modes**: Search input mode, Results browsing mode
+Left justified list of options
+* Chat - opens chat screen
+* Search - opens search screen
+* Settings - opens settings screen
 
-### 5. Relationships Screen (`relationships`)
-**Purpose**: View and manage contact relationships in a data table
-**Layout**: DataTable showing Person 1, Relationship Type, Person 2, Start Date, Status
-**Navigation**:
-- **Key Bindings**: `a` (add), `e` (edit), `d` (delete), `Enter` (view), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, contact detail screens
+### Chat
 
-### 6. Relationship Types Screen (`relationship_types`)
-**Purpose**: Manage available relationship types (family, friend, colleague, etc.)
-**Layout**: List of relationship types with management options
-**Navigation**:
-- **Key Bindings**: `a` (add), `e` (edit), `d` (delete), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, relationship creation flows
+Chat Status Line: The line immediately below the Top Nav, in the Chat Screen, is called the Chat Status Line.  The Chat Status Line displays the following two items, from left to right, which are controlled by background processes:
 
-### 7. Database Screen (`database`)
-**Purpose**: Database management with game-style backup slots
-**Layout**: Statistics at top, backup slots below with restore options
-**Navigation**:
-- **Key Bindings**: `b` (backup), `r` (restore), `e` (export), `i` (import), `v` (vacuum), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen
+1) LLM availability: Shows the status of our connection with the LLM
+✅ "LLM: Online" (green)
+❌ "LLM: Offline" (red)
+⚠️ "LLM: Checking..." (yellow)
 
-### 3. Contacts Screen (`contacts`)
-**Purpose**: Browse and manage contacts in a data table
-**Layout**: DataTable with columns for Name, Email, Phone, Last Interaction
-**Navigation**:
-- **Key Bindings**: `a` (add), `e` (edit), `d` (delete), `Enter` (view details), `/` (search), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, search results, relationship management
-- **Modes**: View mode (default), Search mode (with `/` key)
+2) LLM progress: Shows a progress indicator.  When the LLM is not processing a prompt, it either shows READY, or ERROR.
 
-### 8. Contact Detail Screen (`contact_detail`)
-**Purpose**: View detailed information about a specific contact
-**Layout**: Contact information with related relationships and notes
-**Navigation**:
-- **Key Bindings**: `e` (edit), `r` (relationships), `ESC` (back)
-- **ESC Behavior**: POP (return to contacts list or previous screen)
-- **Entry Points**: Contacts screen, search results, relationship views
+Chat Box: When opened, the chat window displays a top-justified edit box for the user to type prompts into. That is called the "chat box".  This is a few lines high, but scrollable, with a usable scrollbar on the right for mouse users.  When a user hits enter in the chat box, it sends the prompt to the LLM.  When the user hits "Shift+Enter" key combo, it sends a carraige return to the edit box, moving to the next line.
 
-### 9. Contact Form Screen (`contact_form`)
-**Purpose**: Add or edit contact information
-**Layout**: Form fields for contact details with validation
-**Navigation**:
-- **Key Bindings**: `Tab` (next field), `Shift+Tab` (previous field), `Enter` (save), `ESC` (cancel)
-- **ESC Behavior**: CONFIRM (show discard dialog if changes made)
-- **Entry Points**: Contacts screen (add/edit), contact detail screen (edit)
+Response Box: Below the Chat Box, a text display box shows the responses of the LLM to user prompts.  It is also scrollable and contains the last 64KB of responses.
 
-### 10. Relationship Form Screen (`relationship_form`)
-**Purpose**: Create or edit relationships between contacts
-**Layout**: Dual contact selector with relationship type picker
-**Navigation**:
-- **Key Bindings**: `Tab` (cycle selections), `Enter` (save), `ESC` (cancel)
-- **ESC Behavior**: CONFIRM (show discard dialog if changes made)
-- **Entry Points**: Relationships screen, contact detail screen
+### Search
 
-### 11. Import Screen (`import`)
-**Purpose**: Import contacts from various sources (Google Takeout, CSV, etc.)
-**Layout**: Import source selection with preview and options
-**Navigation**:
-- **Key Bindings**: File selection and import options, `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, database screen
+This screen implements the Search part of the "Search-Select-Act" loop, and does not allow for selection or action, yet.
 
-### 12. Export Screen (`export`)
-**Purpose**: Export contacts and relationships in various formats
-**Layout**: Export format selection with filtering options
-**Navigation**:
-- **Key Bindings**: Format selection (`c` CSV, `v` VCard, `j` JSON), `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen, search results, contacts screen
+Search Edit Box: The line immediately below the top nav, on the Search Screen, shows a three line edit box called the Search Edit Box.  This is for entering a free-form text string to search on.
 
-### 13. Metadata Screen (`metadata`)
-**Purpose**: Manage tags and notes associated with contacts
-**Layout**: Tag and note management interface
-**Navigation**:
-- **Key Bindings**: Tag/note management actions, `ESC` (back)
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen
+Search Dropdown:  Below the Search Edit Box, are five search buttons, which correspond to the five user-editable data types in the db.  The mouse can be used to select a button, or when in nav mode, the number of the item selected can be pressed on the keyboard: 
+(1) Contacts
+(2) Relationships
+(3) Relationship_Types
+(4) Notes
+(5) Tags
 
-### 14. Chat Screen (`chat`)
-**Purpose**: Natural language interface for querying and managing contacts
-**Layout**: Chat history with input field and results preview
-**Navigation**:
-- **Key Bindings**: 
-- **ESC Behavior**: POP (return to previous screen)
-- **Entry Points**: Home screen
+Search Results Box: A scrollable text box.  Search returns all of the items of the data type corresponding to the button pressed, that match the string entered into the search edit box.  No pagination.  No nav.  Just a simple list for now.
 
-## Navigation Patterns
+Future implementation: Do not implement, yet: All editing functions will begin with the search screen - CRUD any user editable data type.  Subfilter searches, pagination, and additional nav is all future development.  Exporting graphs are also future development items.
 
-### Navigation Stack
-- Uses NavigationService to maintain screen history
-- ESC behavior varies by screen intent (POP, HOME, CONFIRM, CUSTOM, CANCEL)
-- Supports breadcrumb navigation for complex workflows
+### Settings
 
-### Universal Keybindings
-- **ESC**: Context-dependent navigation (never a dead end)
-- **?**: Help (global binding)
-- **q**: Quit (navigation mode only)
-- **Mode Toggle**: ESC toggles between Navigation and Edit modes
+Database Status Line: A single line below the Top Nav.  Shows db connection status and the number of rows of each user-searchable data type present in the db.
 
-### Search Integration
-- **Global Search**: Available from most screens via `/` key
-- **Contextual Search**: Within lists and tables for filtering
-- **Autocomplete**: Powered by centralized AutocompleteEngine
+Future implementation: Do not implement, yet: Import Contacts, Export Database.
 
-## Current Issues Identified
+### Help
 
-### 1. Dead End Problem
-**Issue**: Starting page may lack clear navigation back to main menu
-**Solution**: Ensure home screen is always accessible and provides clear navigation options
+For now, this just shows a single line of text: "Help not implemented yet."
 
-### 2. Mode Confusion
-**Issue**: Users may not understand Navigation vs Edit mode distinction
-**Solution**: Clear mode indicators in header/footer and consistent ESC behavior
 
-### 3. Navigation Consistency
-**Issue**: Different screens may handle ESC and navigation differently
-**Solution**: Standardize ESC intents and ensure all screens implement proper navigation
 
-## Design Principles
 
-### 1. Keyboard First
-- All actions achievable via keystrokes
-- Single-key actions for common operations
-- Consistent keybindings across screens
 
-### 2. No Dead Ends
-- Every screen provides clear navigation out
-- ESC key always provides meaningful action
-- Home screen always accessible
-
-### 3. Search → Select → Act
-- Consistent workflow pattern across screens
-- Fuzzy search and autocomplete where applicable
-- Batch operations supported
-
-### 4. Modal Clarity
-- Clear distinction between Navigation and Edit modes
-- Mode indicators in UI
-- Consistent mode switching behavior
-
-### 5. Progressive Disclosure
-- Simple interfaces with advanced options available
-- Context-sensitive help and hints
-- Logical information hierarchy
-
-## Technical Implementation Notes
-
-### Screen Registration
-- All screens register themselves in `SCREEN_REGISTRY`
-- Factory pattern for screen creation with service injection
-- Lazy loading and error handling for development
-
-### Service Architecture
-- NavigationService: Screen stack and routing
-- DataService: Business logic abstraction
-- NotificationService: User feedback and alerts
-- SelectionService: Multi-select operations (Phase 2)
-- ValidationService: Form validation (Phase 2)
-
-### State Management
-- Screen-specific state maintained in screen instances
-- Global app state for mode and navigation
-- Persistent selections across pagination
-
-This specification serves as the definitive guide for TUI behavior and should be updated as screens are implemented and refined.

@@ -43,12 +43,9 @@ Looking for something specific? Start with this map.
 | Doc | Status | What you’ll find |
 | --- | --- | --- |
 | `docs/DEV_SETUP.md` | ✅ Current | Start/end-of-day workflow, Git tips, AI helper pointers. |
-| `docs/INSTALL.md` | 🕰️ Historical | Legacy SQLCipher installation notes (kept for reference). |
-| `docs/DB_MANAGEMENT.md` | 🕰️ Historical | Older encryption/database flows superseded by app-level encryption. |
-| `docs/TUI_Specification.md` | ✅ Current | Feature and UX expectations for the modern TUI. |
-| `docs/TUI_Key_Bindings.md` | ✅ Current | Shortcut reference for manual testing. |
-| `ROADMAP.md` | ✅ Current | Current milestone planning. |
-| `CLAUDE.md`, `CLAUDE_TUI_MIGRATION.plan` | 🕰️ Historical | Narrative planning archives for context. |
+| `docs/TUI_Specification.md` | ✅ Current | Feature and UX expectations for the TUI. |
+| `ROADMAP.md` | ✅ Current |  Milestone planning. |
+| `CLAUDE.md` | ✅ Current | Instructions for Claude and other LLMs |
 
 > ℹ️ Sections below this point capture a detailed CLI reference and historical notes. They’re still useful, but check the timestamps and comments inside the documents for freshness.
 
