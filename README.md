@@ -60,25 +60,28 @@ I am solving a few personal pain points with this project:
 
    For more detail on the vision of the project, see the [ROADMAP](https://github.com/richbodo/prt/blob/main/ROADMAP.md)
 
-## Version History
+## CLI, TUI, and Chat
 
-MVP Alpha achieved! - really basic CLI right now, but the basics needed to be done first!
+Status: None of the three interfaces are working fully, but all are useful and do something.
 
-Note: These docs suck.  I'm not going to make them awesome until I hit a milestone where I think this could be useful to someone else, and then I'll fix docs, and look for feedback.  This app is only suitable for developers right now, if that.
-
-## CLI Overview
-
-PRT provides a unified CLI interface that automatically handles setup and operations. The main entry point is:
+PRT provides a CLI interface that automatically handles setup and operations. The main entry point is:
 
 ```bash
 python -m prt_src.cli
 ```
 
+The upgrade for that CLI is the TUI, which allows for a few more features but still works in a terminal or over ssh.  
+
+The much more functional LLM chat features are just getting off the ground, but you can use chat as well for some things right now.
+
 ### Available Commands
 
 ```bash
-# Main interactive interface (default)
-python -m prt_src.cli                 # Auto-detects setup needs
+# TUI - has a menu item for LLM chat as well
+python -m prt_src
+
+# CLI
+python -m prt_src.cli                 # Typer CLI - uto-detects setup needs
 
 # Quick access to LLM chat
 python -m prt_src.cli chat            # Start LLM chat directly
