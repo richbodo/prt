@@ -47,8 +47,6 @@ Looking for something specific? Start with this map.
 | `ROADMAP.md` | ✅ Current |  Milestone planning. |
 | `CLAUDE.md` | ✅ Current | Instructions for Claude and other LLMs |
 
-> ℹ️ Sections below this point capture a detailed CLI reference and historical notes. They’re still useful, but check the timestamps and comments inside the documents for freshness.
-
 ## Motivation/Purpose: 
 
 I am solving a few personal pain points with this project:
@@ -56,7 +54,9 @@ I am solving a few personal pain points with this project:
 1) Storing all my contacts and personal relationship info with US C Corps is not perfect.  Having a little bit of contact-indexed data kept private to me is preferrable to storing it all with the biggest corporations in the world.  So, prt will be that private db for me.
 2) I can't put names to faces particularly well without some way of grouping them and viewing them that works for me to memorize them.  Visuals always help with that.  Prt will create them for me.
 3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore almost never find the people I need to find when I most need to find them, using any centralized contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be my UI for finding folks.
-4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me. 
+4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me.
+
+   For more detail on the vision of the project, see the [ROADMAP](https://github.com/richbodo/prt/blob/main/ROADMAP.md)
 
 ## Version History
 
