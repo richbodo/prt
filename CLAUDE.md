@@ -11,7 +11,21 @@ NEVER proactively create documentation files (*.md) or README files. Only create
 
 ## Project Overview
 
-PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project uses Python with SQLAlchemy, Typer for CLI, and includes AI-powered chat functionality via Ollama integration.  Future implementations will 
+PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project uses Python with SQLAlchemy, Typer for CLI, Textual for a TUI, and includes AI-powered chat functionality via Ollama integration.  
+
+### Vision
+
+The short term vision for PRT is to be a safe space to discover and enhance relationships.
+
+To do that, PRT will provide a safe space for importing contacts from other systems, finding, and adding sensitive relationship data locally, keeping data encrypted when not in use, chatting with a local, safer AI than is available online, and exporting useful directories or diagrams as quick references to find relationships of a certain type, either for quick contact lookup, or as a memory aid, or to share intentionally with others.
+
+The long term vision for PRT is to be a tool that is used in a decentralized community to build stronger community relationships.  
+
+To do that, PRT will be enhaced with a more complicated decentralized communications tool (CRT).
+
+CRT uses zero knowledge tech to expose data in a granular way to workflows that can: notify other community members of important social network health issues.  One such workflow would be the "help" workflow, in which a user notifies their community that they are in need of help, without immediately revealing who they are.  When other community members who are willing to provide help chime in, then information will gradually be revealed based on their preferences, and a communications channel agreed upon so that help can be provided.
+
+CRT could also accept message logs from a user, and export zk proofs of connectedness, so that social network health metrics can be analyzed and "alerts" can be triggered when the community as a whole or a single member moves to an likely unhealthy state.  
 
 ## Development Environment Setup
 
