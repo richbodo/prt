@@ -19,6 +19,8 @@ The basic workflow is below.  If you need a deeper walkthrough, Git reminders, o
 
 Note that this project is LICENSE.md GPLv3, and has the most basic CONTRIBUTING.md and pull request template I could find that just avoids patent and copyright violations.  There is also a CODE_OF_CONDUCT.md which is just the basic mozilla one.
 
+There is a [github project](https://github.com/users/richbodo/projects/2) where I divide up the issues by feature-type-bucket.
+
 ## 🛠️ Development Workflow
 
 ### Quick Setup
