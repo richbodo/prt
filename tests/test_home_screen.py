@@ -185,7 +185,7 @@ class TestHomeScreenModeAwareness:
         async with pilot_screen(HomeScreen, app=mock_app) as pilot:
             screen = pilot.app.screen
             # Set to EDIT mode
-            pilot.app.mode = AppMode.EDIT
+            pilot.app.current_mode = AppMode.EDIT
             screen.top_nav.set_mode(AppMode.EDIT)
 
             # Try to open menu with N - should not work
@@ -194,7 +194,7 @@ class TestHomeScreenModeAwareness:
             assert not dropdown.display  # Should still be hidden
 
             # Set back to NAV mode
-            pilot.app.mode = AppMode.NAVIGATION
+            pilot.app.current_mode = AppMode.NAVIGATION
             screen.top_nav.set_mode(AppMode.NAVIGATION)
 
             # Now it should work

@@ -69,7 +69,7 @@ class HomeScreen(BaseScreen):
         key = event.key.lower()
 
         # In NAV mode, handle single-key shortcuts
-        if self.app.mode == AppMode.NAVIGATION:
+        if self.app.current_mode == AppMode.NAVIGATION:
             if key == "n":
                 self.action_toggle_menu()
                 event.prevent_default()

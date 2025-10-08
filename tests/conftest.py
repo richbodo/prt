@@ -74,11 +74,18 @@ def pilot_screen():
             super().__init__()
             self._screen_class = screen_class
             self._screen_kwargs = screen_kwargs
-            # Add mode attribute if the passed app kwarg has it
-            if "app" in screen_kwargs and hasattr(screen_kwargs["app"], "mode"):
-                self.mode = screen_kwargs["app"].mode
-            else:
-                self.mode = AppMode.NAVIGATION
+            # Initialize mode like the real app
+            self._app_mode = AppMode.NAVIGATION
+
+        @property
+        def current_mode(self):
+            """Get current mode (matches real app API)."""
+            return self._app_mode
+
+        @current_mode.setter
+        def current_mode(self, mode):
+            """Set current mode (matches real app API)."""
+            self._app_mode = mode
 
         def on_mount(self):
             """Push the test screen on mount."""
