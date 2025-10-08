@@ -11,7 +11,7 @@ NEVER proactively create documentation files (*.md) or README files. Only create
 
 ## Project Overview
 
-PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project uses Python with SQLAlchemy, Typer for CLI, Textual for a TUI, and includes AI-powered chat functionality via Ollama integration.  
+PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project provides both a CLI (Typer-based) and a TUI (Textual-based) interface. Built with Python and SQLAlchemy, it includes AI-powered chat functionality via Ollama integration.  
 
 ### Vision
 
@@ -25,7 +25,19 @@ To do that, PRT will be enhaced with a more complicated decentralized communicat
 
 CRT uses zero knowledge tech to expose data in a granular way to workflows that can: notify other community members of important social network health issues.  One such workflow would be the "help" workflow, in which a user notifies their community that they are in need of help, without immediately revealing who they are.  When other community members who are willing to provide help chime in, then information will gradually be revealed based on their preferences, and a communications channel agreed upon so that help can be provided.
 
-CRT could also accept message logs from a user, and export zk proofs of connectedness, so that social network health metrics can be analyzed and "alerts" can be triggered when the community as a whole or a single member moves to an likely unhealthy state.  
+CRT could also accept message logs from a user, and export zk proofs of connectedness, so that social network health metrics can be analyzed and "alerts" can be triggered when the community as a whole or a single member moves to an likely unhealthy state.
+
+## TUI Documentation
+
+The TUI is being refactored for simplicity, testability, and debuggability (Issue #120). Key documentation:
+
+- **[TUI_Specification.md](docs/TUI/TUI_Specification.md)** - Complete specification of screens, navigation, and behavior
+- **[TUI_Style_Guide.md](docs/TUI/TUI_Style_Guide.md)** - Design principles and style guidelines
+- **[TUI_REFACTOR_PLAN.md](docs/TUI/TUI_REFACTOR_PLAN.md)** - Comprehensive refactoring plan and implementation strategy
+- **[TUI_Dev_Tips.md](docs/TUI/TUI_Dev_Tips.md)** - Common issues, solutions, and best practices
+- **[TUI_Key_Bindings.md](docs/TUI/TUI_Key_Bindings.md)** - Complete key binding reference
+
+**IMPORTANT**: Always review the TUI specification and style guide before implementing TUI features. The refactoring prioritizes simplicity over features - follow the spec exactly.
 
 ## Development Environment Setup
 
@@ -34,8 +46,11 @@ CRT could also accept message logs from a user, and export zk proofs of connecte
 # Set up environment and dependencies
 source ./init.sh
 
-# Run the application
+# Run the CLI application
 python -m prt_src.cli
+
+# Run the TUI application
+python -m prt_src.tui
 ```
 
 ### Virtual Environment
@@ -49,13 +64,10 @@ source ./init.sh  # This also installs dev dependencies
 # Run all tests
 ./prt_env/bin/python -m pytest tests/ -v
 
-# Run specific test modules
+# Run specific test files or modules
 ./prt_env/bin/python -m pytest tests/test_api.py -v
 ./prt_env/bin/python -m pytest tests/test_relationship_cli.py -v
-
-# Testing Commands (use these exact paths)
-./prt_env/bin/python -m pytest tests/test_*.py -v  # Run all test files
-./prt_env/bin/python -m pytest tests/test_unified_search.py -v  # Run specific test
+./prt_env/bin/python -m pytest tests/test_home_screen.py -v
 
 # Run linting and formatting (MUST use venv binaries)
 ./prt_env/bin/ruff check prt_src/ --fix
@@ -73,10 +85,11 @@ cd tests && python fixtures.py
 
 ### Core Components
 
-1. **CLI Interface (`prt_src/cli.py`)**: Main entry point with Typer-based command interface
-2. **API Layer (`prt_src/api.py`)**: Clean API abstraction for all operations
-3. **Database Layer (`prt_src/db.py`)**: SQLAlchemy-based database operations
-4. **Models (`prt_src/models.py`)**: SQLAlchemy ORM models for contacts, tags, notes, relationships
+1. **CLI Interface (`prt_src/cli.py`)**: Typer-based command-line interface
+2. **TUI Interface (`prt_src/tui/`)**: Textual-based text user interface
+3. **API Layer (`prt_src/api.py`)**: Clean API abstraction for all operations
+4. **Database Layer (`prt_src/db.py`)**: SQLAlchemy-based database operations
+5. **Models (`prt_src/models.py`)**: SQLAlchemy ORM models for contacts, tags, notes, relationships
 
 ### Key Features
 - **Local-first**: All data stored locally, no cloud sync
@@ -96,12 +109,24 @@ cd tests && python fixtures.py
 
 ## Commands Reference
 
-### Main CLI Commands
+### TUI Application
 ```bash
-# Interactive mode (default)
+# Launch TUI (Text User Interface)
+python -m prt_src.tui
+
+# Run with Textual development tools
+textual run --dev python -m prt_src.tui
+
+# Debug console (separate terminal)
+textual console --port 7342 -v
+```
+
+### CLI Commands
+```bash
+# Interactive CLI mode (legacy)
 python -m prt_src.cli
 
-# Direct chat mode  
+# Direct chat mode
 python -m prt_src.cli chat
 
 # Setup wizard
@@ -196,8 +221,13 @@ def test_functionality(test_db):
 ## Important File Paths
 
 ### Core Source Files
-- `prt_src/cli.py`: Main CLI interface with all interactive menus
-- `prt_src/api.py`: Clean API layer for all operations  
+- `prt_src/cli.py`: CLI interface (Typer-based)
+- `prt_src/tui/`: TUI interface (Textual-based)
+  - `prt_src/tui/app.py`: Main TUI application
+  - `prt_src/tui/screens/`: Screen implementations
+  - `prt_src/tui/widgets/`: Reusable widgets
+  - `prt_src/tui/services/`: Services (data, navigation, notification, LLM status)
+- `prt_src/api.py`: Clean API layer for all operations
 - `prt_src/models.py`: SQLAlchemy ORM models
 - `prt_src/db.py`: Database connection and operations
 - `prt_src/google_takeout.py`: Google Takeout import logic
@@ -339,6 +369,14 @@ func.count(), func.max(), func.min()
 ### Data Schema Consistency
 - Use consistent field names across components (e.g., `from_contact`/`to_contact` not `from`/`to`)
 - Validate data structures match between widgets that communicate
+
+### TUI Debugging
+When debugging TUI issues:
+- Use **2-terminal setup**: Debug console in Terminal 1, TUI in Terminal 2
+- The TUI blocks the terminal while running - use separate terminal for commands
+- Use Textual devtools: `textual run --dev python -m prt_src.tui`
+- Enable visual debugging with `textual console` for real-time logging
+- Refer to TUI_Dev_Tips.md for common issues and solutions
 
 ## Git Commit Guidelines
 
