@@ -57,6 +57,24 @@ class HelpScreen(BaseScreen):
         await super().on_mount()
         logger.info("Help screen mounted")
 
+    def on_key(self, event) -> None:
+        """Handle key presses.
+
+        Args:
+            event: Key event
+        """
+
+        from prt_src.tui.types import AppMode
+
+        key = event.key.lower()
+
+        # In NAV mode, handle dropdown menu keys when menu is open
+        if self.app.current_mode == AppMode.NAVIGATION and self.dropdown.display:
+            action = self.dropdown.get_action(key)
+            if action:
+                action()
+                event.prevent_default()
+
     def action_toggle_menu(self) -> None:
         """Toggle the dropdown menu visibility."""
         self.dropdown.toggle()
