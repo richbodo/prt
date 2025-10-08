@@ -1,110 +1,46 @@
-"""Help screen for PRT TUI - Issue #114.
-
-Displays comprehensive key binding reference and usage guide.
-"""
+"""Help screen - Simple help message placeholder."""
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Container
 from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
-from prt_src.tui.screens import register_screen
 from prt_src.tui.screens.base import BaseScreen
-from prt_src.tui.screens.base import EscapeIntent
+from prt_src.tui.widgets import BottomNav
+from prt_src.tui.widgets import TopNav
 
 logger = get_logger(__name__)
 
 
 class HelpScreen(BaseScreen):
-    """Help screen with comprehensive key bindings and usage guide."""
+    """Help screen with placeholder message.
 
-    def get_screen_name(self) -> str:
-        """Get screen identifier."""
-        return "help"
+    Per spec:
+    - Top Nav
+    - Single line: "Help not implemented yet."
+    - Bottom Nav
+    """
 
-    def on_escape(self) -> EscapeIntent:
-        """ESC goes back to previous screen."""
-        return EscapeIntent.POP
-
-    def get_footer_config(self):
-        """Get footer configuration for help screen."""
-        return {
-            "keyHints": ["[ESC] Back"],
-            "pager": None,
-            "statusRight": None,
-        }
+    def __init__(self, **kwargs):
+        """Initialize Help screen."""
+        super().__init__(**kwargs)
+        self.screen_title = "HELP"
 
     def compose(self) -> ComposeResult:
-        """Compose help screen layout."""
-        with Vertical(classes="help-container"):
-            # Help title
-            yield Static("🆘 PRT Help & Key Bindings", classes="help-title")
+        """Compose the help screen layout."""
+        # Top navigation bar
+        self.top_nav = TopNav(self.screen_title, id="top-nav")
+        yield self.top_nav
 
-            # Global navigation section
-            yield Static("Global Navigation:", classes="help-section-title")
-            yield Static("Alt         - Toggle top nav menu", classes="help-item")
-            yield Static("ESC         - Back/Cancel/Mode toggle", classes="help-item")
-            yield Static("?           - Show this help screen", classes="help-item")
-            yield Static("q           - Quit application", classes="help-item")
-            yield Static("x           - Exit with confirmation", classes="help-item")
+        # Main content container
+        with Container(id="help-content"):
+            yield Static("Help not implemented yet.", id="help-message")
 
-            # Top nav menu section
-            yield Static("Top Nav Menu (when open with Alt):", classes="help-section-title")
-            yield Static("B           - Back to previous screen", classes="help-item")
-            yield Static("H           - Go to home screen", classes="help-item")
-            yield Static("?           - Show this help screen", classes="help-item")
+        # Bottom navigation/status bar
+        self.bottom_nav = BottomNav(id="bottom-nav")
+        yield self.bottom_nav
 
-            # Home screen section
-            yield Static("Home Screen:", classes="help-section-title")
-            yield Static("c           - Contacts", classes="help-item")
-            yield Static("s           - Search", classes="help-item")
-            yield Static("r           - Relationships", classes="help-item")
-            yield Static("y           - Relationship Types", classes="help-item")
-            yield Static("i           - Import", classes="help-item")
-            yield Static("e           - Export", classes="help-item")
-            yield Static("d           - Database", classes="help-item")
-            yield Static("m           - Metadata", classes="help-item")
-            yield Static("t           - Chat", classes="help-item")
-
-            # Contacts screen section
-            yield Static("Contacts Screen:", classes="help-section-title")
-            yield Static("a           - Add new contact", classes="help-item")
-            yield Static("e           - Edit selected contact", classes="help-item")
-            yield Static("d           - Delete selected contact", classes="help-item")
-            yield Static("Enter       - View contact details", classes="help-item")
-            yield Static("/           - Search contacts", classes="help-item")
-
-            # Search screen section
-            yield Static("Search Screen:", classes="help-section-title")
-            yield Static("/           - Focus search input", classes="help-item")
-            yield Static("Tab         - Cycle through filters", classes="help-item")
-            yield Static("Enter       - Select search result", classes="help-item")
-
-            # Chat screen section
-            yield Static("Chat Screen:", classes="help-section-title")
-            yield Static("Enter       - Send message", classes="help-item")
-            yield Static("Shift+Enter - New line in message", classes="help-item")
-            yield Static("Up/Down     - Navigate command history", classes="help-item")
-            yield Static("Ctrl+L      - Clear chat history", classes="help-item")
-
-            # Mode system section
-            yield Static("Mode System:", classes="help-section-title")
-            yield Static(
-                "Navigation Mode - Default mode for browsing (j/k, single keys)",
-                classes="help-item",
-            )
-            yield Static(
-                "Edit Mode       - Text input mode (ESC toggles back)", classes="help-item"
-            )
-
-            # Debug features (if available)
-            yield Static("Debug Features (Development):", classes="help-section-title")
-            yield Static("d           - Toggle debug borders (dev mode)", classes="help-item")
-            yield Static("l           - Log layout analysis (dev mode)", classes="help-item")
-            yield Static("n           - Test notifications (dev mode)", classes="help-item")
-            yield Static("s           - Screenshot capture (dev mode)", classes="help-item")
-            yield Static("r           - Test responsive behavior (dev mode)", classes="help-item")
-
-
-# Register the help screen
-register_screen("help", HelpScreen)
+    async def on_mount(self) -> None:
+        """Handle screen mount."""
+        await super().on_mount()
+        logger.info("Help screen mounted")
