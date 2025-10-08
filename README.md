@@ -21,7 +21,7 @@ Note that this project is LICENSE.md GPLv3, and has the most basic CONTRIBUTING.
 
 There is a [github project](https://github.com/users/richbodo/projects/2) where I divide up the issues by feature-type-bucket.
 
-## 🛠️ Development Workflow
+## 🛠️ Basic Development Workflow
 
 ### Quick Setup
 ```bash
@@ -46,6 +46,8 @@ Looking for something specific? Start with this map.
 
 | Doc | Status | What you’ll find |
 | --- | --- | --- |
+| `CONTRIBUTING.md` | ✅ Current | The most basic one I could find that works|
+| `CODE_OF_CONDUCT.md` | ✅ Current | Most conventional mozilla version |
 | `docs/DEV_SETUP.md` | ✅ Current | Start/end-of-day workflow, Git tips, AI helper pointers. |
 | `docs/TUI_Specification.md` | ✅ Current | Feature and UX expectations for the TUI. |
 | `ROADMAP.md` | ✅ Current |  Milestone planning. |
