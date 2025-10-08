@@ -7,6 +7,10 @@ from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import Static
 
+from prt_src.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class DropdownMenu(Container):
     """Simple dropdown menu overlay.
@@ -60,7 +64,17 @@ class DropdownMenu(Container):
             Action callable or None if key not found
         """
         key_upper = key.upper()
-        for item_key, _label, action in self.items:
+        logger.info(f"[DROPDOWN] get_action called with key='{key}' (upper='{key_upper}')")
+        logger.info(
+            f"[DROPDOWN] Available menu items: {[(key, label) for key, label, _ in self.items]}"
+        )
+
+        for item_key, label, action in self.items:
             if item_key.upper() == key_upper:
+                logger.info(
+                    f"[DROPDOWN] Found match: key='{item_key}', label='{label}', action={action}"
+                )
                 return action
+
+        logger.warning(f"[DROPDOWN] No action found for key '{key}'")
         return None

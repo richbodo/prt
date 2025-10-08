@@ -41,7 +41,7 @@ class BaseScreen(Screen):
 
     def __init__(
         self,
-        app=None,
+        prt_app=None,
         nav_service=None,
         data_service=None,
         notification_service=None,
@@ -53,18 +53,18 @@ class BaseScreen(Screen):
         """Initialize base screen with injected services.
 
         Args:
-            app: Reference to the main app
+            prt_app: Reference to the main PRT app
             nav_service: Navigation service for screen transitions
             data_service: Data service wrapping PRTAPI
             notification_service: Service for toasts/dialogs
             selection_service: Phase 2 selection system
             validation_service: Phase 2 validation system
         """
-        # Don't pass app to Screen - it doesn't accept it
+        # Don't pass prt_app to Screen - it doesn't accept it
         super().__init__(*args, **kwargs)
 
-        # Store app reference as _prt_app (Screen has its own 'app' property)
-        self._prt_app = app
+        # Store app reference (Screen has its own 'app' property for Textual App)
+        self.prt_app = prt_app
         self.nav_service = nav_service
         self.data_service = data_service
         self.notification_service = notification_service

@@ -196,15 +196,14 @@ class PRTApp(App):
         For Issue #120 refactoring: Minimal compose, let screens handle their own layout.
         Textual's Screen system manages screen switching automatically.
         """
-        # Return empty - screens compose themselves
-        return
-        yield  # Make this a generator (unreachable but needed for type)
+        # Return empty iterator - screens compose themselves
+        return iter(())
 
     def on_mount(self) -> None:
         """Handle application mount event."""
         # Phase 1: Always go to home screen (no wizard yet)
         logger.info("Mounting app - pushing home screen")
-        self.push_screen(HomeScreen(app=self, **self.services))
+        self.push_screen(HomeScreen(prt_app=self, **self.services))
 
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
@@ -233,13 +232,23 @@ class PRTApp(App):
 
     async def action_toggle_top_nav(self) -> None:
         """Toggle the top nav dropdown menu."""
+        logger.info(
+            f"[APP] action_toggle_top_nav called, current screen: {type(self.screen).__name__}"
+        )
         # Delegate to current screen if it has the action
         try:
             if hasattr(self.screen, "action_toggle_menu"):
+                logger.info(
+                    f"[APP] Delegating to {type(self.screen).__name__}.action_toggle_menu()"
+                )
                 self.screen.action_toggle_menu()
-                logger.info("Toggled screen dropdown menu")
+                logger.info("[APP] Toggled screen dropdown menu")
+            else:
+                logger.warning(
+                    f"[APP] Screen {type(self.screen).__name__} has no action_toggle_menu method"
+                )
         except Exception as e:
-            logger.debug(f"Could not toggle menu: {e}")
+            logger.error(f"[APP] Could not toggle menu: {e}", exc_info=True)
 
     async def _handle_nav_menu_key(self, key: str) -> bool:
         """Handle navigation menu key selection (Issue #114).
@@ -453,6 +462,29 @@ class PRTApp(App):
         except Exception:
             pass
 
+    def pop_screen(self) -> None:
+        """Pop the current screen and return to the previous one.
+
+        Wraps Textual's pop_screen with logging.
+        """
+        logger.info("[APP] pop_screen() CALLED")
+        logger.info(
+            f"[APP] Screen stack before pop: {[type(s).__name__ for s in self.screen_stack]}"
+        )
+        logger.info(f"[APP] Current screen: {type(self.screen).__name__}")
+
+        try:
+            result = super().pop_screen()
+            logger.info(
+                f"[APP] Screen stack after pop: {[type(s).__name__ for s in self.screen_stack]}"
+            )
+            logger.info(f"[APP] Current screen after pop: {type(self.screen).__name__}")
+            logger.info("[APP] pop_screen() COMPLETED")
+            return result
+        except Exception as e:
+            logger.error(f"[APP] pop_screen() FAILED with exception: {e}")
+            raise
+
     def navigate_to(self, screen_name: str, params: Optional[dict] = None) -> None:
         """Navigate to a screen using Textual's push_screen.
 
@@ -461,6 +493,11 @@ class PRTApp(App):
             params: Optional parameters for the screen
         """
         params = params or {}
+
+        logger.info(f"[APP] navigate_to('{screen_name}') STARTED")
+        logger.info(
+            f"[APP] Screen stack before push: {[type(s).__name__ for s in self.screen_stack]}"
+        )
 
         # Update services with app reference (lazy injection to avoid circular deps)
         if self.services.get("notification_service"):
@@ -475,11 +512,20 @@ class PRTApp(App):
         screen_class = screen_map.get(screen_name)
         if not screen_class:
             logger.error(f"Unknown screen: {screen_name}")
+            # Show user feedback and fallback to home
+            self.sub_title = f"Error: Unknown screen '{screen_name}'"
+            if screen_name != "home":  # Avoid infinite loop
+                logger.info("Falling back to home screen")
+                self.navigate_to("home")
             return
 
-        new_screen = screen_class(app=self, **self.services, **params)
+        new_screen = screen_class(prt_app=self, **self.services, **params)
+        logger.info(f"[APP] Calling push_screen for {screen_name}")
         self.push_screen(new_screen)
-        logger.info(f"Navigated to screen: {screen_name}")
+        logger.info(
+            f"[APP] Screen stack after push: {[type(s).__name__ for s in self.screen_stack]}"
+        )
+        logger.info(f"[APP] navigate_to('{screen_name}') COMPLETED")
 
     def _initialize_database_data(self) -> None:
         """Initialize database with default data (relationship types and 'You' contact).

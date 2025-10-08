@@ -166,6 +166,93 @@ else:
 - **Invisible content**: Theme variable resolution issues
 - **Layout conflicts**: Complex nested structures
 
+### **Logging-Based Debugging**
+
+**CRITICAL**: TUIs are event-driven and hide state behind rendering. Always add comprehensive logging FIRST when debugging.
+
+#### Standard Logging Setup
+```python
+from prt_src.logging_config import get_logger
+logger = get_logger(__name__)
+```
+
+Logs automatically go to `prt_data/prt.log` (INFO level by default).
+
+#### Essential Logging Patterns
+
+**Event Handlers - Log entry, state, decisions:**
+```python
+def on_key(self, event) -> None:
+    key = event.key.lower()
+    logger.info(f"[SCREEN] on_key: key='{key}', dropdown={self.dropdown.display}")
+
+    if key == "n":
+        logger.info("[SCREEN] Handling 'n' - toggling menu")
+        self.action_toggle_menu()
+        event.prevent_default()
+```
+
+**Navigation - Log screen stack (critical for catching double-push bugs):**
+```python
+def navigate_to(self, screen_name: str) -> None:
+    logger.info(f"[APP] navigate_to('{screen_name}') STARTED")
+    logger.info(f"[APP] Stack before: {[type(s).__name__ for s in self.screen_stack]}")
+
+    self.push_screen(new_screen)
+
+    logger.info(f"[APP] Stack after: {[type(s).__name__ for s in self.screen_stack]}")
+```
+
+**Actions - Log before/after state:**
+```python
+def action_go_back(self) -> None:
+    logger.info("[SCREEN] action_go_back STARTED")
+    logger.info(f"[SCREEN] Before: dropdown={self.dropdown.display}, menu={self.menu_open}")
+
+    self.dropdown.hide()
+    self.top_nav.menu_open = False
+
+    logger.info(f"[SCREEN] After: dropdown={self.dropdown.display}, menu={self.menu_open}")
+    self.app.pop_screen()
+    logger.info("[SCREEN] action_go_back COMPLETED")
+```
+
+#### Viewing Logs During Development
+```bash
+# Terminal 1: Run TUI
+python -m prt_src.tui
+
+# Terminal 2: Watch logs in real-time
+tail -f prt_data/prt.log
+
+# Filter by component
+tail -f prt_data/prt.log | grep '\[APP\]'
+
+# Get recent event flow
+tail -200 prt_data/prt.log | grep -E '\[HELP\]|\[APP\]|\[DROPDOWN\]'
+```
+
+#### Tag Convention
+- `[APP]` - Application-level events
+- `[SCREEN]` - Screen-specific events (use screen name like `[HOME]`, `[HELP]`)
+- `[WIDGET]` - Widget events (use widget name like `[DROPDOWN]`, `[TOPNAV]`)
+- `[SERVICE]` - Service events
+
+#### Real Example: Double-Push Bug
+
+**Problem**: "Pressing n,b on help screen requires two attempts to go back"
+
+**Without logs**: Would require hours of code inspection and guesswork.
+
+**With logs**: Immediately revealed the issue:
+```
+[APP] Stack before pop: ['Screen', 'HomeScreen', 'HelpScreen', 'HelpScreen']
+```
+
+The help screen was pushed **twice** due to duplicate event handlers. Screen stack logging caught it in seconds.
+
+**Key Takeaway**: Log screen stack at every navigation point. Stack corruption is common and invisible without logging.
+
 ## Progress Indicator Specific
 
 ### **Working Pattern**

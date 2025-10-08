@@ -6,6 +6,8 @@ from textual.containers import Container
 from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
+from prt_src.tui.constants import CSSClasses
+from prt_src.tui.constants import WidgetIDs
 from prt_src.tui.screens.base import BaseScreen
 from prt_src.tui.types import AppMode
 from prt_src.tui.widgets import BottomNav
@@ -33,26 +35,26 @@ class HomeScreen(BaseScreen):
     def compose(self) -> ComposeResult:
         """Compose the home screen layout."""
         # Top navigation bar
-        self.top_nav = TopNav(self.screen_title, id="top-nav")
+        self.top_nav = TopNav(self.screen_title, id=WidgetIDs.TOP_NAV)
         yield self.top_nav
 
         # Main content container
-        with Container(id="home-content"):
-            yield Static("* Chat - opens chat screen", classes="menu-option")
-            yield Static("* Search - opens search screen", classes="menu-option")
-            yield Static("* Settings - opens settings screen", classes="menu-option")
+        with Container(id=WidgetIDs.HOME_CONTENT):
+            yield Static("* Chat - opens chat screen", classes=CSSClasses.MENU_OPTION)
+            yield Static("* Search - opens search screen", classes=CSSClasses.MENU_OPTION)
+            yield Static("* Settings - opens settings screen", classes=CSSClasses.MENU_OPTION)
 
         # Dropdown menu (hidden by default)
         menu_items = [
             ("H", "Home", self.action_go_home),
             ("B", "Back", self.action_go_back),
         ]
-        self.dropdown = DropdownMenu(menu_items, id="dropdown-menu")
+        self.dropdown = DropdownMenu(menu_items, id=WidgetIDs.DROPDOWN_MENU)
         self.dropdown.display = False
         yield self.dropdown
 
         # Bottom navigation/status bar
-        self.bottom_nav = BottomNav(id="bottom-nav")
+        self.bottom_nav = BottomNav(id=WidgetIDs.BOTTOM_NAV)
         yield self.bottom_nav
 
     async def on_mount(self) -> None:
@@ -85,9 +87,8 @@ class HomeScreen(BaseScreen):
             elif key == "x":
                 self.action_exit()
                 event.prevent_default()
-            elif key == "question_mark":
-                self.action_show_help()
-                event.prevent_default()
+            # Note: "?" key is handled by global App.action_help() binding
+            # Don't handle it here to avoid double-push
             else:
                 # Check if key matches dropdown menu action
                 if self.dropdown.display:
@@ -104,7 +105,7 @@ class HomeScreen(BaseScreen):
         else:
             self.dropdown.show()
             self.top_nav.menu_open = True
-        self.top_nav.update(self.top_nav._format_nav_line())
+        self.top_nav.refresh_display()
 
     def action_go_home(self) -> None:
         """Navigate to home screen (already here)."""
@@ -137,8 +138,7 @@ class HomeScreen(BaseScreen):
     def action_show_help(self) -> None:
         """Show help screen."""
         logger.info("Navigate to help screen")
-        # TODO: Implement help screen navigation
-        self.bottom_nav.show_status("Help screen navigation pending")
+        self.app.navigate_to("help")
 
     def action_exit(self) -> None:
         """Exit application."""

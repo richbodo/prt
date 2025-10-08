@@ -13,14 +13,14 @@ class TestHelpScreenRendering:
     @pytest.mark.asyncio
     async def test_screen_mounts(self, mock_app, pilot_screen):
         """Test that help screen mounts successfully."""
-        async with pilot_screen(HelpScreen, app=mock_app) as pilot:
+        async with pilot_screen(HelpScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             assert screen.is_mounted
 
     @pytest.mark.asyncio
     async def test_has_top_nav(self, mock_app, pilot_screen):
         """Test that help screen has top navigation."""
-        async with pilot_screen(HelpScreen, app=mock_app) as pilot:
+        async with pilot_screen(HelpScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             top_nav = screen.query_one(TopNav)
             assert top_nav is not None
@@ -29,7 +29,7 @@ class TestHelpScreenRendering:
     @pytest.mark.asyncio
     async def test_has_bottom_nav(self, mock_app, pilot_screen):
         """Test that help screen has bottom navigation."""
-        async with pilot_screen(HelpScreen, app=mock_app) as pilot:
+        async with pilot_screen(HelpScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             bottom_nav = screen.query_one(BottomNav)
             assert bottom_nav is not None
@@ -37,7 +37,7 @@ class TestHelpScreenRendering:
     @pytest.mark.asyncio
     async def test_displays_placeholder_message(self, mock_app, pilot_screen):
         """Test that help screen displays placeholder message."""
-        async with pilot_screen(HelpScreen, app=mock_app) as pilot:
+        async with pilot_screen(HelpScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             message = screen.query_one("#help-message")
             assert message is not None
@@ -50,7 +50,7 @@ class TestHelpScreenNavigation:
     @pytest.mark.asyncio
     async def test_esc_returns_to_previous_screen(self, mock_app, pilot_screen):
         """Test that ESC key returns to previous screen."""
-        async with pilot_screen(HelpScreen, app=mock_app) as pilot:
+        async with pilot_screen(HelpScreen, prt_app=mock_app) as pilot:
             # Mock the pop_screen method
             pop_called = False
             original_pop = mock_app.pop_screen

@@ -15,14 +15,14 @@ class TestHomeScreenRendering:
     @pytest.mark.asyncio
     async def test_screen_mounts(self, mock_app, pilot_screen):
         """Test that home screen mounts successfully."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             assert screen.is_mounted
 
     @pytest.mark.asyncio
     async def test_has_top_nav(self, mock_app, pilot_screen):
         """Test that home screen has top navigation."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             top_nav = screen.query_one(TopNav)
             assert top_nav is not None
@@ -31,7 +31,7 @@ class TestHomeScreenRendering:
     @pytest.mark.asyncio
     async def test_has_bottom_nav(self, mock_app, pilot_screen):
         """Test that home screen has bottom navigation."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             bottom_nav = screen.query_one(BottomNav)
             assert bottom_nav is not None
@@ -39,7 +39,7 @@ class TestHomeScreenRendering:
     @pytest.mark.asyncio
     async def test_has_menu_options(self, mock_app, pilot_screen):
         """Test that home screen displays menu options."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             options = screen.query(".menu-option")
             assert len(options) == 3
@@ -52,7 +52,7 @@ class TestHomeScreenRendering:
     @pytest.mark.asyncio
     async def test_has_dropdown_menu(self, mock_app, pilot_screen):
         """Test that home screen has dropdown menu."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             dropdown = screen.query_one(DropdownMenu)
             assert dropdown is not None
@@ -65,7 +65,7 @@ class TestHomeScreenNavigation:
     @pytest.mark.asyncio
     async def test_toggle_menu_with_n_key(self, mock_app, pilot_screen):
         """Test that N key toggles dropdown menu."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             dropdown = screen.query_one(DropdownMenu)
 
@@ -83,7 +83,7 @@ class TestHomeScreenNavigation:
     @pytest.mark.asyncio
     async def test_c_key_attempts_chat_navigation(self, mock_app, pilot_screen, caplog):
         """Test that C key attempts to navigate to chat."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             await pilot.press("c")
             # Check that action was triggered (via log or status message)
@@ -96,7 +96,7 @@ class TestHomeScreenNavigation:
     @pytest.mark.asyncio
     async def test_s_key_attempts_search_navigation(self, mock_app, pilot_screen):
         """Test that S key attempts to navigate to search."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             await pilot.press("s")
             bottom_nav = screen.query_one(BottomNav)
@@ -108,7 +108,7 @@ class TestHomeScreenNavigation:
     @pytest.mark.asyncio
     async def test_t_key_attempts_settings_navigation(self, mock_app, pilot_screen):
         """Test that T key attempts to navigate to settings."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             await pilot.press("t")
             bottom_nav = screen.query_one(BottomNav)
@@ -120,7 +120,7 @@ class TestHomeScreenNavigation:
     @pytest.mark.asyncio
     async def test_x_key_exits_app(self, mock_app, pilot_screen):
         """Test that X key exits application."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             # Mock the exit method to prevent actual exit
             exit_called = False
             original_exit = pilot.app.exit
@@ -144,7 +144,7 @@ class TestHomeScreenDropdownMenu:
     @pytest.mark.asyncio
     async def test_dropdown_has_home_option(self, mock_app, pilot_screen):
         """Test that dropdown menu has Home option."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             dropdown = screen.query_one(DropdownMenu)
             action = dropdown.get_action("H")
@@ -153,7 +153,7 @@ class TestHomeScreenDropdownMenu:
     @pytest.mark.asyncio
     async def test_dropdown_has_back_option(self, mock_app, pilot_screen):
         """Test that dropdown menu has Back option."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             dropdown = screen.query_one(DropdownMenu)
             action = dropdown.get_action("B")
@@ -162,7 +162,7 @@ class TestHomeScreenDropdownMenu:
     @pytest.mark.asyncio
     async def test_h_key_in_dropdown_triggers_home_action(self, mock_app, pilot_screen):
         """Test that H key with dropdown open triggers home action."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             # Open menu
             await pilot.press("n")
@@ -182,7 +182,7 @@ class TestHomeScreenModeAwareness:
     @pytest.mark.asyncio
     async def test_keys_only_work_in_nav_mode(self, mock_app, pilot_screen):
         """Test that single-key shortcuts only work in NAV mode."""
-        async with pilot_screen(HomeScreen, app=mock_app) as pilot:
+        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
             screen = pilot.app.screen
             # Set to EDIT mode
             pilot.app.current_mode = AppMode.EDIT

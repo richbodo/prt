@@ -52,6 +52,14 @@ class TopNav(Static):
         self.screen_name = name.upper()
         self.update(self._format_nav_line())
 
+    def refresh_display(self) -> None:
+        """Refresh the navigation bar display.
+
+        Public method to update the display with current state.
+        Use this instead of calling _format_nav_line() directly.
+        """
+        self.update(self._format_nav_line())
+
     def _format_nav_line(self) -> str:
         """Format the navigation bar content.
 
