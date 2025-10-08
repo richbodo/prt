@@ -217,28 +217,29 @@ class PRTApp(App):
         self.sub_title = f"Mode: {self.current_mode.value}"
         logger.debug(f"Switched to {self.current_mode.value} mode")
 
+        # Update TopNav on current screen if it exists
+        try:
+            from prt_src.tui.widgets import TopNav
+
+            top_nav = self.screen.query_one(TopNav)
+            top_nav.set_mode(self.current_mode)
+        except Exception as e:
+            logger.debug(f"Could not update TopNav: {e}")
+
     def action_quit(self) -> None:
         """Quit the application (only in navigation mode)."""
         if self.current_mode == AppMode.NAVIGATION:
             self.exit()
 
     async def action_toggle_top_nav(self) -> None:
-        """Toggle the top nav dropdown menu (Issue #114)."""
-        self.nav_menu_open = not self.nav_menu_open
-
-        # Update header title based on state
-        if self.nav_menu_open:
-            self.title = "(N)av menu open"
-            self.sub_title = "(B)ack | (H)ome | (?)Help"
-            # Show dropdown menu
-            await self._show_nav_dropdown()
-        else:
-            self.title = "(N)av menu closed"
-            self.sub_title = "Personal Relationship Tracker"
-            # Hide dropdown menu
-            await self._hide_nav_dropdown()
-
-        logger.info(f"Nav menu {'opened' if self.nav_menu_open else 'closed'}")
+        """Toggle the top nav dropdown menu."""
+        # Delegate to current screen if it has the action
+        try:
+            if hasattr(self.screen, "action_toggle_menu"):
+                self.screen.action_toggle_menu()
+                logger.info("Toggled screen dropdown menu")
+        except Exception as e:
+            logger.debug(f"Could not toggle menu: {e}")
 
     async def _handle_nav_menu_key(self, key: str) -> bool:
         """Handle navigation menu key selection (Issue #114).
@@ -324,42 +325,23 @@ class PRTApp(App):
         """
         logger.info(f"APP LEVEL - Key pressed: '{event.key}', mode: {self.current_mode.value}")
 
-        # Handle top nav menu keys when open (Issue #114)
-        if self.nav_menu_open and event.key in ["b", "h", "question_mark"]:
-            handled = await self._handle_nav_menu_key(event.key)
-            if handled:
-                logger.info(f"Nav menu handled key: {event.key}")
-                event.prevent_default()
-                event.stop()
-                return
-
         # Handle exit confirmation if waiting for response
         if hasattr(self, "_waiting_for_exit_confirmation") and self._waiting_for_exit_confirmation:
             if event.key in ["y", "Y"]:
                 logger.info("Y pressed - confirming exit")
                 await self._handle_exit_confirmed()
+                event.prevent_default()
+                event.stop()
                 return
             elif event.key in ["n", "N", "escape"]:
                 logger.info("N/ESC pressed - cancelling exit")
                 await self._handle_exit_cancelled()
+                event.prevent_default()
+                event.stop()
                 return
 
-        # Test all our key bindings manually
-        if event.key == "escape":
-            logger.info("ESC key - calling handle_escape")
-            await self.handle_escape()
-        elif event.key == "q":
-            logger.info("Q key pressed - calling quit action")
-            self.action_quit()
-        elif event.key == "x":
-            logger.info("X key pressed - calling exit action")
-            self.action_exit_with_confirmation()
-        elif event.key == "question_mark":  # ? key is actually 'question_mark'
-            logger.info("? key pressed - calling help action")
-            self.action_help()
-        else:
-            logger.info(f"Unhandled key: {event.key}")
-            # Key not handled - that's ok
+        # Let BINDINGS and screens handle all other keys
+        # Don't intercept - let event bubble to BINDINGS and screen handlers
 
     async def handle_escape(self) -> None:
         """Handle ESC key with per-screen intent."""
