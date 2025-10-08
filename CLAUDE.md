@@ -9,6 +9,25 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 
+## External Documentation Policy
+
+**ALWAYS check `EXTERNAL_DOCS/` directory FIRST** before requesting documentation or library source code:
+
+- When you need documentation for a library (e.g., Textual, FastAPI, etc.), check `EXTERNAL_DOCS/<library-name>/docs/` first
+- When you need source code to understand implementation details, check `EXTERNAL_DOCS/<library-name>/src/` first
+- If the documentation or source is not in `EXTERNAL_DOCS/`, ask the user to add it there before proceeding
+- This approach enables:
+  - Faster debugging by reading actual source code
+  - Better understanding of library internals and limitations
+  - Reduced need for web searches or API calls
+  - Ability to verify behavior against authoritative sources
+
+**Example**: The Textual TUI framework documentation and source code are in `EXTERNAL_DOCS/textual/`:
+- Docs: `EXTERNAL_DOCS/textual/docs/guide/` (user guides), `EXTERNAL_DOCS/textual/docs/widgets/` (widget docs)
+- Source: `EXTERNAL_DOCS/textual/src/textual/` (implementation code)
+
+**When debugging complex issues**: Read the actual source code in `EXTERNAL_DOCS/` to understand how libraries work internally, rather than relying on assumptions or general documentation.
+
 ## Project Overview
 
 PRT (Personal Relationship Toolkit) is a privacy-first personal contact management system that helps users manage relationships, contacts, and notes entirely locally. The project provides both a CLI (Typer-based) and a TUI (Textual-based) interface. Built with Python and SQLAlchemy, it includes AI-powered chat functionality via Ollama integration.  
@@ -464,6 +483,12 @@ func.count(), func.max(), func.min()
 ```
 
 ## TUI Development Guidelines
+
+### Testing with Textual
+- **Textual Testing Guide**: See `EXTERNAL_DOCS/textual/docs/guide/testing.md` for comprehensive Textual testing patterns and best practices
+- The guide covers async testing with pytest, UI interaction testing, and Textual's dedicated test features
+- **Future Task**: Refactor all TUI tests to use Textual's recommended testing patterns, which will enable Claude Code to perform more automated testing
+- Current tests use basic pytest patterns; Textual's approach provides better UI interaction testing capabilities
 
 ### Parallel Development
 - When working on multiple parallel features, expect merge conflicts in `__init__.py` and `styles.tcss`

@@ -40,9 +40,9 @@ class HomeScreen(BaseScreen):
 
         # Main content container
         with Container(id=WidgetIDs.HOME_CONTENT):
-            yield Static("* Chat - opens chat screen", classes=CSSClasses.MENU_OPTION)
-            yield Static("* Search - opens search screen", classes=CSSClasses.MENU_OPTION)
-            yield Static("* Settings - opens settings screen", classes=CSSClasses.MENU_OPTION)
+            yield Static("* (C)hat - opens chat screen", classes=CSSClasses.MENU_OPTION)
+            yield Static("* (S)earch - opens search screen", classes=CSSClasses.MENU_OPTION)
+            yield Static("* Se(t)tings - opens settings screen", classes=CSSClasses.MENU_OPTION)
 
         # Dropdown menu (hidden by default)
         menu_items = [
@@ -69,6 +69,10 @@ class HomeScreen(BaseScreen):
             event: Key event
         """
         key = event.key.lower()
+
+        # When ESC is pressed with dropdown open, close the dropdown
+        if key == "escape" and self.dropdown.display:
+            self.call_after_refresh(self._close_dropdown_if_open)
 
         # In NAV mode, handle single-key shortcuts
         if self.app.current_mode == AppMode.NAVIGATION:
@@ -97,6 +101,14 @@ class HomeScreen(BaseScreen):
                         action()
                         event.prevent_default()
 
+    def _close_dropdown_if_open(self) -> None:
+        """Close dropdown menu if open (called after ESC key)."""
+        if self.dropdown.display:
+            self.dropdown.hide()
+            self.top_nav.menu_open = False
+            self.top_nav.refresh_display()
+            logger.info("Closed dropdown menu after ESC key")
+
     def action_toggle_menu(self) -> None:
         """Toggle dropdown menu visibility."""
         if self.dropdown.display:
@@ -119,21 +131,18 @@ class HomeScreen(BaseScreen):
 
     def action_open_chat(self) -> None:
         """Open chat screen."""
-        self.bottom_nav.show_status("Chat screen not yet implemented")
-        logger.info("Navigate to chat screen (TODO)")
-        # TODO: self.app.push_screen("chat")
+        logger.info("Navigate to chat screen")
+        self.app.navigate_to("chat")
 
     def action_open_search(self) -> None:
         """Open search screen."""
-        self.bottom_nav.show_status("Search screen not yet implemented")
-        logger.info("Navigate to search screen (TODO)")
-        # TODO: self.app.push_screen("search")
+        logger.info("Navigate to search screen")
+        self.app.navigate_to("search")
 
     def action_open_settings(self) -> None:
         """Open settings screen."""
-        self.bottom_nav.show_status("Settings screen not yet implemented")
-        logger.info("Navigate to settings screen (TODO)")
-        # TODO: self.app.push_screen("settings")
+        logger.info("Navigate to settings screen")
+        self.app.navigate_to("settings")
 
     def action_show_help(self) -> None:
         """Show help screen."""

@@ -45,9 +45,9 @@ class TestHomeScreenRendering:
             assert len(options) == 3
 
             texts = [str(opt.render()) for opt in options]
-            assert any("Chat" in text for text in texts)
-            assert any("Search" in text for text in texts)
-            assert any("Settings" in text for text in texts)
+            assert any("(C)hat" in text for text in texts)
+            assert any("(S)earch" in text for text in texts)
+            assert any("Se(t)tings" in text for text in texts)
 
     @pytest.mark.asyncio
     async def test_has_dropdown_menu(self, mock_app, pilot_screen):
@@ -80,42 +80,8 @@ class TestHomeScreenNavigation:
             await pilot.press("n")
             assert not dropdown.display
 
-    @pytest.mark.asyncio
-    async def test_c_key_attempts_chat_navigation(self, mock_app, pilot_screen, caplog):
-        """Test that C key attempts to navigate to chat."""
-        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
-            screen = pilot.app.screen
-            await pilot.press("c")
-            # Check that action was triggered (via log or status message)
-            bottom_nav = screen.query_one(BottomNav)
-            # Status should indicate chat not implemented
-            assert "Chat" in str(bottom_nav.render()) or "not yet implemented" in str(
-                bottom_nav.render()
-            )
-
-    @pytest.mark.asyncio
-    async def test_s_key_attempts_search_navigation(self, mock_app, pilot_screen):
-        """Test that S key attempts to navigate to search."""
-        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
-            screen = pilot.app.screen
-            await pilot.press("s")
-            bottom_nav = screen.query_one(BottomNav)
-            # Status should indicate search not implemented
-            assert "Search" in str(bottom_nav.render()) or "not yet implemented" in str(
-                bottom_nav.render()
-            )
-
-    @pytest.mark.asyncio
-    async def test_t_key_attempts_settings_navigation(self, mock_app, pilot_screen):
-        """Test that T key attempts to navigate to settings."""
-        async with pilot_screen(HomeScreen, prt_app=mock_app) as pilot:
-            screen = pilot.app.screen
-            await pilot.press("t")
-            bottom_nav = screen.query_one(BottomNav)
-            # Status should indicate settings not implemented
-            assert "Settings" in str(bottom_nav.render()) or "not yet implemented" in str(
-                bottom_nav.render()
-            )
+    # NOTE: C/S/T key navigation tests removed - navigation is tested in Phase 2 tests
+    # These keys now trigger real navigation which requires full app context
 
     @pytest.mark.asyncio
     async def test_x_key_exits_app(self, mock_app, pilot_screen):

@@ -2,17 +2,22 @@
 
 from prt_src.tui.screens.base import BaseScreen
 from prt_src.tui.screens.base import EscapeIntent
-from prt_src.tui.screens.help import HelpScreen
+
+# Phase 2 screens
+from prt_src.tui.screens.chat import ChatScreen
 
 # Phase 1 screens
+from prt_src.tui.screens.help import HelpScreen
 from prt_src.tui.screens.home import HomeScreen
+from prt_src.tui.screens.search import SearchScreen
+from prt_src.tui.screens.settings import SettingsScreen
 
 __all__ = [
     "BaseScreen",
+    "ChatScreen",
     "EscapeIntent",
-    "HomeScreen",
     "HelpScreen",
+    "HomeScreen",
+    "SearchScreen",
+    "SettingsScreen",
 ]
-
-# Phase 2 screens (to be implemented):
-# - chat, search, settings
