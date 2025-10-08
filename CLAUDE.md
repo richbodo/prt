@@ -39,6 +39,145 @@ The TUI is being refactored for simplicity, testability, and debuggability (Issu
 
 **IMPORTANT**: Always review the TUI specification and style guide before implementing TUI features. The refactoring prioritizes simplicity over features - follow the spec exactly.
 
+## TUI Debugging Guidelines
+
+**CRITICAL**: TUIs are event-driven systems that are notoriously difficult to debug. When working on TUI code, ALWAYS add comprehensive logging FIRST before attempting fixes.
+
+### Standard Logging Configuration
+
+The project uses a centralized logging system (`prt_src/logging_config.py`):
+
+- **Log file location**: `prt_data/prt.log` (auto-created)
+- **Default log level**: INFO (shows INFO, WARNING, ERROR)
+- **Logger access**: `from prt_src.logging_config import get_logger; logger = get_logger(__name__)`
+- **Log format**: `YYYY-MM-DD HH:MM:SS - module.name - LEVEL - message`
+
+### When to Add Debug Logging
+
+Add comprehensive logging whenever:
+
+1. **Implementing or modifying TUI event handlers** (on_key, on_mount, on_button_pressed, etc.)
+2. **Working with screen navigation** (push_screen, pop_screen, navigate_to)
+3. **Debugging user-reported TUI issues** where behavior is inconsistent or unexpected
+4. **Adding new interactive widgets** or modifying existing ones
+5. **Working with stateful UI components** (dropdowns, forms, multi-screen workflows)
+
+### Essential Logging Pattern for Event-Driven Code
+
+When debugging TUI issues, add logs at these critical points:
+
+```python
+# Event handlers - log entry, state, and exit
+def on_key(self, event) -> None:
+    key = event.key.lower()
+    logger.info(f"[COMPONENT] on_key: key='{key}', state={self.some_state}")
+
+    # Log decision points
+    if some_condition:
+        logger.info(f"[COMPONENT] Taking path A because {reason}")
+        action()
+        logger.info(f"[COMPONENT] Path A completed")
+
+    event.prevent_default()
+
+# Navigation - log screen stack changes
+def navigate_to(self, screen_name: str) -> None:
+    logger.info(f"[APP] navigate_to('{screen_name}') STARTED")
+    logger.info(f"[APP] Screen stack before: {[type(s).__name__ for s in self.screen_stack]}")
+
+    self.push_screen(new_screen)
+
+    logger.info(f"[APP] Screen stack after: {[type(s).__name__ for s in self.screen_stack]}")
+    logger.info(f"[APP] navigate_to('{screen_name}') COMPLETED")
+
+# Action methods - log execution and state changes
+def action_do_something(self) -> None:
+    logger.info("[SCREEN] action_do_something STARTED")
+    logger.info(f"[SCREEN] State before: dropdown={self.dropdown.display}, menu={self.menu_open}")
+
+    # Perform action
+    self.dropdown.hide()
+    self.menu_open = False
+
+    logger.info(f"[SCREEN] State after: dropdown={self.dropdown.display}, menu={self.menu_open}")
+    logger.info("[SCREEN] action_do_something COMPLETED")
+```
+
+### Logging Tag Convention
+
+Use bracketed tags to identify log source:
+
+- `[APP]` - Application-level events (PRTApp)
+- `[SCREEN]` - Screen-specific events (HomeScreen, HelpScreen, etc.)
+- `[WIDGET]` - Widget-specific events (DropdownMenu, TopNav, etc.)
+- `[SERVICE]` - Service-level events (NavigationService, DataService, etc.)
+
+### Viewing TUI Logs
+
+```bash
+# Run TUI normally (logs go to prt_data/prt.log)
+python -m prt_src.tui
+
+# In another terminal, tail the logs
+tail -f prt_data/prt.log
+
+# Filter logs by component
+tail -f prt_data/prt.log | grep '\[APP\]'
+tail -f prt_data/prt.log | grep '\[HELP\]'
+
+# Get recent event flow
+tail -200 prt_data/prt.log | grep -E '\[HELP\]|\[APP\]|\[DROPDOWN\]'
+```
+
+### Critical Debugging Lessons
+
+**Lesson from Issue #120 (Double-push bug)**:
+
+When a user reported "pressing n,b on help screen requires two attempts to navigate back," the logs revealed:
+
+```
+Screen stack before pop: ['Screen', 'HomeScreen', 'HelpScreen', 'HelpScreen']
+```
+
+The help screen was being pushed **twice** due to duplicate event handlers. Without the screen stack logging, this would have taken hours to debug through code inspection alone.
+
+**Key Takeaway**: Log the screen stack at every navigation point. Screen stack corruption is a common TUI bug that's invisible without logging.
+
+### Temporary vs Permanent Logging
+
+- **Temporary**: Use `logger.info()` with tags like `[DEBUG]` or `[TRACE]` for investigation
+- **Permanent**: Keep navigation, error, and state-change logging at INFO level
+- **Remove**: Delete overly verbose logs (e.g., logging every render) after debugging
+
+### Setting Log Level for Deep Debugging
+
+When standard INFO logging isn't enough:
+
+```python
+# Temporarily set DEBUG level in the module you're debugging
+from prt_src.logging_config import setup_logging
+setup_logging(log_level="DEBUG")  # Shows DEBUG, INFO, WARNING, ERROR
+```
+
+Or use conditional debug logging:
+
+```python
+DEBUG_MODE = True  # Set to False before committing
+
+if DEBUG_MODE:
+    logger.debug(f"Detailed state: {expensive_operation()}")
+```
+
+### Before You Start Debugging
+
+1. **Add logging first** - Don't start fixing until you have visibility
+2. **Log the event flow** - Trace the complete path from user action to final state
+3. **Log state changes** - Before/after for all mutations
+4. **Log screen stack** - Every push/pop operation
+5. **Log decision points** - Why each code path was taken
+
+Remember: **"If you can't see it, you can't debug it."** TUIs hide their internal state behind terminal rendering. Logging is your window into what's actually happening.
+
 ## Development Environment Setup
 
 ### Initial Setup

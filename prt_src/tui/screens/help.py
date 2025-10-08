@@ -1,110 +1,135 @@
-"""Help screen for PRT TUI - Issue #114.
-
-Displays comprehensive key binding reference and usage guide.
-"""
+"""Help screen - Simple help message placeholder."""
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Container
 from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
-from prt_src.tui.screens import register_screen
+from prt_src.tui.constants import WidgetIDs
 from prt_src.tui.screens.base import BaseScreen
-from prt_src.tui.screens.base import EscapeIntent
+from prt_src.tui.widgets import BottomNav
+from prt_src.tui.widgets import DropdownMenu
+from prt_src.tui.widgets import TopNav
 
 logger = get_logger(__name__)
 
 
 class HelpScreen(BaseScreen):
-    """Help screen with comprehensive key bindings and usage guide."""
+    """Help screen with placeholder message.
 
-    def get_screen_name(self) -> str:
-        """Get screen identifier."""
-        return "help"
+    Per spec:
+    - Top Nav
+    - Single line: "Help not implemented yet."
+    - Bottom Nav
+    """
 
-    def on_escape(self) -> EscapeIntent:
-        """ESC goes back to previous screen."""
-        return EscapeIntent.POP
-
-    def get_footer_config(self):
-        """Get footer configuration for help screen."""
-        return {
-            "keyHints": ["[ESC] Back"],
-            "pager": None,
-            "statusRight": None,
-        }
+    def __init__(self, **kwargs):
+        """Initialize Help screen."""
+        super().__init__(**kwargs)
+        self.screen_title = "HELP"
 
     def compose(self) -> ComposeResult:
-        """Compose help screen layout."""
-        with Vertical(classes="help-container"):
-            # Help title
-            yield Static("🆘 PRT Help & Key Bindings", classes="help-title")
+        """Compose the help screen layout."""
+        # Top navigation bar
+        self.top_nav = TopNav(self.screen_title, id=WidgetIDs.TOP_NAV)
+        yield self.top_nav
 
-            # Global navigation section
-            yield Static("Global Navigation:", classes="help-section-title")
-            yield Static("Alt         - Toggle top nav menu", classes="help-item")
-            yield Static("ESC         - Back/Cancel/Mode toggle", classes="help-item")
-            yield Static("?           - Show this help screen", classes="help-item")
-            yield Static("q           - Quit application", classes="help-item")
-            yield Static("x           - Exit with confirmation", classes="help-item")
+        # Main content container
+        with Container(id=WidgetIDs.HELP_CONTENT):
+            yield Static("Help not implemented yet.", id=WidgetIDs.HELP_MESSAGE)
 
-            # Top nav menu section
-            yield Static("Top Nav Menu (when open with Alt):", classes="help-section-title")
-            yield Static("B           - Back to previous screen", classes="help-item")
-            yield Static("H           - Go to home screen", classes="help-item")
-            yield Static("?           - Show this help screen", classes="help-item")
+        # Dropdown menu (hidden by default)
+        self.dropdown = DropdownMenu(
+            [
+                ("H", "Home", self.action_go_home),
+                ("B", "Back", self.action_go_back),
+            ],
+            id=WidgetIDs.DROPDOWN_MENU,
+        )
+        self.dropdown.display = False
+        yield self.dropdown
 
-            # Home screen section
-            yield Static("Home Screen:", classes="help-section-title")
-            yield Static("c           - Contacts", classes="help-item")
-            yield Static("s           - Search", classes="help-item")
-            yield Static("r           - Relationships", classes="help-item")
-            yield Static("y           - Relationship Types", classes="help-item")
-            yield Static("i           - Import", classes="help-item")
-            yield Static("e           - Export", classes="help-item")
-            yield Static("d           - Database", classes="help-item")
-            yield Static("m           - Metadata", classes="help-item")
-            yield Static("t           - Chat", classes="help-item")
+        # Bottom navigation/status bar
+        self.bottom_nav = BottomNav(id=WidgetIDs.BOTTOM_NAV)
+        yield self.bottom_nav
 
-            # Contacts screen section
-            yield Static("Contacts Screen:", classes="help-section-title")
-            yield Static("a           - Add new contact", classes="help-item")
-            yield Static("e           - Edit selected contact", classes="help-item")
-            yield Static("d           - Delete selected contact", classes="help-item")
-            yield Static("Enter       - View contact details", classes="help-item")
-            yield Static("/           - Search contacts", classes="help-item")
+    async def on_mount(self) -> None:
+        """Handle screen mount."""
+        await super().on_mount()
+        logger.info("Help screen mounted")
 
-            # Search screen section
-            yield Static("Search Screen:", classes="help-section-title")
-            yield Static("/           - Focus search input", classes="help-item")
-            yield Static("Tab         - Cycle through filters", classes="help-item")
-            yield Static("Enter       - Select search result", classes="help-item")
+    def on_key(self, event) -> None:
+        """Handle key presses.
 
-            # Chat screen section
-            yield Static("Chat Screen:", classes="help-section-title")
-            yield Static("Enter       - Send message", classes="help-item")
-            yield Static("Shift+Enter - New line in message", classes="help-item")
-            yield Static("Up/Down     - Navigate command history", classes="help-item")
-            yield Static("Ctrl+L      - Clear chat history", classes="help-item")
+        Args:
+            event: Key event
+        """
 
-            # Mode system section
-            yield Static("Mode System:", classes="help-section-title")
-            yield Static(
-                "Navigation Mode - Default mode for browsing (j/k, single keys)",
-                classes="help-item",
-            )
-            yield Static(
-                "Edit Mode       - Text input mode (ESC toggles back)", classes="help-item"
-            )
+        from prt_src.tui.types import AppMode
 
-            # Debug features (if available)
-            yield Static("Debug Features (Development):", classes="help-section-title")
-            yield Static("d           - Toggle debug borders (dev mode)", classes="help-item")
-            yield Static("l           - Log layout analysis (dev mode)", classes="help-item")
-            yield Static("n           - Test notifications (dev mode)", classes="help-item")
-            yield Static("s           - Screenshot capture (dev mode)", classes="help-item")
-            yield Static("r           - Test responsive behavior (dev mode)", classes="help-item")
+        key = event.key.lower()
+        logger.info(
+            f"[HELP] on_key called: key='{key}', dropdown.display={self.dropdown.display}, mode={self.app.current_mode}"
+        )
 
+        # In NAV mode, handle keys
+        if self.app.current_mode == AppMode.NAVIGATION:
+            if key == "n":
+                logger.info("[HELP] Handling 'n' key - toggling menu")
+                self.action_toggle_menu()
+                event.prevent_default()
+            elif self.dropdown.display:
+                # When menu is open, check for menu actions
+                logger.info(f"[HELP] Menu is open, looking for action for key '{key}'")
+                action = self.dropdown.get_action(key)
+                logger.info(f"[HELP] get_action('{key}') returned: {action}")
+                if action:
+                    logger.info(f"[HELP] Calling action for key '{key}'")
+                    action()
+                    logger.info(f"[HELP] Action for key '{key}' completed")
+                    event.prevent_default()
+                else:
+                    logger.warning(f"[HELP] No action found for key '{key}'")
 
-# Register the help screen
-register_screen("help", HelpScreen)
+    def action_toggle_menu(self) -> None:
+        """Toggle dropdown menu visibility."""
+        if self.dropdown.display:
+            self.dropdown.hide()
+            self.top_nav.menu_open = False
+        else:
+            self.dropdown.show()
+            self.top_nav.menu_open = True
+        self.top_nav.refresh_display()
+        logger.debug(f"Help screen menu toggled: {self.dropdown.display}")
+
+    def action_go_home(self) -> None:
+        """Navigate to home screen."""
+        logger.info("[HELP] action_go_home STARTED")
+        logger.info(
+            f"[HELP] Before hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
+        )
+        self.dropdown.hide()
+        self.top_nav.menu_open = False
+        self.top_nav.refresh_display()
+        logger.info(
+            f"[HELP] After hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
+        )
+        logger.info("[HELP] Calling navigate_to('home')")
+        self.app.navigate_to("home")
+        logger.info("[HELP] action_go_home COMPLETED")
+
+    def action_go_back(self) -> None:
+        """Go back to previous screen."""
+        logger.info("[HELP] action_go_back STARTED")
+        logger.info(
+            f"[HELP] Before hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
+        )
+        self.dropdown.hide()
+        self.top_nav.menu_open = False
+        self.top_nav.refresh_display()
+        logger.info(
+            f"[HELP] After hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
+        )
+        logger.info("[HELP] Calling pop_screen()")
+        self.app.pop_screen()
+        logger.info("[HELP] action_go_back COMPLETED")

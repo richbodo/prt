@@ -1,43 +1,27 @@
-"""TUI widgets for the PRT application."""
+"""TUI widgets for the PRT application - Refactored (Issue #120)."""
 
-from .base import ConfirmDialog
+# Base widgets
 from .base import ModeAwareWidget
-from .base import StatusBar
-from .base import ToastNotification
-from .contact_detail import ContactDetailView
-from .contact_detail import FieldEditor
-from .contact_list import ContactListWidget
-from .contact_list import ContactRow
-from .navigation_menu import MenuItem
-from .navigation_menu import NavigationMenu
-from .relationship import RelationshipEditor
-from .relationship import RelationshipGraph
-from .relationship import RelationshipList
-from .search_filter import FilterPanel
-from .search_filter import SearchableList
-from .search_filter import SearchBar
-from .settings import SettingItem
-from .settings import SettingsCategory
-from .settings import SettingsScreen
+from .bottomnav import BottomNav
+from .dropdown import DropdownMenu
+
+# Existing widgets that may be useful
+from .progress_indicator import ChatProgressIndicator
+
+# New simplified navigation widgets
+from .topnav import TopNav
 
 __all__ = [
+    # Base
     "ModeAwareWidget",
-    "StatusBar",
-    "ToastNotification",
-    "ConfirmDialog",
-    "ContactListWidget",
-    "ContactRow",
-    "ContactDetailView",
-    "FieldEditor",
-    "SearchBar",
-    "FilterPanel",
-    "SearchableList",
-    "RelationshipEditor",
-    "RelationshipList",
-    "RelationshipGraph",
-    "SettingItem",
-    "SettingsCategory",
-    "SettingsScreen",
-    "MenuItem",
-    "NavigationMenu",
+    # Navigation
+    "TopNav",
+    "BottomNav",
+    "DropdownMenu",
+    # Utility
+    "ChatProgressIndicator",
 ]
+
+# Old widgets kept for reference during refactoring:
+# - contact_detail, contact_list, navigation_menu, relationship, search_filter, settings
+# These will be evaluated and potentially reimplemented as needed
