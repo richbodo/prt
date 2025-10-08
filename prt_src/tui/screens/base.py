@@ -3,16 +3,18 @@
 Provides thin base class with lifecycle hooks, slot configuration,
 and ESC intent handling. Uses composition over inheritance with
 injected services.
+
+Refactored for Issue #120 to use Textual's Screen class directly.
 """
 
-from abc import abstractmethod
+import contextlib
 from enum import Enum
 from typing import Any
 from typing import Dict
 from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.screen import Screen
 from textual.widgets import Static
 
 from prt_src.logging_config import get_logger
@@ -30,7 +32,7 @@ class EscapeIntent(Enum):
     CUSTOM = "custom"  # Screen handles ESC itself
 
 
-class BaseScreen(Container):
+class BaseScreen(Screen):
     """Base class for all TUI screens.
 
     Thin base with lifecycle hooks and slot configuration.
@@ -39,6 +41,7 @@ class BaseScreen(Container):
 
     def __init__(
         self,
+        app=None,
         nav_service=None,
         data_service=None,
         notification_service=None,
@@ -50,15 +53,18 @@ class BaseScreen(Container):
         """Initialize base screen with injected services.
 
         Args:
+            app: Reference to the main app
             nav_service: Navigation service for screen transitions
             data_service: Data service wrapping PRTAPI
             notification_service: Service for toasts/dialogs
             selection_service: Phase 2 selection system
             validation_service: Phase 2 validation system
         """
+        # Don't pass app to Screen - it doesn't accept it
         super().__init__(*args, **kwargs)
 
-        # Store injected services
+        # Store app reference as _prt_app (Screen has its own 'app' property)
+        self._prt_app = app
         self.nav_service = nav_service
         self.data_service = data_service
         self.notification_service = notification_service
@@ -71,17 +77,6 @@ class BaseScreen(Container):
         # Track if header/footer should be shown
         self._show_header = True
         self._show_footer = True
-
-        # Screen-specific CSS class
-        self.add_class(f"screen-{self.get_screen_name()}")
-
-    @abstractmethod
-    def get_screen_name(self) -> str:
-        """Get the screen's unique name.
-
-        Returns:
-            Screen identifier (e.g., "home", "contacts")
-        """
 
     def get_header_config(self) -> Optional[Dict[str, Any]]:
         """Get header slot configuration.
@@ -101,13 +96,11 @@ class BaseScreen(Container):
         # Safe navigation service access with null check
         breadcrumb = []
         if self.nav_service:
-            try:
+            with contextlib.suppress(Exception):
                 breadcrumb = self.nav_service.get_breadcrumb()
-            except Exception:
-                pass  # Navigation service may not be initialized
 
         return {
-            "title": self.get_screen_name().title(),
+            "title": self.__class__.__name__,
             "breadcrumb": breadcrumb,
             "searchBox": False,
             "compact": False,
@@ -162,12 +155,12 @@ class BaseScreen(Container):
     def mark_unsaved(self) -> None:
         """Mark the screen as having unsaved changes."""
         self._has_unsaved_changes = True
-        logger.debug(f"{self.get_screen_name()} marked as having unsaved changes")
+        logger.debug(f"{self.__class__.__name__} marked as having unsaved changes")
 
     def clear_unsaved(self) -> None:
         """Clear the unsaved changes flag."""
         self._has_unsaved_changes = False
-        logger.debug(f"{self.get_screen_name()} unsaved changes cleared")
+        logger.debug(f"{self.__class__.__name__} unsaved changes cleared")
 
     def can_leave(self) -> bool:
         """Check if screen can be left.
@@ -175,13 +168,8 @@ class BaseScreen(Container):
         Returns:
             True if navigation away is allowed
         """
-        # Can always leave if no unsaved changes
-        if not self.has_unsaved_changes():
-            return True
-
-        # If we have unsaved changes, the app will show confirm dialog
-        # This is just for programmatic checks
-        return False
+        # Return True if no unsaved changes, False otherwise
+        return not self.has_unsaved_changes()
 
     def hide_header(self) -> None:
         """Hide the header for this screen."""
@@ -216,32 +204,32 @@ class BaseScreen(Container):
 
         Load data and initialize state here.
         """
-        logger.debug(f"{self.get_screen_name()} screen mounted")
+        logger.debug(f"{self.__class__.__name__} screen mounted")
 
     async def on_show(self) -> None:
         """Called when screen becomes visible.
 
         Refresh data if needed.
         """
-        logger.debug(f"{self.get_screen_name()} screen shown")
+        logger.debug(f"{self.__class__.__name__} screen shown")
 
     async def on_hide(self) -> None:
         """Called when screen is hidden but not destroyed.
 
         Save state if needed.
         """
-        logger.debug(f"{self.get_screen_name()} screen hidden")
+        logger.debug(f"{self.__class__.__name__} screen hidden")
 
     async def on_unmount(self) -> None:
         """Called when screen is destroyed.
 
         Clean up resources.
         """
-        logger.debug(f"{self.get_screen_name()} screen unmounted")
+        logger.debug(f"{self.__class__.__name__} screen unmounted")
 
     def compose(self) -> ComposeResult:
         """Default compose for screens.
 
         Override to add screen content.
         """
-        yield Static(f"{self.get_screen_name().title()} Screen", classes="screen-placeholder")
+        yield Static(f"{self.__class__.__name__} Screen", classes="screen-placeholder")

@@ -4,11 +4,13 @@ This module provides foundational widgets that handle mode management,
 status display, notifications, and confirmations.
 """
 
+import contextlib
 from typing import Callable
 from typing import Optional
 from typing import Set
 
-from textual import events, on
+from textual import events
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.containers import Horizontal
@@ -150,10 +152,8 @@ class StatusBar(ModeAwareWidget):
             self.selection_text = f"{count} selected"
 
         # Try to update UI if mounted
-        try:
+        with contextlib.suppress(Exception):
             self.query_one("#selection-count", Label).update(self.selection_text)
-        except Exception:
-            pass
 
     def update_help_hints(self, hints: str) -> None:
         """Update the help hints display.
@@ -164,10 +164,8 @@ class StatusBar(ModeAwareWidget):
         self.help_text = hints
 
         # Try to update UI if mounted
-        try:
+        with contextlib.suppress(Exception):
             self.query_one("#help-hints", Label).update(self.help_text)
-        except Exception:
-            pass
 
     def update_location(self, location: str) -> None:
         """Update the location/breadcrumb display.
@@ -178,10 +176,8 @@ class StatusBar(ModeAwareWidget):
         self.location_text = location
 
         # Try to update UI if mounted
-        try:
+        with contextlib.suppress(Exception):
             self.query_one("#location", Label).update(self.location_text)
-        except Exception:
-            pass
 
 
 class ToastNotification(Static):
@@ -220,10 +216,8 @@ class ToastNotification(Static):
         self.display = False
 
         # Only remove if mounted in an app
-        try:
+        with contextlib.suppress(Exception):
             self.remove()
-        except Exception:
-            pass
 
     def set_timer(self, duration: float, callback: Callable) -> Timer:
         """Set a timer for auto-dismiss.
@@ -321,10 +315,8 @@ class ConfirmDialog(Container):
         self.display = False
 
         # Only remove if mounted in an app
-        try:
+        with contextlib.suppress(Exception):
             self.remove()
-        except Exception:
-            pass
 
     @property
     def label(self) -> str:

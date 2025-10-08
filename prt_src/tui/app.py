@@ -12,9 +12,6 @@ from textual.app import App
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container
-from textual.widgets import Footer
-from textual.widgets import Header
-from textual.widgets import Static
 
 from prt_src.config import load_config
 from prt_src.db import Database
@@ -194,47 +191,20 @@ class PRTApp(App):
         self._app_mode = mode
 
     def compose(self) -> ComposeResult:
-        """Compose the application layout."""
-        # Use standard header (Issue #114)
-        yield Header()
+        """Compose the application layout.
 
-        # Nav dropdown (initially hidden) (Issue #114)
-        from textual.containers import Vertical
-
-        self.nav_dropdown = Vertical(
-            Static("(B)ack to previous screen", classes="nav-dropdown-item"),
-            Static("(H)ome screen", classes="nav-dropdown-item"),
-            Static("(?)Help screen", classes="nav-dropdown-item"),
-            id="nav-dropdown",
-            classes="nav-dropdown hidden",
-        )
-        yield self.nav_dropdown
-
-        yield Container(
-            Static("Welcome to PRT!", id="welcome"),
-            id="main-container",
-            classes="main-container",
-        )
-        yield Footer()
+        For Issue #120 refactoring: Minimal compose, let screens handle their own layout.
+        Textual's Screen system manages screen switching automatically.
+        """
+        # Return empty - screens compose themselves
+        return
+        yield  # Make this a generator (unreachable but needed for type)
 
     def on_mount(self) -> None:
         """Handle application mount event."""
-        if self._is_first_run:
-            logger.info("First run detected - showing wizard")
-            # Navigate to wizard screen
-            self.call_after_refresh(self._go_to_wizard)
-        else:
-            logger.info("Existing installation detected")
-            # Navigate to home screen
-            self.call_after_refresh(self._go_to_home)
-
-    async def _go_to_home(self) -> None:
-        """Navigate to home screen."""
-        await self.switch_screen("home")
-
-    async def _go_to_wizard(self) -> None:
-        """Navigate to wizard screen."""
-        await self.switch_screen("wizard")
+        # Phase 1: Always go to home screen (no wizard yet)
+        logger.info("Mounting app - pushing home screen")
+        self.push_screen(HomeScreen(app=self, **self.services))
 
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
@@ -287,21 +257,21 @@ class PRTApp(App):
             # Back to previous screen
             previous_screen = self.nav_service.pop()
             if previous_screen:
-                await self.switch_screen(previous_screen)
+                self.navigate_to(previous_screen)
             else:
-                await self.switch_screen("home")
+                self.navigate_to("home")
             # Close menu
             await self.action_toggle_top_nav()
             return True
         elif key == "h":
             # Home screen
-            await self.switch_screen("home")
+            self.navigate_to("home")
             # Close menu
             await self.action_toggle_top_nav()
             return True
         elif key == "question_mark":
             # Help screen
-            await self.switch_screen("help")
+            self.navigate_to("help")
             # Close menu
             await self.action_toggle_top_nav()
             return True
@@ -325,7 +295,7 @@ class PRTApp(App):
     def action_help(self) -> None:
         """Show help screen."""
         # Navigate to help screen (Issue #114)
-        self.call_after_refresh(lambda: self.switch_screen("help"))
+        self.call_after_refresh(lambda: self.navigate_to("help"))
         logger.info("Navigating to help screen")
 
     def action_exit_with_confirmation(self) -> None:
@@ -403,16 +373,16 @@ class PRTApp(App):
             # Show discard confirmation dialog
             if await self.show_discard_dialog():
                 self.nav_service.pop()
-                await self.switch_screen(self.nav_service.get_current_screen())
+                self.navigate_to(self.nav_service.get_current_screen())
         elif intent == EscapeIntent.POP:
             # Pop navigation stack
             previous = self.nav_service.pop()
             if previous:
-                await self.switch_screen(previous)
+                self.navigate_to(previous)
         elif intent == EscapeIntent.HOME:
             # Go to home screen
             self.nav_service.go_home()
-            await self.switch_screen("home")
+            self.navigate_to("home")
         elif intent == EscapeIntent.CUSTOM:
             # Let screen handle it
             self.current_screen.handle_custom_escape()
@@ -501,11 +471,11 @@ class PRTApp(App):
         except Exception:
             pass
 
-    async def switch_screen(self, screen_name: str, params: Optional[dict] = None) -> None:
-        """Switch to a different screen.
+    def navigate_to(self, screen_name: str, params: Optional[dict] = None) -> None:
+        """Navigate to a screen using Textual's push_screen.
 
         Args:
-            screen_name: Name of screen to switch to
+            screen_name: Name of screen to navigate to
             params: Optional parameters for the screen
         """
         params = params or {}
@@ -526,31 +496,8 @@ class PRTApp(App):
             return
 
         new_screen = screen_class(app=self, **self.services, **params)
-
-        # Hide current screen
-        if self.current_screen:
-            await self.current_screen.on_hide()
-
-        # Simplified mounting: Always reuse the main container
-        try:
-            container = self.query_one("#main-container")
-            # Clear the container completely
-            await container.remove_children()
-            # Mount the new screen
-            await container.mount(new_screen)
-            logger.debug(f"Mounted {screen_name} in main-container")
-        except Exception as e:
-            logger.error(f"Failed to switch screen: {e}")
-            return
-
-        # Update current screen reference
-        self.current_screen = new_screen
-        self.current_container_id = "main-container"
-
-        # Show new screen
-        await new_screen.on_show()
-
-        logger.info(f"Switched to screen: {screen_name}")
+        self.push_screen(new_screen)
+        logger.info(f"Navigated to screen: {screen_name}")
 
     def _initialize_database_data(self) -> None:
         """Initialize database with default data (relationship types and 'You' contact).
