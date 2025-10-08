@@ -31,13 +31,64 @@ Visual Encoding: Use restrained colors (green = success, red = error, yellow = w
 
 ## 3. Navigation & Selection
 
-Modal Interaction is to be used when necessary.  
+Modal Interaction is to be used when necessary.
 
 Fuzzy Search: Instant fuzzy-finding with real-time filtering for long lists.
 
-Batch Selection: Space/Tab to toggle items into selection. Commands for “select all” / “invert selection.”
+Batch Selection: Space/Tab to toggle items into selection. Commands for "select all" / "invert selection."
 
 Single-Key Actions: Map menu items or common verbs (a=add, d=delete, e=edit) to single keys. Use modifiers (Ctrl/Alt) for rarer/destructive actions.  Consistent keys assigned to menu items throughout the UI where possible.
+
+### Terminal Text Input Limitations
+
+**Multi-line Text Entry Constraint**: There is currently no reliable cross-terminal method to insert carriage returns (newlines) within TextArea widgets in TUI applications.
+
+**Technical Background**:
+- In Textual TUI applications, the `Key` event class does not include modifier state attributes (`shift`, `ctrl`, `meta`) that are available in `MouseEvent` classes
+- Modifier keys for keyboard events are encoded in the key string itself (e.g., "shift+home", "ctrl+p")
+- Many terminal emulators do not distinguish between `Enter` and `Shift+Enter`, sending identical escape codes for both key combinations
+- This is a fundamental terminal protocol limitation, not a Textual framework issue
+
+**Current Design Decision**:
+- `Enter` key = Execute action (send message, execute search, submit form)
+- Multi-line text entry is not supported in the current TUI implementation
+- Users requiring multi-line input should use alternative interfaces (CLI with external editor, future web interface)
+
+**Reference**: See Textual source code `EXTERNAL_DOCS/textual/src/textual/events.py` lines 260-310 for `Key` event class definition showing the absence of modifier attributes.
+
+### Keyboard Shortcut Display Standards
+
+**Visual Convention**: All keyboard shortcuts MUST be visually indicated in the UI using one of two patterns:
+
+**CRITICAL: Reserved Global Keys** - These keys are NEVER reassigned:
+- `esc` - Toggle Nav/Edit modes (Bottom Nav)
+- `n` - Toggle dropdown menu (Top Nav)
+- `x` - Exit application (Bottom Nav)
+- `?` - Help screen (Bottom Nav)
+- `h` - Home (Dropdown Menu)
+- `b` - Back (Dropdown Menu)
+
+These keys must remain consistent across ALL screens and CANNOT be used for screen-specific menu items.
+
+1. **Letter-based shortcuts** (preferred):
+   - Format: `(L)abel` or `La(b)el` where the letter in parens is the key to press
+   - Use the first letter when possible, but avoid reserved keys
+   - Examples: `(C)hat`, `(S)earch`, `Se(t)tings` (t used because s is taken by Search)
+   - When first letter is reserved or conflicts, use another distinctive letter
+
+2. **Number-based shortcuts** (for lists with conflicting letters):
+   - Format: `(N) Label` where N is 1-9
+   - Use when multiple items share the same first letter OR conflict with reserved keys
+   - Must be consistent within a grouping - if one item needs numbers, ALL items in that list use numbers
+   - Examples: `(1) Contacts`, `(2) Relationships`, `(3) Relationship Types`, `(4) Notes`, `(5) Tags`
+
+**Implementation Rules**:
+- NEVER reassign reserved global keys (esc, n, x, ?, h, b)
+- Every selectable menu item must show its shortcut key
+- Within a single screen or menu, use either ALL letters OR ALL numbers - never mix
+- Shortcuts only work in Navigation mode (not Edit mode)
+- The visual indicator is mandatory, not optional
+- For single-letter shortcuts, the letter must be case-insensitive (works for both 'c' and 'C')
 
 ## 4. Actions & Commands
 

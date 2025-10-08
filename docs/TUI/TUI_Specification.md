@@ -12,7 +12,79 @@ This document defines the expected behavior, navigation flow, and screen specifi
 
 ### Mode System
 - **Navigation Mode**: Default mode for browsing and selection (j/k navigation, single-key actions)
-- **Edit Mode**: Text input mode for forms and search 
+- **Edit Mode**: Text input mode for forms and search
+
+#### Mode Switching Behavior with Dropdown Menus
+
+When a dropdown menu is open and ESC is pressed to toggle modes:
+
+**On screens WITH edit boxes** (Chat, Search):
+- Dropdown menu closes
+- Mode switches to EDIT
+- Cursor automatically focuses in the first/primary edit box
+- User can immediately start typing
+
+**On screens WITHOUT edit boxes** (Home, Settings, Help):
+- Dropdown menu closes
+- Mode toggles normally (NAV ↔ EDIT)
+- No focus change needed (no edit boxes present)
+
+This creates an intelligent UX pattern where ESC always "gets you back to work" - either by entering the edit box on edit-focused screens, or by simply closing the menu on navigation-focused screens.
+
+### Keyboard Shortcut Display Conventions
+
+All keyboard shortcuts for menu items and navigation must be clearly indicated using a consistent visual pattern:
+
+**Reserved Global Keys** (NEVER change these):
+- `(esc)` - Toggle between Nav/Edit modes (Bottom Nav)
+- `(n)` - Toggle dropdown menu (Top Nav)
+- `(x)` - Exit application (Bottom Nav)
+- `(?)` - Help screen (Bottom Nav)
+- `(h)` - Home (Dropdown Menu)
+- `(b)` - Back (Dropdown Menu)
+
+These keys are reserved and consistent across ALL screens. Do not use these letters for any other purpose.
+
+**Letter-based shortcuts** (preferred when possible):
+- Use parentheses around a letter in the word: `(C)hat`, `(S)earch`, `Se(t)tings`
+- Prefer the first letter, but use another letter if the first is reserved or conflicts
+- The letter inside parentheses is the key to press in Navigation mode
+- Examples: `(C)hat`, `(S)earch`, `Se(t)tings` (t instead of s which is taken)
+
+**Number-based shortcuts** (for lists with conflicting letters):
+- Use numbers 1-9 in parentheses before the item name: `(1) Contacts`, `(2) Relationships`
+- Start numbering at 1 for the first item and increment sequentially
+- Examples: `(1) Contacts`, `(2) Relationships`, `(3) Relationship Types`, `(4) Notes`, `(5) Tags`
+
+**Consistency rules**:
+- NEVER reassign reserved global keys (esc, n, x, ?, h, b)
+- If ANY items in a list have conflicting letters (including reserved keys), use numbers for ALL items in that list
+- Keep the same shortcut style (letters or numbers) within each logical grouping
+- Always show the shortcut indicator, even if it seems obvious
+- The shortcut key only works in Navigation mode (not Edit mode)
+
+**Examples**:
+
+Good - All letter-based (no conflicts):
+```
+(C)hat
+(S)earch
+(T)ools
+```
+
+Good - All number-based (conflicts resolved):
+```
+(1) Contacts
+(2) Colleagues
+(3) Categories
+```
+
+Bad - Inconsistent mixing:
+```
+(C)hat
+(2) Search
+(T)ools
+```
 
 ## Bottom Nav (aka Status Bar)
 
@@ -49,10 +121,10 @@ There are currently only five screens supported by the TUI
 
 ### Home
 
-Left justified list of options
-* Chat - opens chat screen
-* Search - opens search screen
-* Settings - opens settings screen
+Left justified list of options:
+* (C)hat - opens chat screen
+* (S)earch - opens search screen
+* Se(t)tings - opens settings screen
 
 ### Chat
 

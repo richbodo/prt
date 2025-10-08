@@ -1,4 +1,4 @@
-"""Help screen - Simple help message placeholder."""
+"""Settings screen - Configuration and database status display."""
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -14,29 +14,58 @@ from prt_src.tui.widgets import TopNav
 logger = get_logger(__name__)
 
 
-class HelpScreen(BaseScreen):
-    """Help screen with placeholder message.
+def get_database_stats_stub() -> dict:
+    """Stub function - returns test database statistics.
+
+    TODO Phase 2B: Replace with real DataService integration.
+
+    Returns:
+        Dict with database statistics
+    """
+    return {
+        "status": "connected",
+        "contacts": 45,
+        "tags": 12,
+        "relationships": 23,
+        "notes": 8,
+    }
+
+
+class SettingsScreen(BaseScreen):
+    """Settings screen with database status and configuration.
 
     Per spec:
     - Top Nav
-    - Single line: "Help not implemented yet."
+    - Database Status Line (connection status + counts)
+    - Placeholder for future import/export options
     - Bottom Nav
     """
 
     def __init__(self, **kwargs):
-        """Initialize Help screen."""
+        """Initialize Settings screen."""
         super().__init__(**kwargs)
-        self.screen_title = "HELP"
+        self.screen_title = "SETTINGS"
 
     def compose(self) -> ComposeResult:
-        """Compose the help screen layout."""
+        """Compose the settings screen layout."""
         # Top navigation bar
         self.top_nav = TopNav(self.screen_title, id=WidgetIDs.TOP_NAV)
         yield self.top_nav
 
-        # Main content container
-        with Container(id=WidgetIDs.HELP_CONTENT):
-            yield Static("Help not implemented yet.", id=WidgetIDs.HELP_MESSAGE)
+        # Database status section
+        stats = get_database_stats_stub()
+        status_icon = "🟢" if stats["status"] == "connected" else "🔴"
+        status_text = (
+            f"{status_icon} Connected │ Contacts: {stats['contacts']} │ Tags: {stats['tags']}\n"
+            f"Relationships: {stats['relationships']} │ Notes: {stats['notes']}"
+        )
+
+        with Container(id=WidgetIDs.SETTINGS_CONTENT):
+            yield Static(status_text, id=WidgetIDs.SETTINGS_DB_STATUS)
+            yield Static(
+                "\n(Future: Import/Export options)",
+                id=WidgetIDs.SETTINGS_PLACEHOLDER,
+            )
 
         # Dropdown menu (hidden by default)
         self.dropdown = DropdownMenu(
@@ -56,7 +85,7 @@ class HelpScreen(BaseScreen):
     async def on_mount(self) -> None:
         """Handle screen mount."""
         await super().on_mount()
-        logger.info("Help screen mounted")
+        logger.info("Settings screen mounted")
 
     def on_key(self, event) -> None:
         """Handle key presses.
@@ -64,13 +93,9 @@ class HelpScreen(BaseScreen):
         Args:
             event: Key event
         """
-
         from prt_src.tui.types import AppMode
 
         key = event.key.lower()
-        logger.info(
-            f"[HELP] on_key called: key='{key}', dropdown.display={self.dropdown.display}, mode={self.app.current_mode}"
-        )
 
         # When ESC is pressed with dropdown open, close the dropdown
         if key == "escape" and self.dropdown.display:
@@ -79,21 +104,14 @@ class HelpScreen(BaseScreen):
         # In NAV mode, handle keys
         if self.app.current_mode == AppMode.NAVIGATION:
             if key == "n":
-                logger.info("[HELP] Handling 'n' key - toggling menu")
                 self.action_toggle_menu()
                 event.prevent_default()
             elif self.dropdown.display:
                 # When menu is open, check for menu actions
-                logger.info(f"[HELP] Menu is open, looking for action for key '{key}'")
                 action = self.dropdown.get_action(key)
-                logger.info(f"[HELP] get_action('{key}') returned: {action}")
                 if action:
-                    logger.info(f"[HELP] Calling action for key '{key}'")
                     action()
-                    logger.info(f"[HELP] Action for key '{key}' completed")
                     event.prevent_default()
-                else:
-                    logger.warning(f"[HELP] No action found for key '{key}'")
 
     def _close_dropdown_if_open(self) -> None:
         """Close dropdown menu if open (called after ESC key)."""
@@ -101,7 +119,7 @@ class HelpScreen(BaseScreen):
             self.dropdown.hide()
             self.top_nav.menu_open = False
             self.top_nav.refresh_display()
-            logger.info("[HELP] Closed dropdown menu after ESC key")
+            logger.debug("Closed dropdown menu after ESC key")
 
     def action_toggle_menu(self) -> None:
         """Toggle dropdown menu visibility."""
@@ -112,36 +130,19 @@ class HelpScreen(BaseScreen):
             self.dropdown.show()
             self.top_nav.menu_open = True
         self.top_nav.refresh_display()
-        logger.debug(f"Help screen menu toggled: {self.dropdown.display}")
 
     def action_go_home(self) -> None:
         """Navigate to home screen."""
-        logger.info("[HELP] action_go_home STARTED")
-        logger.info(
-            f"[HELP] Before hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
-        )
         self.dropdown.hide()
         self.top_nav.menu_open = False
         self.top_nav.refresh_display()
-        logger.info(
-            f"[HELP] After hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
-        )
-        logger.info("[HELP] Calling navigate_to('home')")
+        logger.info("Navigating to home from settings screen")
         self.app.navigate_to("home")
-        logger.info("[HELP] action_go_home COMPLETED")
 
     def action_go_back(self) -> None:
         """Go back to previous screen."""
-        logger.info("[HELP] action_go_back STARTED")
-        logger.info(
-            f"[HELP] Before hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
-        )
         self.dropdown.hide()
         self.top_nav.menu_open = False
         self.top_nav.refresh_display()
-        logger.info(
-            f"[HELP] After hide - dropdown.display={self.dropdown.display}, menu_open={self.top_nav.menu_open}"
-        )
-        logger.info("[HELP] Calling pop_screen()")
+        logger.info("Going back from settings screen")
         self.app.pop_screen()
-        logger.info("[HELP] action_go_back COMPLETED")

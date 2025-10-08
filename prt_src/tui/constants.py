@@ -20,12 +20,29 @@ class WidgetIDs:
     # Content containers
     HOME_CONTENT = "home-content"
     HELP_CONTENT = "help-content"
+    SETTINGS_CONTENT = "settings-content"
+    SEARCH_CONTENT = "search-content"
+    CHAT_CONTENT = "chat-content"
 
     # Confirmation dialogs
     EXIT_CONFIRMATION = "exit-confirmation"
 
     # Help message
     HELP_MESSAGE = "help-message"
+
+    # Settings widgets
+    SETTINGS_DB_STATUS = "settings-db-status"
+    SETTINGS_PLACEHOLDER = "settings-placeholder"
+
+    # Search widgets
+    SEARCH_INPUT = "search-input"
+    SEARCH_BUTTONS = "search-buttons"
+    SEARCH_RESULTS = "search-results"
+
+    # Chat widgets
+    CHAT_STATUS = "chat-status"
+    CHAT_INPUT = "chat-input"
+    CHAT_RESPONSE = "chat-response"
 
 
 # CSS classes

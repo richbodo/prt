@@ -16,9 +16,12 @@ from textual.containers import Container
 from prt_src.config import load_config
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
+from prt_src.tui.screens import ChatScreen
 from prt_src.tui.screens import EscapeIntent
 from prt_src.tui.screens import HelpScreen
 from prt_src.tui.screens import HomeScreen
+from prt_src.tui.screens import SearchScreen
+from prt_src.tui.screens import SettingsScreen
 from prt_src.tui.services.navigation import NavigationService
 from prt_src.tui.types import AppMode
 
@@ -211,6 +214,14 @@ class PRTApp(App):
             self.current_mode = AppMode.EDIT
         else:
             self.current_mode = AppMode.NAVIGATION
+            # When switching to NAV mode, blur any focused input widgets
+            # so they don't capture keystrokes
+            try:
+                if self.focused:
+                    logger.debug(f"Blurring focused widget: {self.focused}")
+                    self.set_focus(None)
+            except Exception as e:
+                logger.debug(f"Could not blur focused widget: {e}")
 
         # Update UI to reflect mode change
         self.sub_title = f"Mode: {self.current_mode.value}"
@@ -503,10 +514,13 @@ class PRTApp(App):
         if self.services.get("notification_service"):
             self.services["notification_service"].set_app(self)
 
-        # Create new screen instance (Phase 1: only home and help)
+        # Create new screen instance
         screen_map = {
             "home": HomeScreen,
             "help": HelpScreen,
+            "chat": ChatScreen,
+            "search": SearchScreen,
+            "settings": SettingsScreen,
         }
 
         screen_class = screen_map.get(screen_name)

@@ -3,6 +3,8 @@ prt_data/
 directories/
 exports/
 
+# External docs for local llms to read
+EXTERNAL_DOCS/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
