@@ -41,3 +41,54 @@ def sample_config(tmp_path):
         "db_username": "test",
         "db_password": "test",
     }
+
+
+@pytest.fixture
+def mock_app():
+    """Create a mock app for testing."""
+    from unittest.mock import MagicMock
+
+    from prt_src.tui.types import AppMode
+
+    app = MagicMock()
+    app.mode = AppMode.NAVIGATION
+    app.exit = MagicMock()
+    app.push_screen = MagicMock()
+    app.pop_screen = MagicMock()
+    return app
+
+
+@pytest.fixture
+def pilot_screen():
+    """Create a pilot for testing Textual screens."""
+    from contextlib import asynccontextmanager
+
+    from textual.app import App
+
+    from prt_src.tui.types import AppMode
+
+    class TestApp(App):
+        """Minimal test app."""
+
+        def __init__(self, screen_class, **screen_kwargs):
+            super().__init__()
+            self._screen_class = screen_class
+            self._screen_kwargs = screen_kwargs
+            # Add mode attribute if the passed app kwarg has it
+            if "app" in screen_kwargs and hasattr(screen_kwargs["app"], "mode"):
+                self.mode = screen_kwargs["app"].mode
+            else:
+                self.mode = AppMode.NAVIGATION
+
+        def on_mount(self):
+            """Push the test screen on mount."""
+            self.push_screen(self._screen_class(**self._screen_kwargs))
+
+    @asynccontextmanager
+    async def _pilot(screen_class, **screen_kwargs):
+        """Run screen in test app."""
+        app = TestApp(screen_class, **screen_kwargs)
+        async with app.run_test() as pilot:
+            yield pilot
+
+    return _pilot
