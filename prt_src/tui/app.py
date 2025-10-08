@@ -20,7 +20,8 @@ from prt_src.config import load_config
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens import EscapeIntent
-from prt_src.tui.screens import create_screen
+from prt_src.tui.screens import HelpScreen
+from prt_src.tui.screens import HomeScreen
 from prt_src.tui.services.navigation import NavigationService
 from prt_src.tui.types import AppMode
 
@@ -513,12 +514,18 @@ class PRTApp(App):
         if self.services.get("notification_service"):
             self.services["notification_service"].set_app(self)
 
-        # Create new screen instance
-        new_screen = create_screen(screen_name, **self.services, **params)
+        # Create new screen instance (Phase 1: only home and help)
+        screen_map = {
+            "home": HomeScreen,
+            "help": HelpScreen,
+        }
 
-        if not new_screen:
-            logger.error(f"Failed to create screen: {screen_name}")
+        screen_class = screen_map.get(screen_name)
+        if not screen_class:
+            logger.error(f"Unknown screen: {screen_name}")
             return
+
+        new_screen = screen_class(app=self, **self.services, **params)
 
         # Hide current screen
         if self.current_screen:

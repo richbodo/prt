@@ -1,5 +1,8 @@
 """Dropdown menu widget."""
 
+from typing import Callable
+from typing import Optional
+
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.widgets import Static
@@ -12,7 +15,7 @@ class DropdownMenu(Container):
     keyboard shortcuts or mouse clicks.
     """
 
-    def __init__(self, items: list[tuple[str, str, callable]], **kwargs):
+    def __init__(self, items: list[tuple[str, str, Callable]], **kwargs):
         """Initialize DropdownMenu.
 
         Args:
@@ -47,7 +50,7 @@ class DropdownMenu(Container):
         else:
             self.show()
 
-    def get_action(self, key: str) -> callable | None:
+    def get_action(self, key: str) -> Optional[Callable]:
         """Get action for a key press.
 
         Args:
