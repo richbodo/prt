@@ -149,8 +149,8 @@ class SearchScreen(BaseScreen):
         with Container(id=WidgetIDs.SEARCH_CONTENT):
             # Search input box - using custom TextArea subclass
             self.search_input = SearchTextArea(
-                "Enter search text...",
                 id=WidgetIDs.SEARCH_INPUT,
+                placeholder="Enter search text...",
             )
             self.search_input.styles.height = 3
             self.search_input._parent_screen = self  # Link to parent for ENTER handling
@@ -300,7 +300,7 @@ class SearchScreen(BaseScreen):
         """Execute search with current query and type."""
         query = self.search_input.text.strip()
 
-        if not query or query == "Enter search text...":
+        if not query:
             self.results_display.update("Please enter a search query.")
             self.bottom_nav.show_status("Please enter a search query")
             return
@@ -371,6 +371,28 @@ class SearchScreen(BaseScreen):
                     button.variant = "default"
             except Exception as e:
                 logger.debug(f"Could not update button {button_id}: {e}")
+
+    def on_mode_changed(self, mode) -> None:
+        """Handle mode changes - focus input when entering EDIT mode.
+
+        Args:
+            mode: The new AppMode
+        """
+        from prt_src.tui.types import AppMode
+
+        super().on_mode_changed(mode)
+
+        if mode == AppMode.EDIT:
+            # Close dropdown menu if open
+            if self.dropdown.display:
+                self.dropdown.hide()
+                self.top_nav.menu_open = False
+                self.top_nav.refresh_display()
+                logger.debug("[SEARCH] Closed dropdown menu when switching to EDIT mode")
+
+            # Focus the input box
+            self.search_input.focus()
+            logger.info("[SEARCH] Focused search input after mode change to EDIT")
 
     def _refocus_if_edit_mode(self) -> None:
         """Refocus input box if we're in EDIT mode (called after ESC key).

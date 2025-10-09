@@ -56,6 +56,36 @@ Single-Key Actions: Map menu items or common verbs (a=add, d=delete, e=edit) to 
 
 **Reference**: See Textual source code `EXTERNAL_DOCS/textual/src/textual/events.py` lines 260-310 for `Key` event class definition showing the absence of modifier attributes.
 
+### TextArea Input Widget Standards
+
+**Placeholder Text**: All TextArea widgets that accept user input MUST use the `placeholder` parameter instead of setting initial text content.
+
+**Correct Implementation**:
+```python
+# Use placeholder parameter
+self.search_input = TextArea(
+    id="search-input",
+    placeholder="Enter search text...",
+)
+```
+
+**Incorrect Implementation**:
+```python
+# DO NOT set placeholder as initial text content
+self.search_input = TextArea(
+    "Enter search text...",  # WRONG - this becomes actual content
+    id="search-input",
+)
+```
+
+**Behavior Requirements**:
+- Placeholder text MUST disappear immediately when the user types the first character
+- Placeholder text MUST reappear if the user deletes all content
+- Placeholder text is styled differently (grayed out) to distinguish it from actual content
+- When validating input, check for empty/whitespace strings, NOT for the placeholder text value
+
+**Rationale**: Using the `placeholder` parameter ensures Textual's native placeholder handling, which automatically manages visibility and styling. Setting placeholder text as initial content creates bugs where the placeholder persists after typing begins.
+
 ### Keyboard Shortcut Display Standards
 
 **Visual Convention**: All keyboard shortcuts MUST be visually indicated in the UI using one of two patterns:

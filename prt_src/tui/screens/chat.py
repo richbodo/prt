@@ -109,8 +109,8 @@ class ChatScreen(BaseScreen):
 
             # Chat input box - using custom TextArea subclass
             self.chat_input = ChatTextArea(
-                "Enter your prompt here...",
                 id=WidgetIDs.CHAT_INPUT,
+                placeholder="Enter your prompt here...",
             )
             self.chat_input.styles.height = 5
             self.chat_input._parent_screen = self  # Link to parent for ENTER handling
@@ -207,7 +207,7 @@ class ChatScreen(BaseScreen):
         """Send message to LLM and display response."""
         message = self.chat_input.text.strip()
 
-        if not message or message == "Enter your prompt here...":
+        if not message:
             self.bottom_nav.show_status("Please enter a message")
             return
 
@@ -258,6 +258,28 @@ class ChatScreen(BaseScreen):
                 "[... earlier messages truncated ...]\n" + self.response_buffer[overflow:]
             )
             logger.debug(f"Response buffer truncated, removed {overflow} bytes")
+
+    def on_mode_changed(self, mode) -> None:
+        """Handle mode changes - focus input when entering EDIT mode.
+
+        Args:
+            mode: The new AppMode
+        """
+        from prt_src.tui.types import AppMode
+
+        super().on_mode_changed(mode)
+
+        if mode == AppMode.EDIT:
+            # Close dropdown menu if open
+            if self.dropdown.display:
+                self.dropdown.hide()
+                self.top_nav.menu_open = False
+                self.top_nav.refresh_display()
+                logger.debug("[CHAT] Closed dropdown menu when switching to EDIT mode")
+
+            # Focus the input box
+            self.chat_input.focus()
+            logger.info("[CHAT] Focused chat input after mode change to EDIT")
 
     def _refocus_if_edit_mode(self) -> None:
         """Refocus input box if we're in EDIT mode (called after ESC key).
