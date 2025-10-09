@@ -212,12 +212,14 @@ class PRTApp(App):
         """Toggle between navigation and edit modes."""
         if self.current_mode == AppMode.NAVIGATION:
             # Check if screen has editable widgets before switching to EDIT
+            # Import locally to avoid circular import (BaseScreen imports from app types)
             from prt_src.tui.screens.base import BaseScreen
 
             if isinstance(self.screen, BaseScreen) and not self.screen.has_editable_widgets():
                 logger.info("[APP] Cannot enter EDIT mode - no editable widgets on screen")
                 # Show status message to user
                 try:
+                    # Import locally to avoid circular import
                     from prt_src.tui.widgets import BottomNav
 
                     bottom_nav = self.screen.query_one(BottomNav)
@@ -244,6 +246,7 @@ class PRTApp(App):
 
         # Update TopNav on current screen if it exists
         try:
+            # Import locally to avoid circular import
             from prt_src.tui.widgets import TopNav
 
             top_nav = self.screen.query_one(TopNav)
@@ -253,6 +256,7 @@ class PRTApp(App):
 
         # Notify screen about mode change
         try:
+            # Import locally to avoid circular import (BaseScreen imports from app types)
             from prt_src.tui.screens.base import BaseScreen
 
             if isinstance(self.screen, BaseScreen):
