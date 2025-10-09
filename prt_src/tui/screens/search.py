@@ -2,8 +2,10 @@
 
 from textual import events
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Container
 from textual.containers import Horizontal
+from textual.containers import VerticalScroll
 from textual.widgets import Button
 from textual.widgets import Static
 from textual.widgets import TextArea
@@ -19,19 +21,31 @@ logger = get_logger(__name__)
 
 
 class SearchTextArea(TextArea):
-    """Custom TextArea that intercepts Enter key to execute search instead of inserting newline."""
+    """Custom TextArea that intercepts Enter key to execute search instead of inserting newline.
+
+    Key bindings:
+    - Enter: Execute search
+    - Ctrl+J: Insert newline (carriage return)
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._parent_screen = None
 
     async def _on_key(self, event: events.Key) -> None:
-        """Override key handler to intercept Enter for search execution."""
+        """Override key handler to intercept Enter for search execution and Ctrl+J for newline."""
         key = event.key
 
-        # Check if this is a plain Enter
+        # Ctrl+J = insert newline
+        if key == "ctrl+j":
+            logger.info("[SearchTextArea] CTRL+J detected - inserting newline")
+            self.insert("\n")
+            event.prevent_default()
+            event.stop()
+            return
+
+        # Plain Enter = execute search
         if key == "enter" and self._parent_screen:
-            # Plain Enter = execute search
             logger.info("[SearchTextArea] Plain ENTER detected - executing search")
             handled = await self._parent_screen._handle_textarea_submit()
             if handled:
@@ -125,6 +139,18 @@ class SearchScreen(BaseScreen):
     SEARCH_NOTES = "notes"
     SEARCH_TAGS = "tags"
 
+    # Key bindings for NAV mode scrolling
+    BINDINGS = [
+        Binding("j", "scroll_down", "Scroll down", show=False),
+        Binding("k", "scroll_up", "Scroll up", show=False),
+        Binding("up", "scroll_up", "Scroll up", show=False),
+        Binding("down", "scroll_down", "Scroll down", show=False),
+        Binding("pageup", "page_up", "Page up", show=False),
+        Binding("pagedown", "page_down", "Page down", show=False),
+        Binding("home", "scroll_top", "Scroll to top", show=False),
+        Binding("end", "scroll_bottom", "Scroll to bottom", show=False),
+    ]
+
     def __init__(self, **kwargs):
         """Initialize Search screen."""
         super().__init__(**kwargs)
@@ -156,6 +182,13 @@ class SearchScreen(BaseScreen):
             self.search_input._parent_screen = self  # Link to parent for ENTER handling
             yield self.search_input
 
+            # Hint text
+            self.input_hint = Static(
+                "Enter to send, Ctrl+J inserts carriage return",
+                id="search-input-hint",
+            )
+            yield self.input_hint
+
             # Search type buttons
             with Horizontal(id=WidgetIDs.SEARCH_BUTTONS):
                 yield Button("(1) Contacts", id="btn-contacts", variant="primary")
@@ -164,12 +197,14 @@ class SearchScreen(BaseScreen):
                 yield Button("(4) Notes", id="btn-notes")
                 yield Button("(5) Tags", id="btn-tags")
 
-            # Results display
-            self.results_display = Static(
-                "Enter a search query and select a search type.",
-                id=WidgetIDs.SEARCH_RESULTS,
-            )
-            yield self.results_display
+            # Results display (scrollable container)
+            with VerticalScroll(id=WidgetIDs.SEARCH_RESULTS) as self.results_display:
+                self.results_display.can_focus = True
+                self.results_content = Static(
+                    "Enter a search query and select a search type.",
+                    id="search-results-content",
+                )
+                yield self.results_content
 
         # Dropdown menu (hidden by default)
         self.dropdown = DropdownMenu(
@@ -299,7 +334,7 @@ class SearchScreen(BaseScreen):
         query = self.search_input.text.strip()
 
         if not query:
-            self.results_display.update("Please enter a search query.")
+            self.results_content.update("Please enter a search query.")
             self.bottom_nav.show_status("Please enter a search query")
             return
 
@@ -307,7 +342,7 @@ class SearchScreen(BaseScreen):
 
         # Show searching status
         self.bottom_nav.show_status(f"Searching {self.current_search_type} for '{query}'...")
-        self.results_display.update(f"Searching {self.current_search_type}...\n\n(Using stub data)")
+        self.results_content.update(f"Searching {self.current_search_type}...\n\n(Using stub data)")
 
         # Get stub results
         search_func = self.search_functions[self.current_search_type]
@@ -315,7 +350,7 @@ class SearchScreen(BaseScreen):
 
         # Format and display results
         if not results:
-            self.results_display.update(
+            self.results_content.update(
                 f"No {self.current_search_type} found matching '{query}'\n\n(Stub search - would search real database)"
             )
             self.bottom_nav.show_status(f"No results found for '{query}'")
@@ -324,7 +359,7 @@ class SearchScreen(BaseScreen):
             for item in results:
                 result_text += self._format_result_item(item) + "\n"
             result_text += "\n(These are stub results. Phase 2B will connect to real database.)"
-            self.results_display.update(result_text)
+            self.results_content.update(result_text)
             self.bottom_nav.show_status(f"Found {len(results)} stub results for '{query}'")
 
     def _format_result_item(self, item: dict) -> str:
@@ -371,7 +406,7 @@ class SearchScreen(BaseScreen):
                 logger.debug(f"Could not update button {button_id}: {e}")
 
     def on_mode_changed(self, mode) -> None:
-        """Handle mode changes - focus input when entering EDIT mode.
+        """Handle mode changes - focus appropriate widget based on mode.
 
         Called by app's action_toggle_mode() after mode changes.
 
@@ -393,6 +428,18 @@ class SearchScreen(BaseScreen):
             # Focus the input box
             self.search_input.focus()
             logger.info("[SEARCH] Focused search input after mode change to EDIT")
+
+        elif mode == AppMode.NAVIGATION:
+            # Close dropdown menu if open
+            if self.dropdown.display:
+                self.dropdown.hide()
+                self.top_nav.menu_open = False
+                self.top_nav.refresh_display()
+                logger.debug("[SEARCH] Closed dropdown menu when switching to NAV mode")
+
+            # Focus the results area for scrolling
+            self.results_display.focus()
+            logger.info("[SEARCH] Focused results area after mode change to NAV")
 
     def action_toggle_menu(self) -> None:
         """Toggle dropdown menu visibility."""
@@ -419,3 +466,43 @@ class SearchScreen(BaseScreen):
         self.top_nav.refresh_display()
         logger.info("Going back from search screen")
         self.app.pop_screen()
+
+    # Scroll actions for NAV mode
+    def action_scroll_down(self) -> None:
+        """Scroll results area down (j key or down arrow in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_down()
+
+    def action_scroll_up(self) -> None:
+        """Scroll results area up (k key or up arrow in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_up()
+
+    def action_page_down(self) -> None:
+        """Scroll results area one page down (PageDown in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_page_down()
+
+    def action_page_up(self) -> None:
+        """Scroll results area one page up (PageUp in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_page_up()
+
+    def action_scroll_top(self) -> None:
+        """Scroll results area to top (Home key in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_home()
+
+    def action_scroll_bottom(self) -> None:
+        """Scroll results area to bottom (End key in NAV mode)."""
+        if self.results_display.has_focus:
+            self.results_display.scroll_end()
+
+    def on_focus(self, event) -> None:
+        """Handle focus changes - close dropdown menu when focus changes."""
+        # Close dropdown menu when focus changes to any widget
+        if self.dropdown.display:
+            self.dropdown.hide()
+            self.top_nav.menu_open = False
+            self.top_nav.refresh_display()
+            logger.debug("[SEARCH] Closed dropdown menu on focus change")

@@ -38,7 +38,10 @@ class TestChatScreen:
         async with pilot_screen(ChatScreen, prt_app=mock_app) as pilot:
             chat_status = pilot.app.screen.query_one(f"#{WidgetIDs.CHAT_STATUS}")
             assert chat_status is not None
-            assert "LLM" in str(chat_status.render())
+            # Query the Static widget inside the container
+            chat_status_text = pilot.app.screen.query_one("#chat-status-text")
+            assert chat_status_text is not None
+            assert "LLM" in str(chat_status_text.render())
 
     @pytest.mark.asyncio
     async def test_has_chat_input(self, mock_app, pilot_screen):
