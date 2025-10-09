@@ -211,6 +211,23 @@ class PRTApp(App):
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
         if self.current_mode == AppMode.NAVIGATION:
+            # Check if screen has editable widgets before switching to EDIT
+            # Import locally to avoid circular import (BaseScreen imports from app types)
+            from prt_src.tui.screens.base import BaseScreen
+
+            if isinstance(self.screen, BaseScreen) and not self.screen.has_editable_widgets():
+                logger.info("[APP] Cannot enter EDIT mode - no editable widgets on screen")
+                # Show status message to user
+                try:
+                    # Import locally to avoid circular import
+                    from prt_src.tui.widgets import BottomNav
+
+                    bottom_nav = self.screen.query_one(BottomNav)
+                    bottom_nav.show_status("No editable fields on this screen")
+                except Exception as e:
+                    logger.debug(f"Could not show status message: {e}")
+                return  # Stay in NAV mode
+
             self.current_mode = AppMode.EDIT
         else:
             self.current_mode = AppMode.NAVIGATION
@@ -229,12 +246,23 @@ class PRTApp(App):
 
         # Update TopNav on current screen if it exists
         try:
+            # Import locally to avoid circular import
             from prt_src.tui.widgets import TopNav
 
             top_nav = self.screen.query_one(TopNav)
             top_nav.set_mode(self.current_mode)
         except Exception as e:
             logger.debug(f"Could not update TopNav: {e}")
+
+        # Notify screen about mode change
+        try:
+            # Import locally to avoid circular import (BaseScreen imports from app types)
+            from prt_src.tui.screens.base import BaseScreen
+
+            if isinstance(self.screen, BaseScreen):
+                self.screen.on_mode_changed(self.current_mode)
+        except Exception as e:
+            logger.debug(f"Could not notify screen of mode change: {e}")
 
     def action_quit(self) -> None:
         """Quit the application (only in navigation mode)."""

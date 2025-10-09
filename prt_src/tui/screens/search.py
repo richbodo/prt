@@ -149,8 +149,8 @@ class SearchScreen(BaseScreen):
         with Container(id=WidgetIDs.SEARCH_CONTENT):
             # Search input box - using custom TextArea subclass
             self.search_input = SearchTextArea(
-                "Enter search text...",
                 id=WidgetIDs.SEARCH_INPUT,
+                placeholder="Enter search text...",
             )
             self.search_input.styles.height = 3
             self.search_input._parent_screen = self  # Link to parent for ENTER handling
@@ -228,16 +228,14 @@ class SearchScreen(BaseScreen):
 
         Args:
             event: Key event
+
+        Note:
+            ESC key is handled by app-level priority binding (action_toggle_mode),
+            which calls on_mode_changed(). No need to handle ESC here.
         """
         from prt_src.tui.types import AppMode
 
         key = event.key.lower()
-
-        # When ESC is pressed, it will toggle mode via app-level binding
-        # After mode changes to EDIT, we want to focus the input
-        if key == "escape":
-            # Schedule focus after the mode toggle completes
-            self.call_after_refresh(self._refocus_if_edit_mode)
 
         # In NAV mode, handle keys
         if self.app.current_mode == AppMode.NAVIGATION:
@@ -300,7 +298,7 @@ class SearchScreen(BaseScreen):
         """Execute search with current query and type."""
         query = self.search_input.text.strip()
 
-        if not query or query == "Enter search text...":
+        if not query:
             self.results_display.update("Please enter a search query.")
             self.bottom_nav.show_status("Please enter a search query")
             return
@@ -372,25 +370,29 @@ class SearchScreen(BaseScreen):
             except Exception as e:
                 logger.debug(f"Could not update button {button_id}: {e}")
 
-    def _refocus_if_edit_mode(self) -> None:
-        """Refocus input box if we're in EDIT mode (called after ESC key).
+    def on_mode_changed(self, mode) -> None:
+        """Handle mode changes - focus input when entering EDIT mode.
 
-        Also closes dropdown menu if open, as per UX pattern:
-        dropdown open + ESC = close menu and enter first edit box.
+        Called by app's action_toggle_mode() after mode changes.
+
+        Args:
+            mode: The new AppMode
         """
         from prt_src.tui.types import AppMode
 
-        if self.app.current_mode == AppMode.EDIT:
+        super().on_mode_changed(mode)
+
+        if mode == AppMode.EDIT:
             # Close dropdown menu if open
             if self.dropdown.display:
                 self.dropdown.hide()
                 self.top_nav.menu_open = False
                 self.top_nav.refresh_display()
-                logger.debug("Closed dropdown menu when switching to EDIT mode")
+                logger.debug("[SEARCH] Closed dropdown menu when switching to EDIT mode")
 
             # Focus the input box
             self.search_input.focus()
-            logger.debug("Refocused search input after mode toggle to EDIT")
+            logger.info("[SEARCH] Focused search input after mode change to EDIT")
 
     def action_toggle_menu(self) -> None:
         """Toggle dropdown menu visibility."""

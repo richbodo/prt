@@ -14,22 +14,39 @@ This document defines the expected behavior, navigation flow, and screen specifi
 - **Navigation Mode**: Default mode for browsing and selection (j/k navigation, single-key actions)
 - **Edit Mode**: Text input mode for forms and search
 
-#### Mode Switching Behavior with Dropdown Menus
+#### Mode Switching Behavior
 
-When a dropdown menu is open and ESC is pressed to toggle modes:
+When ESC is pressed to toggle between NAV and EDIT modes:
+
+**Smart Mode Toggle**: The application automatically detects whether editable widgets (TextArea, Input) exist on the current screen before allowing mode changes.
 
 **On screens WITH edit boxes** (Chat, Search):
-- Dropdown menu closes
+- Any open dropdown menu closes automatically
 - Mode switches to EDIT
 - Cursor automatically focuses in the first/primary edit box
 - User can immediately start typing
+- The blinking cursor appears in the focused input box
 
 **On screens WITHOUT edit boxes** (Home, Settings, Help):
-- Dropdown menu closes
-- Mode toggles normally (NAV ↔ EDIT)
-- No focus change needed (no edit boxes present)
+- Attempting to switch to EDIT mode is blocked
+- Status message appears: "No editable fields on this screen"
+- Mode remains as NAV (does not change)
+- This prevents "fake" mode changes where EDIT mode would have no effect
 
-This creates an intelligent UX pattern where ESC always "gets you back to work" - either by entering the edit box on edit-focused screens, or by simply closing the menu on navigation-focused screens.
+**Returning from EDIT to NAV**:
+- ESC toggles back to NAV mode (always works)
+- Any focused input widgets are automatically blurred
+- Keyboard input now triggers single-key shortcuts instead of text entry
+
+**Implementation Requirements**:
+- BaseScreen provides `has_editable_widgets()` method that auto-detects TextArea and Input widgets
+- App's `action_toggle_mode()` checks this method before allowing switch to EDIT mode
+- Screens with input boxes MUST override `on_mode_changed(mode)` from BaseScreen
+- When mode changes to EDIT, screens MUST call `.focus()` on their primary input widget
+- The mode change notification happens automatically via the app's `action_toggle_mode()`
+- This ensures consistent "focus on EDIT" behavior across all screens
+
+**Design Rationale**: Mode indicators should reflect actual capability. If EDIT mode provides no different functionality than NAV mode, the UI should not claim to be in EDIT mode. This creates honest feedback and prevents user confusion.
 
 ### Keyboard Shortcut Display Conventions
 

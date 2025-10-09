@@ -227,6 +227,39 @@ class BaseScreen(Screen):
         """
         logger.debug(f"{self.__class__.__name__} screen unmounted")
 
+    def has_editable_widgets(self) -> bool:
+        """Check if screen has any editable widgets (TextArea or Input).
+
+        Uses automatic detection to support dynamic screens that may show/hide
+        edit boxes based on state.
+
+        Returns:
+            True if screen has at least one TextArea or Input widget
+        """
+        try:
+            from textual.widgets import Input
+            from textual.widgets import TextArea
+
+            editable = list(self.query(TextArea)) + list(self.query(Input))
+            has_widgets = len(editable) > 0
+            logger.debug(
+                f"{self.__class__.__name__} has_editable_widgets: {has_widgets} ({len(editable)} widgets found)"
+            )
+            return has_widgets
+        except Exception as e:
+            logger.debug(f"Error checking for editable widgets: {e}")
+            return False
+
+    def on_mode_changed(self, mode) -> None:
+        """Called when app mode changes between NAV and EDIT.
+
+        Override in subclasses to handle mode changes (e.g., focus inputs when entering EDIT).
+
+        Args:
+            mode: The new AppMode
+        """
+        logger.debug(f"{self.__class__.__name__} mode changed to {mode.value}")
+
     def compose(self) -> ComposeResult:
         """Default compose for screens.
 
