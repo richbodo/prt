@@ -372,4 +372,399 @@ textual run --dev --port 7342 python -m prt_src
 
 ---
 
+## Testing TUIs with Pilot
+
+### The TUI Testing Paradigm Shift
+
+**Critical Insight**: "The most effective way to test a terminal application is to not involve a terminal at all."
+
+TUIs are hard to test with traditional tools because they:
+- Transform the terminal into "application mode" (not line-based CLI)
+- Use ANSI escape codes to paint a 2D canvas (not a queryable DOM)
+- Bypass standard I/O streams (use raw device events)
+
+**Textual's Solution**: Run tests in **headless mode** using the **Pilot** API.
+
+### Why Pilot Works
+
+```python
+async with app.run_test() as pilot:
+    # App runs WITHOUT a terminal
+    # - No ANSI codes sent to screen
+    # - Event loop runs in-memory
+    # - Pilot injects events directly into asyncio queue
+    # - Fast, deterministic, reliable
+```
+
+**Key Architecture**:
+1. `App.run_test()` creates virtual display (no terminal needed)
+2. Pilot injects Key/Click events into app's event queue
+3. Events process exactly as in real terminal
+4. Tests query widget state and assert outcomes
+
+### Testing Methodology: Vibe-Coding vs Agent-Based
+
+#### **Vibe-Coding** (Current - Human + Claude)
+
+**Philosophy**: Test-After Development
+```
+Explore → Implement → Visual test → Write locking test
+```
+
+**Why**: Exploration needs freedom, tests lock in stable behavior
+
+**What to test**:
+- User journeys (not implementation details)
+- Mode changes, navigation, input
+- Visual snapshots for key screens
+
+**When to write**:
+- After feature stabilizes
+- When fixing bugs (regression test)
+- Before refactoring
+
+#### **Agent-Based** (Future - Multi-Agent Team)
+
+**Philosophy**: Test-Driven Development
+```
+Spec → Agent writes test → Agent implements → Test validates
+```
+
+**Why**: Agents can't see UI - tests are their only feedback
+
+**What to test**:
+- Everything (comprehensive coverage)
+- Contract tests between agent-written modules
+- Property-based tests for state machines
+
+**When to write**:
+- BEFORE any code (test = specification)
+- For every feature and bug fix
+- CI gates all merges
+
+### The PRT Testing Pyramid
+
+```
+          /\
+         /E2E\           ← 5% - Full user journeys
+        /------\
+       /Visual \         ← 15% - Snapshot tests
+      /--------\
+     /Integration\       ← 60% - Screen tests (MAJORITY)
+    /------------\
+   / Widget/Unit \       ← 20% - Component tests
+  /----------------\
+```
+
+**Why this works for TUIs**: Pilot is SO fast that integration tests are nearly as cheap as unit tests.
+
+### Test Organization
+
+```
+tests/
+├── test_widgets/          # Widget unit tests
+│   ├── test_dropdown_menu.py
+│   └── test_chat_textarea.py
+├── test_screens/          # Integration tests (MAJORITY)
+│   ├── test_home_screen.py
+│   ├── test_chat_screen.py
+│   └── test_search_screen.py
+├── test_snapshots/        # Visual regression tests
+│   ├── test_home_snapshots.py
+│   └── test_chat_snapshots.py
+├── test_e2e/              # End-to-end workflows
+│   └── test_navigation_flow.py
+└── conftest.py            # Shared fixtures
+```
+
+### Standard Test Structure
+
+```python
+async def test_feature_name():
+    """Clear description of what this test verifies."""
+    # Arrange
+    app = PRTApp()
+    async with app.run_test() as pilot:
+        # Act
+        await pilot.press("c")  # Navigate to chat
+        await pilot.pause()     # Wait for messages to process
+
+        # Assert
+        assert pilot.app.screen.screen_title == "CHAT"
+```
+
+### Essential Pilot Methods
+
+#### Keyboard Input
+```python
+# Single key
+await pilot.press("escape")
+
+# Multiple keys (unpacking)
+await pilot.press(*"hello")  # Types h,e,l,l,o
+
+# Special keys
+await pilot.press("enter", "tab", "up", "down")
+
+# With modifiers
+await pilot.press("ctrl+c")
+```
+
+#### Mouse Input
+```python
+# Click by selector
+await pilot.click("#button-id")
+await pilot.click(Button)
+
+# Click with offset
+await pilot.click(Button, offset=(10, 5))
+
+# Click at screen coordinates
+await pilot.click(offset=(20, 10))
+
+# Double/triple click
+await pilot.click("#widget", times=2)
+
+# Click with modifiers
+await pilot.click("#slider", control=True)
+```
+
+#### Timing & Synchronization
+```python
+# Wait for all pending messages
+await pilot.pause()
+
+# Wait with delay
+await pilot.pause(delay=0.5)
+
+# Wait for animation
+await pilot.wait_for_animation()
+```
+
+#### Widget Queries
+```python
+# By ID
+widget = pilot.app.query_one("#widget-id")
+
+# By type
+from textual.widgets import TextArea
+input_widget = pilot.app.query_one(TextArea)
+
+# Multiple matches
+buttons = pilot.app.query(".action-button")
+
+# With type hint
+chat_input = pilot.app.query_one("#chat-input", TextArea)
+```
+
+### Common Test Patterns
+
+#### Testing Mode Changes
+```python
+async def test_mode_toggle():
+    app = PRTApp()
+    async with app.run_test() as pilot:
+        # Check initial mode
+        assert pilot.app.current_mode == AppMode.NAVIGATION
+
+        # Toggle mode
+        await pilot.press("escape")
+        await pilot.pause()
+
+        # Verify mode changed
+        assert pilot.app.current_mode == AppMode.EDIT
+```
+
+#### Testing Screen Navigation
+```python
+async def test_navigation():
+    app = PRTApp()
+    async with app.run_test() as pilot:
+        # Navigate to screen
+        await pilot.press("c")  # Chat screen
+        await pilot.pause()
+
+        # Verify navigation
+        assert pilot.app.screen.screen_title == "CHAT"
+
+        # Verify widgets mounted
+        chat_input = pilot.app.query_one("#chat-input")
+        assert chat_input is not None
+```
+
+#### Testing Input Focus
+```python
+async def test_input_focus():
+    app = PRTApp()
+    async with app.run_test() as pilot:
+        await pilot.press("c")  # Navigate to chat
+        await pilot.press("escape")  # Enter EDIT mode
+        await pilot.pause()
+
+        # Verify input has focus
+        chat_input = pilot.app.query_one("#chat-input", TextArea)
+        assert chat_input.has_focus
+```
+
+#### Testing Text Input
+```python
+async def test_typing():
+    app = PRTApp()
+    async with app.run_test() as pilot:
+        await pilot.press("s")  # Search screen
+        await pilot.press("escape")  # EDIT mode
+        await pilot.pause()
+
+        # Type text
+        await pilot.press(*"test query")
+        await pilot.pause()
+
+        # Verify text entered
+        search_input = pilot.app.query_one("#search-input", TextArea)
+        assert search_input.text == "test query"
+```
+
+### Configuration & Running Tests
+
+#### pytest.ini_options (pyproject.toml)
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"  # REQUIRED for Textual tests
+testpaths = ["tests"]
+```
+
+#### Running Tests
+```bash
+# All tests
+./prt_env/bin/python -m pytest tests/ -v
+
+# Specific test file
+./prt_env/bin/python -m pytest tests/test_pilot_demo.py -v
+
+# Specific test
+./prt_env/bin/python -m pytest tests/test_pilot_demo.py::test_mode_toggle -v
+
+# With coverage
+./prt_env/bin/python -m pytest tests/ --cov=prt_src --cov-report=html
+```
+
+### Debugging Test Failures
+
+#### Common Issues
+
+**1. Timing Issues**
+```python
+# ❌ BAD - Race condition
+await pilot.press("enter")
+assert some_state  # Might not be updated yet
+
+# ✅ GOOD - Wait for processing
+await pilot.press("enter")
+await pilot.pause()  # Let messages process
+assert some_state
+```
+
+**2. Widget Not Found**
+```python
+# ❌ BAD - Widget might not be mounted yet
+await pilot.press("c")
+widget = pilot.app.query_one("#widget")  # Might fail
+
+# ✅ GOOD - Wait for screen to mount
+await pilot.press("c")
+await pilot.pause()
+widget = pilot.app.query_one("#widget")
+```
+
+**3. Wrong Screen**
+```python
+# Always verify you're on the right screen
+assert pilot.app.screen.screen_title == "CHAT"
+# Then query widgets
+```
+
+### Snapshot Testing (Visual Regression)
+
+```bash
+# Install
+pip install pytest-textual-snapshot
+```
+
+```python
+def test_home_screen_appearance(snap_compare):
+    """Snapshot test for home screen layout."""
+    assert snap_compare("prt_src/tui/__main__.py")
+
+def test_chat_with_input(snap_compare):
+    """Snapshot of chat screen after typing."""
+    async def setup(pilot):
+        await pilot.press("c")  # Go to chat
+        await pilot.press("escape")  # EDIT mode
+        await pilot.press(*"Hello!")
+        await pilot.pause()
+
+    assert snap_compare(
+        "prt_src/tui/__main__.py",
+        run_before=setup
+    )
+```
+
+```bash
+# First run (generates baseline)
+pytest tests/test_snapshots.py
+
+# Update snapshots after UI change
+pytest tests/test_snapshots.py --snapshot-update
+```
+
+### Testing Best Practices
+
+1. **Write tests for user journeys**, not implementation details
+2. **Always call `await pilot.pause()`** after actions that trigger async events
+3. **Query widgets AFTER `pause()`** to ensure they're mounted
+4. **Verify screen before querying** - assert you're on the right screen
+5. **Use descriptive test names** - explain WHAT you're testing
+6. **Keep tests focused** - one behavior per test
+7. **Use fixtures** for common setup (in `conftest.py`)
+8. **Test happy path AND error cases**
+9. **Snapshot critical screens** - catch visual regressions
+10. **Run tests before committing** - fast feedback loop
+
+### When Tests Fail: Debugging Strategy
+
+1. **Read the assertion error** - it shows actual vs expected
+2. **Add print/log statements** - see what state actually is
+3. **Run single test** - isolate the failure
+4. **Check timing** - add more `pause()` calls
+5. **Verify widget exists** - might not be mounted yet
+6. **Check screen title** - might be on wrong screen
+7. **Look at screen stack** - navigation might be broken
+8. **Use `--tb=short`** - cleaner stack traces (already in pyproject.toml)
+
+### Example: Greenfield Test
+
+See `tests/test_pilot_demo.py` for a complete example demonstrating:
+- Mode switching tests
+- Navigation tests
+- Input focus tests
+- Placeholder text tests
+
+Run it with:
+```bash
+./prt_env/bin/python -m pytest tests/test_pilot_demo.py -v
+```
+
+### Future: Testing for Agent-Based Development
+
+When agents write code:
+1. **Agent writes test from spec** (test = contract)
+2. **Agent implements until test passes**
+3. **CI runs ALL tests** before merge
+4. **Visual snapshots catch UI breaks**
+5. **Property-based tests** for complex state machines
+
+**Why this matters**: Agents can't "see" the TUI running. Tests are their ONLY feedback mechanism.
+
+---
+
 *This document should be updated as we discover more TUI development patterns and solutions.*
