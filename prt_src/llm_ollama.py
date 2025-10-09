@@ -17,6 +17,9 @@ from typing import Optional
 import requests
 
 from .api import PRTAPI
+from .logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -32,11 +35,30 @@ class Tool:
 class OllamaLLM:
     """Ollama LLM client with tool calling support."""
 
-    def __init__(self, api: PRTAPI, base_url: str = "http://localhost:11434/v1"):
-        """Initialize Ollama LLM client."""
+    def __init__(
+        self,
+        api: PRTAPI,
+        base_url: str = "http://localhost:11434/v1",
+        keep_alive: str = "30m",
+        timeout: int = 120,
+    ):
+        """Initialize Ollama LLM client.
+
+        Args:
+            api: PRTAPI instance for database operations
+            base_url: Ollama API base URL
+            keep_alive: How long to keep model loaded in memory.
+                       Can be a duration string ("5m", "30m", "1h"),
+                       number in seconds, or -1 for infinite.
+                       Default: "30m" (30 minutes)
+            timeout: Request timeout in seconds. Default: 120 (2 minutes)
+                    For large models like gpt-oss:20b, longer timeouts are needed.
+        """
         self.api = api
         self.base_url = base_url
         self.model = "gpt-oss:20b"
+        self.keep_alive = keep_alive
+        self.timeout = timeout
         self.tools = self._create_tools()
         self.conversation_history = []
 
@@ -58,6 +80,54 @@ class OllamaLLM:
         except (requests.exceptions.RequestException, requests.exceptions.Timeout):
             return False
         except Exception:
+            return False
+
+    async def preload_model(self) -> bool:
+        """Preload the model into memory to avoid cold start delays.
+
+        Why preloading is necessary:
+        - The gpt-oss:20b model is 13GB and takes 20-40 seconds to load from disk
+        - Ollama unloads models after 5 minutes of inactivity by default
+        - Without preloading, the first chat request after idle time must:
+          1. Load the 13GB model (20-40 seconds)
+          2. Process the request (10-80+ seconds depending on complexity)
+          Total: Can exceed 120 second timeout, causing failures
+        - Preloading on screen mount ensures the model is ready before user sends messages
+        - The keep_alive setting (default 30m) keeps model loaded between requests
+
+        Performance impact:
+        - Short queries work without preload (~10-20s total including load time)
+        - Large generation requests (100+ lines) require preload to avoid timeout
+        - Preload adds 20-30s to chat screen startup but eliminates timeout risk
+
+        Returns:
+            True if model was successfully loaded, False otherwise
+        """
+        try:
+            logger.info(f"[LLM] Preloading model {self.model} into memory...")
+
+            # Use Ollama's generate endpoint with empty prompt to load the model
+            # This keeps the model in memory according to keep_alive setting
+            response = await asyncio.to_thread(
+                requests.post,
+                f"{self.base_url.replace('/v1', '')}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": "",
+                    "keep_alive": self.keep_alive,
+                },
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                logger.info(f"[LLM] Model {self.model} preloaded successfully")
+                return True
+            else:
+                logger.warning(f"[LLM] Model preload returned status {response.status_code}")
+                return False
+
+        except Exception as e:
+            logger.error(f"[LLM] Failed to preload model: {e}")
             return False
 
     def _create_tools(self) -> List[Tool]:
@@ -317,6 +387,8 @@ Remember: You can only use the tools listed above. You cannot access files, run 
 
     def chat(self, message: str) -> str:
         """Send a message to the LLM and get a response."""
+        logger.info(f"[LLM] Starting chat with message: {message[:100]}...")
+
         # Add user message to conversation history
         self.conversation_history.append({"role": "user", "content": message})
 
@@ -327,36 +399,51 @@ Remember: You can only use the tools listed above. You cannot access files, run 
             + self.conversation_history,
             "tools": self._format_tool_calls(),
             "stream": False,
+            "keep_alive": self.keep_alive,
         }
 
+        url = f"{self.base_url}/chat/completions"
+        logger.info(f"[LLM] Sending request to {url}, model={self.model}, timeout={self.timeout}s")
+        logger.debug(f"[LLM] Message history length: {len(self.conversation_history)}")
+
         try:
-            # Send request to Ollama with shorter timeout
+            # Send request to Ollama
+            logger.debug("[LLM] Making POST request to Ollama...")
             response = requests.post(
-                f"{self.base_url}/chat/completions",
+                url,
                 json=request_data,
-                timeout=30,  # Reduced from 120 to 30 seconds
+                timeout=self.timeout,
             )
+            logger.debug(f"[LLM] Received response with status code: {response.status_code}")
             response.raise_for_status()
 
             result = response.json()
+            logger.debug(
+                f"[LLM] Received JSON response with {len(result.get('choices', []))} choices"
+            )
 
             # Validate response structure
             if not result.get("choices") or not result["choices"]:
+                logger.error("[LLM] Invalid response: no choices found")
                 return "Error: Invalid response from Ollama - no choices found"
 
             choice = result["choices"][0]
             if not choice.get("message"):
+                logger.error("[LLM] Invalid response: no message in choice")
                 return "Error: Invalid response from Ollama - no message found"
 
             message_obj = choice["message"]
+            logger.debug(f"[LLM] Message object keys: {list(message_obj.keys())}")
 
             # Check if the LLM wants to call a tool
             if "tool_calls" in message_obj and message_obj["tool_calls"]:
                 tool_calls = message_obj["tool_calls"]
+                logger.info(f"[LLM] LLM requested {len(tool_calls)} tool calls")
                 tool_results = []
 
                 # Limit to prevent infinite loops
                 if len(tool_calls) > 5:
+                    logger.warning(f"[LLM] Too many tool calls requested: {len(tool_calls)}")
                     return "Error: Too many tool calls requested. Please try a simpler query."
 
                 for tool_call in tool_calls:
@@ -365,6 +452,7 @@ Remember: You can only use the tools listed above. You cannot access files, run 
 
                     tool_name = tool_call["function"]["name"]
                     arguments_str = tool_call["function"].get("arguments", "{}")
+                    logger.info(f"[LLM] Executing tool: {tool_name}")
 
                     # Parse arguments if it's a string
                     try:
@@ -373,11 +461,14 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                             if isinstance(arguments_str, str)
                             else arguments_str
                         )
-                    except json.JSONDecodeError:
+                        logger.debug(f"[LLM] Tool arguments: {arguments}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"[LLM] Failed to parse tool arguments: {e}")
                         arguments = {}
 
                     # Call the tool
                     tool_result = self._call_tool(tool_name, arguments)
+                    logger.debug(f"[LLM] Tool {tool_name} result: {str(tool_result)[:200]}")
                     tool_results.append(
                         {
                             "tool_call_id": tool_call.get("id", ""),
@@ -401,27 +492,32 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                         }
                     )
 
-                # Get final response from LLM with shorter timeout
+                # Get final response from LLM
+                logger.info("[LLM] Requesting final response after tool calls")
                 final_request = {
                     "model": self.model,
                     "messages": [{"role": "system", "content": self._create_system_prompt()}]
                     + self.conversation_history,
                     "stream": False,
+                    "keep_alive": self.keep_alive,
                 }
 
                 final_response = requests.post(
                     f"{self.base_url}/chat/completions",
                     json=final_request,
-                    timeout=30,  # Reduced timeout
+                    timeout=self.timeout,
                 )
+                logger.debug(f"[LLM] Final response status: {final_response.status_code}")
                 final_response.raise_for_status()
 
                 final_result = final_response.json()
 
                 if not final_result.get("choices") or not final_result["choices"]:
+                    logger.error("[LLM] Invalid final response: no choices")
                     return "Error: Invalid final response from Ollama"
 
                 assistant_message = final_result["choices"][0]["message"]["content"]
+                logger.info(f"[LLM] Final response received: {assistant_message[:100]}...")
 
                 # Add final assistant message to history
                 self.conversation_history.append(
@@ -432,18 +528,23 @@ Remember: You can only use the tools listed above. You cannot access files, run 
             else:
                 # No tool calls, just return the response
                 assistant_message = message_obj["content"]
+                logger.info(f"[LLM] Direct response (no tools): {assistant_message[:100]}...")
                 self.conversation_history.append(
                     {"role": "assistant", "content": assistant_message}
                 )
                 return assistant_message
 
-        except requests.exceptions.Timeout:
-            return "Error: Request to Ollama timed out. Please check if Ollama is running and try again."
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.Timeout as e:
+            logger.error(f"[LLM] Request timed out after {self.timeout}s: {e}")
+            return f"Error: Request to Ollama timed out after {self.timeout} seconds. The model may need more time to load or process this request."
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"[LLM] Connection error: {e}")
             return "Error: Cannot connect to Ollama. Please make sure Ollama is running on localhost:11434"
         except requests.exceptions.RequestException as e:
+            logger.error(f"[LLM] Request exception: {e}", exc_info=True)
             return f"Error communicating with Ollama: {str(e)}"
         except Exception as e:
+            logger.error(f"[LLM] Unexpected error: {e}", exc_info=True)
             return f"Error processing response: {str(e)}"
 
     def clear_history(self):

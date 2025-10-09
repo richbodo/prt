@@ -46,3 +46,82 @@ DropdownMenu.visible {
     background: $primary;
     color: $text;
 }
+
+/* Chat Screen Layout */
+#chat-status {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+}
+
+#chat-status-text {
+    width: auto;
+}
+
+#chat-loading {
+    width: auto;
+    height: 1;
+    margin-left: 1;
+}
+
+#chat-response {
+    height: 1fr;  /* Take remaining space */
+    overflow-y: auto;
+    border: none;
+}
+
+#chat-response:focus {
+    border: solid $primary;
+}
+
+#chat-response-content {
+    padding: 1;
+}
+
+#chat-content {
+    height: auto;
+    dock: bottom;  /* Sticky at bottom */
+}
+
+#chat-input {
+    height: 5;
+}
+
+#chat-input-hint {
+    height: 1;
+    color: $text-muted;
+    text-style: dim;
+}
+
+/* Search Screen Layout */
+#search-content {
+    height: auto;
+}
+
+#search-input {
+    height: 3;
+}
+
+#search-input-hint {
+    height: 1;
+    color: $text-muted;
+    text-style: dim;
+}
+
+#search-buttons {
+    height: 3;
+}
+
+#search-results {
+    height: 1fr;  /* Take remaining space */
+    overflow-y: auto;
+    border: none;
+}
+
+#search-results:focus {
+    border: solid $primary;
+}
+
+#search-results-content {
+    padding: 1;
+}
