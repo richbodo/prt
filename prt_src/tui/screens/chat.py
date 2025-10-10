@@ -1,8 +1,14 @@
 """Chat screen - LLM interaction interface."""
 
+import asyncio
+
 from textual import events
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Container
+from textual.containers import Horizontal
+from textual.containers import VerticalScroll
+from textual.widgets import LoadingIndicator
 from textual.widgets import Static
 from textual.widgets import TextArea
 
@@ -19,8 +25,9 @@ logger = get_logger(__name__)
 class ChatTextArea(TextArea):
     """Custom TextArea that intercepts Enter key to submit instead of inserting newline.
 
-    Note: In terminals, Shift+Enter often cannot be distinguished from Enter.
-    We detect this by checking the key string.
+    Key bindings:
+    - Enter: Submit message
+    - Ctrl+J: Insert newline (carriage return)
     """
 
     def __init__(self, *args, **kwargs):
@@ -28,13 +35,19 @@ class ChatTextArea(TextArea):
         self._parent_screen = None
 
     async def _on_key(self, event: events.Key) -> None:
-        """Override key handler to intercept Enter for submission."""
+        """Override key handler to intercept Enter for submission and Ctrl+J for newline."""
         key = event.key
 
-        # Check if this is a plain Enter (not Shift+Enter, not Ctrl+Enter, etc.)
-        # In terminals, shift modifiers are often encoded in the key string
+        # Ctrl+J = insert newline
+        if key == "ctrl+j":
+            logger.info("[ChatTextArea] CTRL+J detected - inserting newline")
+            self.insert("\n")
+            event.prevent_default()
+            event.stop()
+            return
+
+        # Plain Enter = submit message
         if key == "enter" and self._parent_screen:
-            # Plain Enter = submit message
             logger.info("[ChatTextArea] Plain ENTER detected - submitting")
             handled = await self._parent_screen._handle_textarea_submit()
             if handled:
@@ -42,33 +55,8 @@ class ChatTextArea(TextArea):
                 event.stop()
                 return
 
-        # All other keys (including shift+enter if terminal supports it) - let TextArea handle
+        # All other keys - let TextArea handle
         await super()._on_key(event)
-
-
-def get_llm_status_stub() -> dict:
-    """Stub function - returns test LLM status.
-
-    TODO Phase 2B: Replace with real LLMStatusService integration.
-
-    Returns:
-        Dict with LLM status information
-    """
-    return {"status": "online", "model": "test-model", "ready": True}
-
-
-async def send_to_llm_stub(message: str) -> str:
-    """Stub function - returns test LLM response.
-
-    TODO Phase 2B: Replace with real Ollama integration.
-
-    Args:
-        message: User message
-
-    Returns:
-        LLM response string
-    """
-    return f"Echo (stub): {message}"
 
 
 class ChatScreen(BaseScreen):
@@ -85,28 +73,63 @@ class ChatScreen(BaseScreen):
     # Response buffer limit (64KB)
     MAX_RESPONSE_SIZE = 64 * 1024
 
+    # Key bindings for NAV mode scrolling
+    BINDINGS = [
+        Binding("j", "scroll_down", "Scroll down", show=False),
+        Binding("k", "scroll_up", "Scroll up", show=False),
+        Binding("up", "scroll_up", "Scroll up", show=False),
+        Binding("down", "scroll_down", "Scroll down", show=False),
+        Binding("pageup", "page_up", "Page up", show=False),
+        Binding("pagedown", "page_down", "Page down", show=False),
+        Binding("home", "scroll_top", "Scroll to top", show=False),
+        Binding("end", "scroll_bottom", "Scroll to bottom", show=False),
+    ]
+
     def __init__(self, **kwargs):
         """Initialize Chat screen."""
         super().__init__(**kwargs)
         self.screen_title = "CHAT"
         self.response_buffer = ""
         self._processing_enter = False  # Flag to prevent double-processing
+        self.llm_ready = False  # Track LLM availability
+        # Note: self.llm_service comes from BaseScreen via kwargs
 
     def compose(self) -> ComposeResult:
-        """Compose the chat screen layout."""
+        """Compose the chat screen layout.
+
+        Layout (per spec):
+        - Top Nav
+        - Chat Status Line (immediately below top nav)
+        - Response Box (scrollable, takes remaining space)
+        - Chat Input Box (sticky at bottom)
+        - Hint text
+        - Bottom Nav
+        """
         # Top navigation bar
         self.top_nav = TopNav(self.screen_title, id=WidgetIDs.TOP_NAV)
         yield self.top_nav
 
-        # Main content container
-        with Container(id=WidgetIDs.CHAT_CONTENT):
-            # Chat status line
-            status = get_llm_status_stub()
-            status_icon = "✅" if status["ready"] else "⏳"
-            status_text = f"{status_icon} LLM: {status['status'].upper()} │ READY"
-            self.chat_status = Static(status_text, id=WidgetIDs.CHAT_STATUS)
-            yield self.chat_status
+        # Chat status line (immediately below top nav)
+        with Horizontal(id=WidgetIDs.CHAT_STATUS):
+            self.chat_status_text = Static("LLM: CHECKING...", id="chat-status-text")
+            yield self.chat_status_text
 
+            # Loading indicator (hidden by default, shown during processing)
+            self.chat_loading = LoadingIndicator(id="chat-loading")
+            self.chat_loading.display = False
+            yield self.chat_loading
+
+        # Response display area (scrollable container, takes main space)
+        with VerticalScroll(id=WidgetIDs.CHAT_RESPONSE) as self.chat_response:
+            self.chat_response.can_focus = True
+            self.chat_response_content = Static(
+                "LLM responses will appear here.\n\nEnter your message below and press ENTER to send.",
+                id="chat-response-content",
+            )
+            yield self.chat_response_content
+
+        # Input container (sticky at bottom)
+        with Container(id=WidgetIDs.CHAT_CONTENT):
             # Chat input box - using custom TextArea subclass
             self.chat_input = ChatTextArea(
                 id=WidgetIDs.CHAT_INPUT,
@@ -116,12 +139,12 @@ class ChatScreen(BaseScreen):
             self.chat_input._parent_screen = self  # Link to parent for ENTER handling
             yield self.chat_input
 
-            # Response display area
-            self.chat_response = Static(
-                "LLM responses will appear here.\n\nPress ENTER (in Edit mode) to send your message.",
-                id=WidgetIDs.CHAT_RESPONSE,
+            # Hint text
+            self.input_hint = Static(
+                "Enter to send, Ctrl+J inserts carriage return",
+                id="chat-input-hint",
             )
-            yield self.chat_response
+            yield self.input_hint
 
         # Dropdown menu (hidden by default)
         self.dropdown = DropdownMenu(
@@ -143,6 +166,10 @@ class ChatScreen(BaseScreen):
         await super().on_mount()
         logger.info("Chat screen mounted")
 
+        # LLM service comes from BaseScreen (injected via kwargs)
+        # Check LLM health
+        await self._check_llm_health()
+
         # Start in EDIT mode since chat input is the primary purpose
         from prt_src.tui.types import AppMode
 
@@ -151,6 +178,50 @@ class ChatScreen(BaseScreen):
         # Focus the chat input box
         self.chat_input.focus()
         logger.debug("Chat screen: Set mode to EDIT on mount and focused input")
+
+    async def _check_llm_health(self) -> None:
+        """Check if Ollama LLM is available and update status."""
+        if not self.llm_service:
+            self.llm_ready = False
+            self.chat_status_text.update("❌ LLM: ERROR │ Service not initialized")
+            self.chat_loading.display = False
+            logger.error("LLM service is not available")
+            return
+
+        try:
+            # Check health with timeout
+            is_healthy = await self.llm_service.health_check(timeout=2.0)
+
+            if is_healthy:
+                # Preload the model into memory to avoid cold start delays
+                self.chat_status_text.update("⏳ LLM: LOADING MODEL...")
+                self.chat_loading.display = True
+                logger.info("LLM health check passed, preloading model...")
+
+                preload_success = await self.llm_service.preload_model()
+
+                if preload_success:
+                    self.llm_ready = True
+                    self.chat_status_text.update(
+                        f"✅ LLM: ONLINE │ READY ({self.llm_service.model})"
+                    )
+                    self.chat_loading.display = False
+                    logger.info("LLM model preloaded successfully")
+                else:
+                    self.llm_ready = True  # Still mark as ready, model will load on first use
+                    self.chat_status_text.update("⚠️  LLM: ONLINE │ Model will load on first use")
+                    self.chat_loading.display = False
+                    logger.warning("LLM model preload failed, but service is available")
+            else:
+                self.llm_ready = False
+                self.chat_status_text.update("❌ LLM: OFFLINE │ Cannot connect to Ollama")
+                self.chat_loading.display = False
+                logger.warning("LLM health check failed")
+        except Exception as e:
+            self.llm_ready = False
+            self.chat_status_text.update(f"❌ LLM: ERROR │ {str(e)[:40]}")
+            self.chat_loading.display = False
+            logger.error(f"LLM health check error: {e}")
 
     async def _handle_textarea_submit(self) -> bool:
         """Handle Enter key from ChatTextArea for submission.
@@ -209,36 +280,48 @@ class ChatScreen(BaseScreen):
             self.bottom_nav.show_status("Please enter a message")
             return
 
+        # Check if LLM is ready
+        if not self.llm_ready or not self.llm_service:
+            self.bottom_nav.show_status("LLM is not available. Please check Ollama is running.")
+            return
+
         logger.info(f"Sending message to LLM: {message[:50]}...")
 
-        # Show processing status
-        self.chat_status.update("⏳ LLM: PROCESSING │ Waiting for response...")
+        # Show processing status with animated loading indicator
+        self.chat_status_text.update("⏳ LLM: PROCESSING │ Generating response...")
+        self.chat_loading.display = True
         self.bottom_nav.show_status("Sending message to LLM...")
 
         try:
-            # Get stub response
-            response = await send_to_llm_stub(message)
+            # Call LLM chat (it's synchronous, so run in thread pool)
+            logger.info(f"[CHAT] Calling LLM via asyncio.to_thread, message length: {len(message)}")
+            response = await asyncio.to_thread(self.llm_service.chat, message)
+            logger.info(f"[CHAT] Received response from LLM, length: {len(response)}")
 
             # Add to response buffer
             self._add_to_response_buffer(f"\n> You: {message}\n\n{response}\n")
 
             # Update display
-            self.chat_response.update(self.response_buffer)
+            self.chat_response_content.update(self.response_buffer)
 
-            # Reset status
-            status_icon = "✅"
-            self.chat_status.update(f"{status_icon} LLM: ONLINE │ READY")
-            self.bottom_nav.show_status("Message sent successfully (stub response)")
+            # Auto-scroll to bottom to show new response
+            self.chat_response.scroll_end(animate=False)
+
+            # Reset status - hide loading indicator
+            self.chat_loading.display = False
+            self.chat_status_text.update(f"✅ LLM: ONLINE │ READY ({self.llm_service.model})")
+            self.bottom_nav.show_status("Message sent successfully")
 
             # Clear input
             self.chat_input.clear()
 
-            logger.info("LLM response received and displayed")
+            logger.info("[CHAT] LLM response received and displayed")
 
         except Exception as e:
-            logger.error(f"Error sending message to LLM: {e}", exc_info=True)
-            self.chat_status.update("❌ LLM: ERROR │ Failed to get response")
-            self.bottom_nav.show_status(f"Error: {e}")
+            logger.error(f"[CHAT] Error sending message to LLM: {e}", exc_info=True)
+            self.chat_loading.display = False
+            self.chat_status_text.update("❌ LLM: ERROR │ Failed to get response")
+            self.bottom_nav.show_status(f"Error: {str(e)[:60]}")
 
     def _add_to_response_buffer(self, text: str) -> None:
         """Add text to response buffer with 64KB limit.
@@ -258,7 +341,7 @@ class ChatScreen(BaseScreen):
             logger.debug(f"Response buffer truncated, removed {overflow} bytes")
 
     def on_mode_changed(self, mode) -> None:
-        """Handle mode changes - focus input when entering EDIT mode.
+        """Handle mode changes - focus appropriate widget based on mode.
 
         Called by app's action_toggle_mode() after mode changes.
 
@@ -280,6 +363,18 @@ class ChatScreen(BaseScreen):
             # Focus the input box
             self.chat_input.focus()
             logger.info("[CHAT] Focused chat input after mode change to EDIT")
+
+        elif mode == AppMode.NAVIGATION:
+            # Close dropdown menu if open
+            if self.dropdown.display:
+                self.dropdown.hide()
+                self.top_nav.menu_open = False
+                self.top_nav.refresh_display()
+                logger.debug("[CHAT] Closed dropdown menu when switching to NAV mode")
+
+            # Focus the response area for scrolling
+            self.chat_response.focus()
+            logger.info("[CHAT] Focused response area after mode change to NAV")
 
     def action_toggle_menu(self) -> None:
         """Toggle dropdown menu visibility."""
@@ -306,3 +401,43 @@ class ChatScreen(BaseScreen):
         self.top_nav.refresh_display()
         logger.info("Going back from chat screen")
         self.app.pop_screen()
+
+    # Scroll actions for NAV mode
+    def action_scroll_down(self) -> None:
+        """Scroll response area down (j key or down arrow in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_down()
+
+    def action_scroll_up(self) -> None:
+        """Scroll response area up (k key or up arrow in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_up()
+
+    def action_page_down(self) -> None:
+        """Scroll response area one page down (PageDown in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_page_down()
+
+    def action_page_up(self) -> None:
+        """Scroll response area one page up (PageUp in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_page_up()
+
+    def action_scroll_top(self) -> None:
+        """Scroll response area to top (Home key in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_home()
+
+    def action_scroll_bottom(self) -> None:
+        """Scroll response area to bottom (End key in NAV mode)."""
+        if self.chat_response.has_focus:
+            self.chat_response.scroll_end()
+
+    def on_focus(self, event) -> None:
+        """Handle focus changes - close dropdown menu when focus changes."""
+        # Close dropdown menu when focus changes to any widget
+        if self.dropdown.display:
+            self.dropdown.hide()
+            self.top_nav.menu_open = False
+            self.top_nav.refresh_display()
+            logger.debug("[CHAT] Closed dropdown menu on focus change")

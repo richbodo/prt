@@ -145,6 +145,8 @@ Left justified list of options:
 
 ### Chat
 
+Response Box: Below the top nav, this is a text box where LLM responses, interspersed with the prompts that initiated them, are displayed.  Initially, this is blank.  As responses come in, the response space fills up.  The response edit box takes whatever portion of the screen is available to it, expanding as the screen expands.  There is a scrollbar on teh right hand side of the repsonse box that can scroll back through the last 64KB of prompt-repsonse text.
+
 Chat Status Line: The line immediately below the Top Nav, in the Chat Screen, is called the Chat Status Line.  The Chat Status Line displays the following two items, from left to right, which are controlled by background processes:
 
 1) LLM availability: Shows the status of our connection with the LLM
@@ -152,19 +154,28 @@ Chat Status Line: The line immediately below the Top Nav, in the Chat Screen, is
 ❌ "LLM: Offline" (red)
 ⚠️ "LLM: Checking..." (yellow)
 
-2) LLM progress: Shows a progress indicator.  When the LLM is not processing a prompt, it either shows READY, or ERROR.
+2) LLM progress: Shows a progress indicator.  When the LLM is not processing a prompt, it either shows READY, or ERROR.  
 
-Chat Box: When opened, the chat window displays a top-justified edit box for the user to type prompts into. That is called the "chat box".  This is a few lines high, but scrollable, with a usable scrollbar on the right for mouse users.  When a user hits enter in the chat box, it sends the prompt to the LLM.  When the user hits "Shift+Enter" key combo, it sends a carraige return to the edit box, moving to the next line.
+Chat Box: The chat input box is positioned at the bottom of the screen (sticky positioning) for easy access. The input box is a few lines high, scrollable, with a usable scrollbar on the right for mouse users.
 
-Response Box: Below the Chat Box, a text display box shows the responses of the LLM to user prompts.  It is also scrollable and contains the last 64KB of responses.
+**Input Key Bindings**:
+- **Enter**: Sends the prompt to the LLM
+- **Ctrl+J**: Inserts a carriage return (newline) in the input box, moving to the next line
+- A reminder hint is displayed below the input box: "Enter to send, Ctrl+J inserts carriage return"
+
+Directly below the reminder hint is the bottom nav.
+
+**Design Note**: We use Ctrl+J instead of Shift+Enter because terminal applications often cannot distinguish Shift+Enter from plain Enter due to terminal protocol limitations.
+
+Response Box: Above the Chat Box, a scrollable text display box shows the responses of the LLM to user prompts. It takes up the majority of the screen space and contains the last 64KB of responses.
 
 ### Search
 
 This screen implements the Search part of the "Search-Select-Act" loop, and does not allow for selection or action, yet.
 
-Search Edit Box: The line immediately below the top nav, on the Search Screen, shows a three line edit box called the Search Edit Box.  This is for entering a free-form text string to search on.
+Search Edit Box: The line immediately below the top nav, on the Search Screen, shows a three line edit box called the Search Edit Box. This is for entering a free-form text string to search on.
 
-Search Dropdown:  Below the Search Edit Box, are five search buttons, which correspond to the five user-editable data types in the db.  The mouse can be used to select a button, or when in nav mode, the number of the item selected can be pressed on the keyboard: 
+Search Dropdown: Below the Search Edit Box and hint text, are five search buttons, which correspond to the five user-editable data types in the db. The mouse can be used to select a button, or when in nav mode, the number of the item selected can be pressed on the keyboard: 
 (1) Contacts
 (2) Relationships
 (3) Relationship_Types

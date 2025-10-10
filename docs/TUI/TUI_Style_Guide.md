@@ -39,22 +39,74 @@ Batch Selection: Space/Tab to toggle items into selection. Commands for "select 
 
 Single-Key Actions: Map menu items or common verbs (a=add, d=delete, e=edit) to single keys. Use modifiers (Ctrl/Alt) for rarer/destructive actions.  Consistent keys assigned to menu items throughout the UI where possible.
 
-### Terminal Text Input Limitations
+### Terminal Text Input Key Bindings
 
-**Multi-line Text Entry Constraint**: There is currently no reliable cross-terminal method to insert carriage returns (newlines) within TextArea widgets in TUI applications.
+**Multi-line Text Entry Solution**: We use `Ctrl+J` to insert carriage returns (newlines) within TextArea widgets, while `Enter` executes the primary action.
 
 **Technical Background**:
 - In Textual TUI applications, the `Key` event class does not include modifier state attributes (`shift`, `ctrl`, `meta`) that are available in `MouseEvent` classes
-- Modifier keys for keyboard events are encoded in the key string itself (e.g., "shift+home", "ctrl+p")
+- Modifier keys for keyboard events are encoded in the key string itself (e.g., "shift+home", "ctrl+p", "ctrl+j")
 - Many terminal emulators do not distinguish between `Enter` and `Shift+Enter`, sending identical escape codes for both key combinations
 - This is a fundamental terminal protocol limitation, not a Textual framework issue
+- However, `Ctrl+J` is reliably detectable across terminal emulators
 
-**Current Design Decision**:
-- `Enter` key = Execute action (send message, execute search, submit form)
-- Multi-line text entry is not supported in the current TUI implementation
-- Users requiring multi-line input should use alternative interfaces (CLI with external editor, future web interface)
+**Standard Key Bindings for TextArea Widgets**:
+- **Enter**: Execute primary action (send message, execute search, submit form)
+- **Ctrl+J**: Insert carriage return (newline) in the text area
+- **Esc**: Toggle between NAV and EDIT modes (global binding)
 
-**Reference**: See Textual source code `EXTERNAL_DOCS/textual/src/textual/events.py` lines 260-310 for `Key` event class definition showing the absence of modifier attributes.
+**Hint Text Requirement**: All TextArea widgets MUST display a hint below the input box to remind users of these key bindings:
+```
+"Enter to send, Ctrl+J inserts carriage return"
+```
+
+**Implementation Pattern**:
+```python
+# Custom TextArea subclass that intercepts keys
+class ChatTextArea(TextArea):
+    async def _on_key(self, event: events.Key) -> None:
+        key = event.key
+
+        # Ctrl+J = insert newline
+        if key == "ctrl+j":
+            self.insert("\n")
+            event.prevent_default()
+            event.stop()
+            return
+
+        # Enter = submit/execute
+        if key == "enter" and self._parent_screen:
+            await self._parent_screen._handle_textarea_submit()
+            event.prevent_default()
+            event.stop()
+            return
+
+        # All other keys - let TextArea handle
+        await super()._on_key(event)
+```
+
+**Hint Text Display**:
+```python
+# In screen's compose() method, after the TextArea:
+self.input_hint = Static(
+    "Enter to send, Ctrl+J inserts carriage return",
+    id="input-hint",
+)
+yield self.input_hint
+```
+
+**CSS Styling for Hint Text**:
+```css
+#chat-input-hint, #search-input-hint {
+    height: 1;
+    color: $text-muted;
+    text-style: dim;
+}
+```
+
+**Rationale**: Using Ctrl+J provides reliable multi-line entry while keeping Enter for the most common action (submit). The hint text ensures discoverability of this non-obvious key combination.
+
+**Reference**: See Textual source code `EXTERNAL_DOCS/textual/src/textual/events.py` lines 260-310 for `Key` event class definition.
 
 ### TextArea Input Widget Standards
 

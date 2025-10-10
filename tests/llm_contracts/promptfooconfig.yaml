@@ -1,0 +1,148 @@
+description: 'PRT Chat LLM Intent Parsing Contract Tests - Phase 0 Initial Suite'
+
+# System prompt to test
+prompts:
+  - file://system_prompt.txt
+
+# LLM provider configuration
+providers:
+  - id: ollama:gpt-oss:20b
+    config:
+      temperature: 0.1  # Low for consistency
+      apiBaseUrl: http://localhost:11434/v1
+
+# Default test configuration
+defaultTest:
+  options:
+    provider: ollama:gpt-oss:20b
+
+# ============================================================================
+# Phase 0 Test Suite: 5 Critical Tests
+# ============================================================================
+
+tests:
+  # -------------------------------------------------------------------------
+  # Critical Test 1: Search Intent Classification
+  # -------------------------------------------------------------------------
+  - description: '[CRITICAL] Identifies search intent for tech contacts'
+    vars:
+      user_message: 'show me all my tech contacts'
+    assert:
+      # Must be valid JSON
+      - type: is-json
+
+      # Must have 'search' intent
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          return response.intent === 'search';
+
+      # Must extract 'tech' tag filter
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          const tags = response.parameters?.filters?.tags || [];
+          return tags.includes('tech');
+
+  # -------------------------------------------------------------------------
+  # Critical Test 2: Selection Intent Classification
+  # -------------------------------------------------------------------------
+  - description: '[CRITICAL] Identifies selection intent with ID list'
+    vars:
+      user_message: 'select 1, 2, and 5'
+    assert:
+      # Must be valid JSON
+      - type: is-json
+
+      # Must have 'select' intent
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          return response.intent === 'select';
+
+      # Must extract correct IDs in order
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          const ids = response.parameters?.ids || [];
+          // Check that 1, 2, and 5 are all present
+          return ids.includes(1) && ids.includes(2) && ids.includes(5);
+
+  # -------------------------------------------------------------------------
+  # Critical Test 3: Export Intent Classification
+  # -------------------------------------------------------------------------
+  - description: '[CRITICAL] Identifies export intent for directory format'
+    vars:
+      user_message: 'export them for the directory maker'
+    assert:
+      # Must be valid JSON
+      - type: is-json
+
+      # Must have 'export' intent
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          return response.intent === 'export';
+
+      # Must identify 'directory' format
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          return response.parameters?.format === 'directory';
+
+  # -------------------------------------------------------------------------
+  # Critical Test 4: Parameter Extraction (Tags + Location)
+  # -------------------------------------------------------------------------
+  - description: '[CRITICAL] Extracts both tags and location from multi-filter query'
+    vars:
+      user_message: 'find python developers in San Francisco'
+    assert:
+      # Must be valid JSON
+      - type: is-json
+
+      # Must extract 'python' tag
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          const tags = response.parameters?.filters?.tags || [];
+          return tags.includes('python') || tags.includes('developer');
+
+      # Must extract San Francisco location
+      - type: javascript
+        value: |
+          const response = JSON.parse(output);
+          const locations = response.parameters?.filters?.location || [];
+          return locations.some(loc =>
+            loc.toLowerCase().includes('san francisco') ||
+            loc.toLowerCase() === 'sf'
+          );
+
+  # -------------------------------------------------------------------------
+  # Critical Test 5: No Hallucinations (Safety Property)
+  # -------------------------------------------------------------------------
+  - description: '[CRITICAL] Does not hallucinate contact names in export query'
+    vars:
+      user_message: 'export the selected contacts'
+    assert:
+      # Must be valid JSON
+      - type: is-json
+
+      # Must NOT contain common hallucinated names
+      - type: not-contains
+        value: 'Alice'
+      - type: not-contains
+        value: 'Bob'
+      - type: not-contains
+        value: 'John Doe'
+      - type: not-contains
+        value: 'Jane Smith'
+
+# ============================================================================
+# Test Output Configuration
+# ============================================================================
+
+outputPath: './promptfoo_results.json'
+
+# Generate HTML report
+# Run: npx promptfoo view
+# to open web UI for viewing results

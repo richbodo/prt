@@ -767,4 +767,200 @@ When agents write code:
 
 ---
 
+## Database Dependencies in Tests
+
+### Decision: No Database Mocking Required
+
+**Context**: PRT is designed as a local-first application that uses SQLite exclusively. We maintain a comprehensive fixture system and PRTApp has built-in in-memory database fallback.
+
+**Rationale**:
+1. **Local SQLite Only**: We do not plan to support multiple database backends
+2. **Fast Enough**: SQLite in-memory databases are nearly as fast as mocks
+3. **Real Behavior**: Testing against actual SQLite catches real issues
+4. **Simple Maintenance**: No mock/fixture drift to manage
+
+### PRTApp Database Fallback
+
+PRTApp automatically falls back to an in-memory database when configuration fails:
+
+```python
+# From prt_src/tui/app.py
+def __init__(self):
+    try:
+        config = load_config()
+        db_path = Path(config["db_path"])
+        self.db = TUIDatabase(db_path)
+        self.db.connect()
+    except Exception as e:
+        # Automatic fallback for testing
+        self.db = TUIDatabase(Path(":memory:"))
+        self.db.connect()
+```
+
+**Key Point**: Tests using full `PRTApp()` instances automatically get isolated in-memory databases with no external dependencies.
+
+### Available Test Fixtures (conftest.py)
+
+PRT provides three test fixture patterns:
+
+#### 1. Full App Instance (Integration Testing)
+```python
+async def test_navigation():
+    """Test full app behavior."""
+    app = PRTApp()  # Auto-uses :memory: database
+    async with app.run_test() as pilot:
+        await pilot.press("c")
+        assert pilot.app.screen.screen_title == "CHAT"
+```
+
+**Use for**: UI navigation, mode switching, screen transitions, user journeys
+
+**Pros**:
+- Tests real app behavior
+- No mocking or setup needed
+- Fast (in-memory database)
+- Catches integration issues
+
+**Cons**:
+- Cannot test specific database states easily
+- Starts with empty database
+
+#### 2. Test Database with Fixtures
+```python
+def test_search_functionality(test_db):
+    """Test with sample data."""
+    db, fixtures = test_db
+    # fixtures contains 6 contacts, 8 tags, 6 notes
+    results = db.search_contacts("Alice")
+    assert len(results) > 0
+```
+
+**Use for**: Data service testing, API testing, search functionality
+
+**Pros**:
+- Pre-populated with realistic data
+- Predictable test data
+- Tests database operations directly
+
+**Cons**:
+- Requires tmp_path fixture (pytest provides this)
+- More setup code
+
+#### 3. Empty Test Database
+```python
+def test_with_empty_database(test_db_empty):
+    """Test edge cases with no data."""
+    db = test_db_empty
+    results = db.search_contacts("anyone")
+    assert len(results) == 0
+```
+
+**Use for**: Testing empty state, initialization, edge cases
+
+#### 4. Component Testing with pilot_screen
+```python
+async def test_screen_rendering(pilot_screen):
+    """Test individual screen without full app."""
+    async with pilot_screen(ChatScreen) as pilot:
+        # Tests screen in isolation
+        assert pilot.app.screen.screen_title == "CHAT"
+```
+
+**Use for**: Isolated screen testing, widget unit tests
+
+**Note**: This creates a minimal test app, NOT the full PRTApp with all services.
+
+### Standard Testing Patterns
+
+#### Pattern 1: UI Integration Tests (MOST COMMON)
+```python
+async def test_mode_toggle_on_chat_screen():
+    """ESC should toggle mode on Chat screen."""
+    app = PRTApp()  # Uses :memory: database automatically
+    async with app.run_test() as pilot:
+        await pilot.press("c")  # Navigate to Chat
+        await pilot.pause()
+
+        await pilot.press("escape")  # Toggle to EDIT mode
+        await pilot.pause()
+
+        assert pilot.app.current_mode == AppMode.EDIT
+```
+
+**Why**: Tests user-visible behavior without needing specific database state.
+
+#### Pattern 2: Data Service Tests with Fixtures
+```python
+def test_contact_search_with_data(test_db):
+    """Search finds contacts in database."""
+    db, fixtures = test_db
+
+    # fixtures.contacts[0] is "Alice Johnson"
+    results = db.search_contacts("Alice")
+
+    assert len(results) == 1
+    assert results[0].name == "Alice Johnson"
+```
+
+**Why**: Tests database operations with predictable test data.
+
+#### Pattern 3: Edge Case Tests with Empty Database
+```python
+def test_search_empty_database(test_db_empty):
+    """Search handles empty database gracefully."""
+    db = test_db_empty
+
+    results = db.search_contacts("anything")
+
+    assert results == []  # Should not crash
+```
+
+**Why**: Verifies graceful handling of empty state.
+
+### When to Use Each Pattern
+
+| Test Type | Use | Fixture/Pattern |
+|-----------|-----|-----------------|
+| UI Navigation | Screen transitions, key bindings | `PRTApp()` |
+| Mode Switching | NAV ↔ EDIT, focus management | `PRTApp()` |
+| Input/Forms | Typing, placeholders, validation | `PRTApp()` |
+| Search Results | Finding contacts/tags/notes | `test_db` |
+| Analytics | Relationship graphs, statistics | `test_db` |
+| Empty State | No data, initialization | `test_db_empty` |
+| Widget Rendering | Individual screen layout | `pilot_screen` |
+
+### CI/Future Considerations
+
+**Current State**: No CI for tests yet
+
+**Future Considerations**:
+- SQLite works identically on all platforms
+- No external dependencies to install
+- In-memory databases are CI-friendly
+- When we add CI, no test changes needed
+
+**If we add CI**: The current approach will work without modification because:
+1. SQLite is available everywhere
+2. In-memory databases require no setup
+3. Fixtures create temporary databases (tmp_path)
+4. No network or external services required
+
+### Testing Strategy Summary
+
+**Standard Practice**:
+1. **UI/Integration Tests** → Use `PRTApp()` (gets :memory: database automatically)
+2. **Data Service Tests** → Use `test_db` fixture (with sample data)
+3. **Edge Case Tests** → Use `test_db_empty` fixture
+4. **Widget Tests** → Use `pilot_screen` fixture
+
+**Why No Mocking**:
+- PRTApp already has in-memory fallback
+- SQLite is fast and available everywhere
+- Real database catches real bugs
+- Simple to maintain
+
+**Documentation Date**: 2025-10-09 (aligned with current development sprint)
+
+---
+
 *This document should be updated as we discover more TUI development patterns and solutions.*

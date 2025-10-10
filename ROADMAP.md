@@ -51,11 +51,11 @@ This document outlines the development roadmap for the Personal Relationship Too
 ## Flet for mobile apps
 - [ ] **We will take the working TUI and duplicate it in flet** TBD
 
-## Make it fun - can be done in parallel with any other initiative
+## FUN FACTORS - can be done in parallel with any other initiative
 
-I had a nice, wide-ranging, rambling [conversation with claude about this](https://claude.ai/share/c2c3ac4d-894e-47c9-b3f9-7f4c5e4f4a43), and claude came up with some suggestions to make the project more fun:
+I had a nice, wide-ranging, rambling conversation with claude about this, and claude came up with some suggestions to make the project more fun.  I think there is a lot more to add here, and some of these are not quite in line with the rest of the roadmap, but they are interesting enough to include as a starting point:
 
-Some thoughts on making it more engaging:
+Claudes thoughts on making it more engaging:
 
 1. Make the loneliness visible (then addressable)
 Right now it tracks relationships, but does it surface gaps? Imagine a gentle dashboard that shows: "You haven't reached out to anyone in the 'close friend' tag in 3 weeks" or "5 people reached out to you that you never responded to." Not guilt-trippy, just... honest. Distributed devs respond to metrics. Make relationship health a metric they can improve.

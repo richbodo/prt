@@ -1,11 +1,20 @@
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import Optional
 
 CONFIG_FILE = "prt_config.json"
 DATA_DIR_NAME = "prt_data"
 REQUIRED_FIELDS = ["google_api_key", "openai_api_key", "db_path", "db_username", "db_password"]
+
+
+def _get_logger():
+    """Get logger lazily to avoid circular import."""
+    from .logging_config import get_logger
+
+    return get_logger(__name__)
 
 
 def data_dir() -> Path:
@@ -112,3 +121,248 @@ def get_database_url(config: Dict[str, Any]) -> str:
     """Get the database URL."""
     db_path = config.get("db_path", "prt_data/prt.db")
     return f"sqlite:///{db_path}"
+
+
+# ============================================================================
+# LLM Configuration Management
+# ============================================================================
+
+
+@dataclass
+class LLMConfig:
+    """LLM connection and model configuration."""
+
+    provider: str = "ollama"
+    model: str = "gpt-oss:20b"
+    base_url: str = "http://localhost:11434/v1"
+    timeout: int = 120
+    temperature: float = 0.1
+    keep_alive: str = "30m"
+
+
+@dataclass
+class LLMPermissions:
+    """LLM permission and safety controls."""
+
+    allow_create: bool = True
+    allow_update: bool = True
+    allow_delete: bool = False
+    require_confirmation_delete: bool = True
+    require_confirmation_bulk_operations: bool = True
+    max_bulk_operations: int = 100
+    read_only_mode: bool = False
+
+
+@dataclass
+class LLMPrompts:
+    """LLM system prompt configuration."""
+
+    override_system_prompt: Optional[str] = None
+    use_file: bool = False
+    file_path: Optional[str] = None
+
+
+@dataclass
+class LLMContext:
+    """LLM context management configuration."""
+
+    mode: str = "adaptive"  # minimal | detailed | adaptive
+    max_conversation_history: int = 3
+    max_context_tokens: int = 4000
+
+
+@dataclass
+class LLMDeveloper:
+    """LLM developer tools and debugging."""
+
+    debug_mode: bool = False
+    log_prompts: bool = False
+    log_responses: bool = False
+    log_timing: bool = False
+
+
+class LLMConfigManager:
+    """Manager for LLM configuration with validation and defaults."""
+
+    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
+        """Initialize LLM config manager.
+
+        Args:
+            config_dict: Optional config dictionary. If None, loads from config file.
+        """
+        if config_dict is None:
+            config_dict = load_config()
+
+        self.llm = self._load_llm_config(config_dict.get("llm", {}))
+        self.permissions = self._load_permissions_config(config_dict.get("llm_permissions", {}))
+        self.prompts = self._load_prompts_config(config_dict.get("llm_prompts", {}))
+        self.context = self._load_context_config(config_dict.get("llm_context", {}))
+        self.developer = self._load_developer_config(config_dict.get("llm_developer", {}))
+
+    def _load_llm_config(self, llm_dict: Dict[str, Any]) -> LLMConfig:
+        """Load LLM connection configuration with validation."""
+        return LLMConfig(
+            provider=llm_dict.get("provider", "ollama"),
+            model=llm_dict.get("model", "gpt-oss:20b"),
+            base_url=llm_dict.get("base_url", "http://localhost:11434/v1"),
+            timeout=llm_dict.get("timeout", 120),
+            temperature=llm_dict.get("temperature", 0.1),
+            keep_alive=llm_dict.get("keep_alive", "30m"),
+        )
+
+    def _load_permissions_config(self, perm_dict: Dict[str, Any]) -> LLMPermissions:
+        """Load LLM permissions configuration with validation."""
+        require_confirmation = perm_dict.get("require_confirmation", {})
+
+        return LLMPermissions(
+            allow_create=perm_dict.get("allow_create", True),
+            allow_update=perm_dict.get("allow_update", True),
+            allow_delete=perm_dict.get("allow_delete", False),
+            require_confirmation_delete=require_confirmation.get("delete", True),
+            require_confirmation_bulk_operations=require_confirmation.get("bulk_operations", True),
+            max_bulk_operations=perm_dict.get("max_bulk_operations", 100),
+            read_only_mode=perm_dict.get("read_only_mode", False),
+        )
+
+    def _load_prompts_config(self, prompts_dict: Dict[str, Any]) -> LLMPrompts:
+        """Load LLM prompts configuration with validation."""
+        return LLMPrompts(
+            override_system_prompt=prompts_dict.get("override_system_prompt"),
+            use_file=prompts_dict.get("use_file", False),
+            file_path=prompts_dict.get("file_path"),
+        )
+
+    def _load_context_config(self, context_dict: Dict[str, Any]) -> LLMContext:
+        """Load LLM context configuration with validation."""
+        mode = context_dict.get("mode", "adaptive")
+        if mode not in ["minimal", "detailed", "adaptive"]:
+            _get_logger().warning(
+                f"Invalid context mode '{mode}', using 'adaptive'. Valid: minimal, detailed, adaptive"
+            )
+            mode = "adaptive"
+
+        return LLMContext(
+            mode=mode,
+            max_conversation_history=context_dict.get("max_conversation_history", 3),
+            max_context_tokens=context_dict.get("max_context_tokens", 4000),
+        )
+
+    def _load_developer_config(self, dev_dict: Dict[str, Any]) -> LLMDeveloper:
+        """Load LLM developer tools configuration."""
+        return LLMDeveloper(
+            debug_mode=dev_dict.get("debug_mode", False),
+            log_prompts=dev_dict.get("log_prompts", False),
+            log_responses=dev_dict.get("log_responses", False),
+            log_timing=dev_dict.get("log_timing", False),
+        )
+
+    def get_system_prompt(self) -> Optional[str]:
+        """Get the system prompt from configuration.
+
+        Returns:
+            System prompt string if configured, None otherwise
+        """
+        if self.prompts.use_file and self.prompts.file_path:
+            try:
+                prompt_path = Path(self.prompts.file_path)
+                if not prompt_path.is_absolute():
+                    # Resolve relative to data directory
+                    prompt_path = data_dir() / self.prompts.file_path
+
+                if prompt_path.exists():
+                    return prompt_path.read_text()
+                else:
+                    _get_logger().warning(f"System prompt file not found: {prompt_path}")
+                    return None
+            except Exception as e:
+                _get_logger().error(f"Failed to load system prompt from file: {e}")
+                return None
+
+        return self.prompts.override_system_prompt
+
+    def validate(self) -> bool:
+        """Validate configuration.
+
+        Returns:
+            True if configuration is valid
+        """
+        logger = _get_logger()
+
+        # Validate provider
+        if self.llm.provider != "ollama":
+            logger.warning(
+                f"Unsupported LLM provider '{self.llm.provider}'. Only 'ollama' is currently supported."
+            )
+            return False
+
+        # Validate timeout
+        if self.llm.timeout < 10 or self.llm.timeout > 600:
+            logger.warning(f"LLM timeout {self.llm.timeout}s is outside recommended range (10-600)")
+
+        # Validate temperature
+        if self.llm.temperature < 0.0 or self.llm.temperature > 2.0:
+            logger.warning(
+                f"LLM temperature {self.llm.temperature} is outside valid range (0.0-2.0)"
+            )
+            return False
+
+        # Validate max_bulk_operations
+        if self.permissions.max_bulk_operations < 1:
+            logger.warning("max_bulk_operations must be at least 1")
+            return False
+
+        # Check for conflicting permissions
+        if self.permissions.read_only_mode and (
+            self.permissions.allow_create
+            or self.permissions.allow_update
+            or self.permissions.allow_delete
+        ):
+            logger.warning(
+                "read_only_mode is enabled but write permissions are also enabled. read_only_mode will take precedence."
+            )
+
+        return True
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary for saving.
+
+        Returns:
+            Dictionary representation of configuration
+        """
+        return {
+            "llm": {
+                "provider": self.llm.provider,
+                "model": self.llm.model,
+                "base_url": self.llm.base_url,
+                "timeout": self.llm.timeout,
+                "temperature": self.llm.temperature,
+                "keep_alive": self.llm.keep_alive,
+            },
+            "llm_permissions": {
+                "allow_create": self.permissions.allow_create,
+                "allow_update": self.permissions.allow_update,
+                "allow_delete": self.permissions.allow_delete,
+                "require_confirmation": {
+                    "delete": self.permissions.require_confirmation_delete,
+                    "bulk_operations": self.permissions.require_confirmation_bulk_operations,
+                },
+                "max_bulk_operations": self.permissions.max_bulk_operations,
+                "read_only_mode": self.permissions.read_only_mode,
+            },
+            "llm_prompts": {
+                "override_system_prompt": self.prompts.override_system_prompt,
+                "use_file": self.prompts.use_file,
+                "file_path": self.prompts.file_path,
+            },
+            "llm_context": {
+                "mode": self.context.mode,
+                "max_conversation_history": self.context.max_conversation_history,
+                "max_context_tokens": self.context.max_context_tokens,
+            },
+            "llm_developer": {
+                "debug_mode": self.developer.debug_mode,
+                "log_prompts": self.developer.log_prompts,
+                "log_responses": self.developer.log_responses,
+                "log_timing": self.developer.log_timing,
+            },
+        }
