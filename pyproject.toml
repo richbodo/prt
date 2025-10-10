@@ -10,7 +10,7 @@ authors = [
     {name = "Rich Bodo", email = "richbodo@gmail.com"}
 ]
 readme = "README.md"
-license = {text = "MIT"}
+license = "GPL-3.0-only"
 keywords = ["contacts", "relationships", "tui", "personal-data", "sqlite"]
 classifiers = [
     "Development Status :: 4 - Beta",
