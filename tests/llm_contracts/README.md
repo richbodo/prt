@@ -1,118 +1,57 @@
-# LLM Contract Tests with Promptfoo
+# LLM Contract Tests for PRT Chat
 
-This directory contains contract tests for validating LLM intent parsing accuracy.
+This directory contains contract tests for validating that the LLM (Ollama with gpt-oss:20b) can reliably parse natural language queries into structured JSON commands.
 
-## What Are Contract Tests?
+## Why Contract Tests?
 
-Contract tests validate that the LLM consistently produces correct outputs (the "contract") for a defined set of inputs. They catch regressions when prompts change and establish accuracy baselines.
+Contract tests validate the **interface contract** between our application and the LLM. Unlike unit tests or integration tests, contract tests ensure that:
 
-See `docs/Chat_Integration/06_Contract_Testing.md` for complete documentation.
+1. The LLM produces **valid JSON** (always)
+2. The LLM correctly **identifies intents** (search, select, export, etc.)
+3. The LLM accurately **extracts parameters** (tags, locations, dates, IDs)
+4. The LLM **never hallucinates** data (doesn't invent contacts, tags, or fields)
+5. The LLM handles **edge cases and adversarial inputs** gracefully
 
-## Quick Start
+These tests run against the **real LLM**, not mocks.
 
-### Prerequisites
+## Test Suites
 
-1. **Ollama running** with gpt-oss:20b model:
-   ```bash
-   ollama serve
-   ollama pull gpt-oss:20b
-   ```
-
-2. **Promptfoo installed**:
-   ```bash
-   npm install -g promptfoo
-   # or
-   npx promptfoo --version
-   ```
-
-### Running Tests
+### 1. Initial Suite (5 tests) - `promptfooconfig.yaml`
+Quick smoke test for CI
 
 ```bash
-# Run all contract tests
-npx promptfoo eval
-
-# Run and open web UI
-npx promptfoo eval && promptfoo view
-
-# Save results for baseline comparison
-npx promptfoo eval -o results.json
+npx promptfoo eval -c promptfooconfig.yaml
 ```
 
-### Understanding Results
-
-**Pass rate target**: ≥95% (19/20 tests passing)
-
-**Key metrics**:
-- Intent classification accuracy: 100% required
-- Parameter extraction accuracy: ≥95%
-- JSON validity: 100% required
-- Hallucination rate: 0% required
-
-## Phase 0 Test Suite
-
-The initial test suite includes **5 critical tests**:
-
-1. **Search intent classification** - "show me tech contacts"
-2. **Selection intent classification** - "select 1, 2, and 5"
-3. **Export intent classification** - "export for directory"
-4. **Multi-filter parameter extraction** - "python developers in SF"
-5. **No hallucinations** - Must not invent contact names
-
-## Files
-
-- `promptfooconfig.yaml` - Promptfoo configuration
-- `system_prompt.txt` - System prompt being tested
-- `README.md` - This file
-- `baseline.json` - Baseline results (created after first passing run)
-- `promptfoo_results.json` - Latest test results (generated)
-
-## Baseline Tracking
-
-After tests pass consistently:
+### 2. Comprehensive Suite (45 tests) - `promptfooconfig_comprehensive.yaml`
+Full validation for Phase 3 baseline
 
 ```bash
-# Establish baseline
-npx promptfoo eval -o baseline.json
-git add baseline.json
-git commit -m "Establish LLM contract test baseline"
-
-# Compare new results to baseline
-npx promptfoo eval -o new_results.json
-python compare_results.py new_results.json baseline.json
+npx promptfoo eval -c promptfooconfig_comprehensive.yaml
 ```
 
-## Troubleshooting
+## Running Tests
 
-### Tests fail intermittently
+```bash
+cd tests/llm_contracts
 
-**Cause**: LLM non-determinism
+# Start Ollama first
+ollama serve
 
-**Solution**:
-- Temperature is already low (0.1)
-- Run tests multiple times, accept 90%+ pass rate
-- Consider using larger model
+# Run comprehensive suite
+npx promptfoo eval -c promptfooconfig_comprehensive.yaml
 
-### Tests timeout
+# View results in web UI
+npx promptfoo view
+```
 
-**Cause**: Model loading delay
+## Success Criteria
 
-**Solution**:
-- Preload model: `ollama run gpt-oss:20b "test"`
-- Set keep_alive: `ollama run gpt-oss:20b --keep-alive 30m`
+| Metric | Target | Critical? |
+|--------|--------|-----------|
+| **JSON Validity** | 100% | ✅ YES |
+| **Intent Accuracy** | >95% | ✅ YES |
+| **Parameter Accuracy** | >90% | ✅ YES |
+| **Hallucination Rate** | 0% | ✅ YES |
 
-### JSON validation failures
-
-**Cause**: LLM returns text instead of pure JSON
-
-**Solution**: Update system_prompt.txt to be more explicit about JSON-only output
-
-## Next Steps (Phase 3)
-
-Phase 3 will expand this suite to 60+ tests covering:
-- Edge cases (empty queries, long queries)
-- All intent types
-- Complex parameter extraction
-- Error handling
-- Multi-turn conversation context
-
-See `docs/Chat_Integration/03_Implementation_Plan.md` Phase 3 for details.
+See full documentation in this file for details on interpreting results, troubleshooting, and establishing baselines.
