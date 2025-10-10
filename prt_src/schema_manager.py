@@ -417,29 +417,36 @@ class SchemaManager:
             with open(migration_path) as f:
                 sql_content = f.read()
 
-            # Execute SQL statements one by one (split by semicolon)
-            statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+            # Use raw connection's executescript for FTS5 SQL
+            # This properly handles multi-statement SQL including triggers with BEGIN...END blocks
+            # We can't use the naive split-by-semicolon approach because triggers contain
+            # internal semicolons that would break the parsing
+            try:
+                # Get the raw connection from SQLAlchemy
+                raw_connection = self.db.engine.raw_connection()
+                cursor = raw_connection.cursor()
 
-            for statement in statements:
-                if statement and not statement.startswith("--"):
-                    try:
-                        self.db.session.execute(text(statement))
-                    except Exception as e:
-                        # Some statements might fail if objects already exist
-                        # Log but continue
-                        if "already exists" not in str(e).lower():
-                            console.print(f"  ⚠ Warning during FTS5 setup: {e}", style="yellow")
+                # executescript() handles multiple statements and commits automatically
+                cursor.executescript(sql_content)
+                cursor.close()
 
-            console.print("  ✓ Created FTS5 virtual tables", style="green")
-            console.print("  ✓ Added synchronization triggers", style="green")
-            console.print("  ✓ Indexed existing data", style="green")
+                # executescript() committed automatically, so refresh session state
+                self.db.session.expire_all()
 
-            # Update schema version
-            self.db.session.execute(
-                text("UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP")
-            )
+                console.print("  ✓ Created FTS5 virtual tables", style="green")
+                console.print("  ✓ Added synchronization triggers", style="green")
+                console.print("  ✓ Indexed existing data", style="green")
 
-            self.db.session.commit()
+                # Update schema version in a new transaction (executescript already committed)
+                self.db.session.execute(
+                    text("UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP")
+                )
+                self.db.session.commit()
+            except Exception as e:
+                # If FTS5 setup fails, provide clear error and rollback
+                self.db.session.rollback()
+                console.print(f"  ❌ Error during FTS5 setup: {e}", style="red")
+                raise  # Re-raise to trigger migration failure
             console.print("✅ Full-text search support added successfully!", style="green bold")
 
         except Exception as e:
