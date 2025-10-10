@@ -461,19 +461,33 @@ class SchemaManager:
         console.print("Adding TUI-specific contact columns...", style="blue")
 
         try:
-            # Add is_you column
-            self.db.session.execute(
-                text("ALTER TABLE contacts ADD COLUMN is_you BOOLEAN DEFAULT 0")
-            )
-            console.print("  ✓ Added is_you column", style="green")
+            # Check which columns already exist (for idempotency)
+            # This handles cases where ORM created table with these columns already
+            cursor = self.db.session.execute(text("PRAGMA table_info(contacts)"))
+            existing_columns = {row[1] for row in cursor.fetchall()}
 
-            # Add first_name column
-            self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)"))
-            console.print("  ✓ Added first_name column", style="green")
+            # Add is_you column if it doesn't exist
+            if "is_you" not in existing_columns:
+                self.db.session.execute(
+                    text("ALTER TABLE contacts ADD COLUMN is_you BOOLEAN DEFAULT 0")
+                )
+                console.print("  ✓ Added is_you column", style="green")
+            else:
+                console.print("  ✓ is_you column already exists", style="dim")
 
-            # Add last_name column
-            self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)"))
-            console.print("  ✓ Added last_name column", style="green")
+            # Add first_name column if it doesn't exist
+            if "first_name" not in existing_columns:
+                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)"))
+                console.print("  ✓ Added first_name column", style="green")
+            else:
+                console.print("  ✓ first_name column already exists", style="dim")
+
+            # Add last_name column if it doesn't exist
+            if "last_name" not in existing_columns:
+                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)"))
+                console.print("  ✓ Added last_name column", style="green")
+            else:
+                console.print("  ✓ last_name column already exists", style="dim")
 
             # Create index for "You" contact lookup (SQLite uses 1 for TRUE in partial index)
             self.db.session.execute(
@@ -483,23 +497,32 @@ class SchemaManager:
             )
             console.print("  ✓ Created index for is_you lookup", style="green")
 
-            # Populate first_name and last_name from existing name field (SQLite syntax)
-            self.db.session.execute(
-                text(
+            # Populate first_name and last_name from existing name field (only if columns are empty)
+            # Check if we need to populate (if first_name is NULL for any contact)
+            result = self.db.session.execute(
+                text("SELECT COUNT(*) FROM contacts WHERE first_name IS NULL LIMIT 1")
+            ).fetchone()
+
+            if result and result[0] > 0:
+                self.db.session.execute(
+                    text(
+                        """
+                    UPDATE contacts SET
+                        first_name = CASE
+                            WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, 1, INSTR(name, ' ') - 1)
+                            ELSE name
+                        END,
+                        last_name = CASE
+                            WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, INSTR(name, ' ') + 1)
+                            ELSE ''
+                        END
+                    WHERE first_name IS NULL
                     """
-                UPDATE contacts SET
-                    first_name = CASE
-                        WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, 1, INSTR(name, ' ') - 1)
-                        ELSE name
-                    END,
-                    last_name = CASE
-                        WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, INSTR(name, ' ') + 1)
-                        ELSE ''
-                    END
-                """
+                    )
                 )
-            )
-            console.print("  ✓ Populated first_name and last_name from name field", style="green")
+                console.print("  ✓ Populated first_name and last_name from name field", style="green")
+            else:
+                console.print("  ✓ first_name and last_name already populated", style="dim")
 
             # Update schema version
             self.db.session.execute(
