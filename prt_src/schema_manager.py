@@ -19,7 +19,7 @@ console = Console()
 class SchemaManager:
     """Simple, safe database schema management."""
 
-    CURRENT_VERSION = 5
+    CURRENT_VERSION = 6
 
     def __init__(self, db):
         """Initialize with database connection."""
@@ -324,7 +324,7 @@ class SchemaManager:
                 self.db.session.execute(
                     text(
                         """
-                    INSERT OR IGNORE INTO relationship_types 
+                    INSERT OR IGNORE INTO relationship_types
                     (type_key, description, inverse_type_key, is_symmetrical)
                     VALUES (:type_key, :description, :inverse_key, :is_symmetrical)
                 """
@@ -379,7 +379,7 @@ class SchemaManager:
             self.db.session.execute(
                 text(
                     """
-                CREATE INDEX IF NOT EXISTS idx_backup_metadata_created 
+                CREATE INDEX IF NOT EXISTS idx_backup_metadata_created
                 ON backup_metadata(created_at DESC)
             """
                 )
@@ -446,6 +446,63 @@ class SchemaManager:
             self.db.session.rollback()
             raise RuntimeError(f"Failed to add FTS5 support: {e}")
 
+    def apply_migration_v5_to_v6(self):
+        """Add is_you, first_name, and last_name columns to contacts table."""
+        console.print("Adding TUI-specific contact columns...", style="blue")
+
+        try:
+            # Add is_you column
+            self.db.session.execute(
+                text("ALTER TABLE contacts ADD COLUMN is_you BOOLEAN DEFAULT 0")
+            )
+            console.print("  ✓ Added is_you column", style="green")
+
+            # Add first_name column
+            self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)"))
+            console.print("  ✓ Added first_name column", style="green")
+
+            # Add last_name column
+            self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)"))
+            console.print("  ✓ Added last_name column", style="green")
+
+            # Create index for "You" contact lookup (SQLite uses 1 for TRUE in partial index)
+            self.db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_contacts_is_you ON contacts(is_you) WHERE is_you = 1"
+                )
+            )
+            console.print("  ✓ Created index for is_you lookup", style="green")
+
+            # Populate first_name and last_name from existing name field (SQLite syntax)
+            self.db.session.execute(
+                text(
+                    """
+                UPDATE contacts SET
+                    first_name = CASE
+                        WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, 1, INSTR(name, ' ') - 1)
+                        ELSE name
+                    END,
+                    last_name = CASE
+                        WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, INSTR(name, ' ') + 1)
+                        ELSE ''
+                    END
+                """
+                )
+            )
+            console.print("  ✓ Populated first_name and last_name from name field", style="green")
+
+            # Update schema version
+            self.db.session.execute(
+                text("UPDATE schema_version SET version = 6, updated_at = CURRENT_TIMESTAMP")
+            )
+
+            self.db.session.commit()
+            console.print("✅ TUI contact columns added successfully!", style="green bold")
+
+        except Exception as e:
+            self.db.session.rollback()
+            raise RuntimeError(f"Failed to add TUI contact columns: {e}")
+
     def migrate_to_version(self, target_version: int, current_version: int):
         """Apply migrations to reach target version."""
         # Map of all migration paths
@@ -454,6 +511,7 @@ class SchemaManager:
             (2, 3): [self.apply_migration_v2_to_v3],
             (3, 4): [self.apply_migration_v3_to_v4],
             (4, 5): [self.apply_migration_v4_to_v5],
+            (5, 6): [self.apply_migration_v5_to_v6],
             (1, 3): [self.apply_migration_v1_to_v2, self.apply_migration_v2_to_v3],
             (1, 4): [
                 self.apply_migration_v1_to_v2,
@@ -466,13 +524,32 @@ class SchemaManager:
                 self.apply_migration_v3_to_v4,
                 self.apply_migration_v4_to_v5,
             ],
+            (1, 6): [
+                self.apply_migration_v1_to_v2,
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
             (2, 4): [self.apply_migration_v2_to_v3, self.apply_migration_v3_to_v4],
             (2, 5): [
                 self.apply_migration_v2_to_v3,
                 self.apply_migration_v3_to_v4,
                 self.apply_migration_v4_to_v5,
             ],
+            (2, 6): [
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
             (3, 5): [self.apply_migration_v3_to_v4, self.apply_migration_v4_to_v5],
+            (3, 6): [
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
+            (4, 6): [self.apply_migration_v4_to_v5, self.apply_migration_v5_to_v6],
         }
 
         migration_path = migrations.get((current_version, target_version))
