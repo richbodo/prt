@@ -45,6 +45,7 @@ class BaseScreen(Screen):
         nav_service=None,
         data_service=None,
         notification_service=None,
+        llm_service=None,
         selection_service=None,
         validation_service=None,
         *args,
@@ -57,6 +58,7 @@ class BaseScreen(Screen):
             nav_service: Navigation service for screen transitions
             data_service: Data service wrapping PRTAPI
             notification_service: Service for toasts/dialogs
+            llm_service: LLM service for AI chat functionality
             selection_service: Phase 2 selection system
             validation_service: Phase 2 validation system
         """
@@ -68,6 +70,7 @@ class BaseScreen(Screen):
         self.nav_service = nav_service
         self.data_service = data_service
         self.notification_service = notification_service
+        self.llm_service = llm_service
         self.selection_service = selection_service
         self.validation_service = validation_service
 

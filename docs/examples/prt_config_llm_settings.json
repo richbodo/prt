@@ -1,0 +1,101 @@
+{
+  "_comment": "Example LLM configuration for PRT",
+  "_comment2": "Copy relevant sections to your prt_data/prt_config.json",
+
+  "llm": {
+    "provider": "ollama",
+    "model": "gpt-oss:20b",
+    "base_url": "http://localhost:11434/v1",
+    "timeout": 120,
+    "keep_alive": "30m",
+    "temperature": 0.1,
+    "max_tokens": 2048,
+    "top_p": 0.9,
+    "top_k": 40,
+    "repeat_penalty": 1.1
+  },
+
+  "llm_permissions": {
+    "_comment": "Safety controls for LLM operations",
+    "allow_create": true,
+    "allow_update": true,
+    "allow_delete": false,
+    "require_confirmation": {
+      "create": false,
+      "update": false,
+      "delete": true,
+      "bulk_operations": true
+    },
+    "max_bulk_operations": 100,
+    "read_only_mode": false
+  },
+
+  "llm_prompts": {
+    "_comment": "System prompt configuration",
+    "_comment2": "Leave null to use built-in defaults",
+    "system_prompt_override": null,
+    "system_prompt_file": null,
+    "enable_custom_prompts": true,
+    "prompt_templates_dir": "prt_data/prompt_templates"
+  },
+
+  "llm_context": {
+    "_comment": "Context management settings",
+    "max_conversation_history": 10,
+    "context_mode": "adaptive",
+    "max_context_tokens": 4000,
+    "enable_conversation_memory": true,
+    "prune_old_context": true
+  },
+
+  "llm_developer": {
+    "_comment": "Developer tools and debugging",
+    "debug_mode": false,
+    "log_prompts": false,
+    "log_responses": false,
+    "log_file": "prt_data/llm_debug.log",
+    "enable_experimental_features": false,
+    "show_token_usage": false,
+    "show_timing": false
+  },
+
+  "_profiles": {
+    "_comment": "Example configuration profiles",
+
+    "conservative": {
+      "llm_permissions": {
+        "allow_create": true,
+        "allow_update": false,
+        "allow_delete": false,
+        "require_confirmation": {
+          "create": true,
+          "bulk_operations": true
+        }
+      }
+    },
+
+    "developer": {
+      "llm_permissions": {
+        "allow_create": true,
+        "allow_update": true,
+        "allow_delete": true,
+        "require_confirmation": {
+          "delete": true,
+          "bulk_operations": true
+        }
+      },
+      "llm_developer": {
+        "debug_mode": true,
+        "log_prompts": true,
+        "log_responses": true,
+        "show_timing": true
+      }
+    },
+
+    "read_only": {
+      "llm_permissions": {
+        "read_only_mode": true
+      }
+    }
+  }
+}
