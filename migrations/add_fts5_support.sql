@@ -27,11 +27,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
 );
 
 -- Create FTS5 virtual table for tags
--- This enables full-text search across tag names and descriptions
+-- This enables full-text search across tag names
 CREATE VIRTUAL TABLE IF NOT EXISTS tags_fts USING fts5(
     tag_id UNINDEXED,
     name,
-    description,
     contact_count UNINDEXED,  -- Store but don't index
     tokenize='porter unicode61'
 );
@@ -64,11 +63,10 @@ LEFT JOIN contacts c ON cm.contact_id = c.id
 GROUP BY n.id;
 
 -- Populate tags_fts with existing data
-INSERT INTO tags_fts (tag_id, name, description, contact_count)
+INSERT INTO tags_fts (tag_id, name, contact_count)
 SELECT
     t.id,
     COALESCE(t.name, ''),
-    COALESCE(t.description, ''),
     COUNT(DISTINCT cm.contact_id)
 FROM tags t
 LEFT JOIN metadata_tags mt ON t.id = mt.tag_id
@@ -141,11 +139,10 @@ END;
 CREATE TRIGGER IF NOT EXISTS tags_fts_insert
 AFTER INSERT ON tags
 BEGIN
-    INSERT INTO tags_fts (tag_id, name, description, contact_count)
+    INSERT INTO tags_fts (tag_id, name, contact_count)
     VALUES (
         NEW.id,
         COALESCE(NEW.name, ''),
-        COALESCE(NEW.description, ''),
         0
     );
 END;
@@ -154,9 +151,8 @@ CREATE TRIGGER IF NOT EXISTS tags_fts_update
 AFTER UPDATE ON tags
 BEGIN
     UPDATE tags_fts
-    SET 
-        name = COALESCE(NEW.name, ''),
-        description = COALESCE(NEW.description, '')
+    SET
+        name = COALESCE(NEW.name, '')
     WHERE tag_id = NEW.id;
 END;
 
