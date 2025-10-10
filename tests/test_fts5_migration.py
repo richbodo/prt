@@ -94,9 +94,9 @@ class TestFTS5Migration:
             if current < 5:
                 assert schema_manager.apply_migration_v4_to_v5.called
 
-    def test_current_version_is_5(self, schema_manager):
-        """Verify CURRENT_VERSION is set to 5."""
-        assert schema_manager.CURRENT_VERSION == 5
+    def test_current_version_is_6(self, schema_manager):
+        """Verify CURRENT_VERSION is set to 6."""
+        assert schema_manager.CURRENT_VERSION == 6
 
     def test_migration_file_not_found(self, schema_manager, mock_db):
         """Verify proper error when migration file is missing."""
