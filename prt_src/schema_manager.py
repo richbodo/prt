@@ -421,32 +421,35 @@ class SchemaManager:
             # This properly handles multi-statement SQL including triggers with BEGIN...END blocks
             # We can't use the naive split-by-semicolon approach because triggers contain
             # internal semicolons that would break the parsing
+
+            # IMPORTANT: Append schema version update to the SQL for atomicity
+            # executescript() auto-commits, so we need everything in one script
+            sql_content += "\n-- Update schema version (part of atomic FTS5 migration)\n"
+            sql_content += "UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP;\n"
+
             try:
                 # Get the raw connection from SQLAlchemy
                 raw_connection = self.db.engine.raw_connection()
                 cursor = raw_connection.cursor()
 
                 # executescript() handles multiple statements and commits automatically
+                # This includes FTS5 table creation AND schema version update atomically
                 cursor.executescript(sql_content)
                 cursor.close()
 
-                # executescript() committed automatically, so refresh session state
+                # executescript() committed everything, so refresh session state
                 self.db.session.expire_all()
 
                 console.print("  ✓ Created FTS5 virtual tables", style="green")
                 console.print("  ✓ Added synchronization triggers", style="green")
                 console.print("  ✓ Indexed existing data", style="green")
-
-                # Update schema version in a new transaction (executescript already committed)
-                self.db.session.execute(
-                    text("UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP")
-                )
-                self.db.session.commit()
+                console.print("  ✓ Updated schema version to 5", style="green")
             except Exception as e:
-                # If FTS5 setup fails, provide clear error and rollback
-                self.db.session.rollback()
+                # If FTS5 setup fails, executescript will have rolled back automatically
+                # (it wraps everything in BEGIN...COMMIT, and failures trigger rollback)
                 console.print(f"  ❌ Error during FTS5 setup: {e}", style="red")
                 raise  # Re-raise to trigger migration failure
+
             console.print("✅ Full-text search support added successfully!", style="green bold")
 
         except Exception as e:
