@@ -1,0 +1,399 @@
+description: "Contract tests for search_contacts tool calling (simplified architecture)"
+
+# System prompt with tool instructions
+prompts:
+  - file://system_prompt_search_only.txt
+
+# Ollama provider with tool definitions
+providers:
+  - id: ollama:llama3.2:3b
+    config:
+      # Define the search_contacts tool
+      tools:
+        - name: search_contacts
+          description: "Search contacts by name, email, phone, or tags. Returns matching contacts with full details."
+          parameters:
+            type: object
+            properties:
+              query:
+                type: string
+                description: "Natural language search query. Leave empty to get all contacts."
+            required: []
+      # Ollama-specific settings
+      temperature: 0.1  # Low temperature for deterministic tool calling
+      num_predict: 500  # Max tokens for response
+
+# Default test configuration
+defaultTest:
+  options:
+    # Increase timeout for LLM calls
+    timeout: 30000  # 30 seconds
+
+# Test cases
+tests:
+  # ============================================================================
+  # BASIC QUERIES - Test fundamental tool calling behavior
+  # ============================================================================
+
+  - description: "Count all contacts - should call search_contacts with empty query"
+    vars:
+      user_query: "How many contacts do I have?"
+    assert:
+      - type: javascript
+        value: |
+          // Verify tool was called
+          const toolCalls = output.tool_calls || [];
+          if (toolCalls.length === 0) {
+            return { pass: false, reason: 'No tool calls made' };
+          }
+
+          // Find search_contacts call
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+          if (!searchCall) {
+            return {
+              pass: false,
+              reason: `Expected search_contacts, got: ${toolCalls.map(t => t.name).join(', ')}`
+            };
+          }
+
+          // Verify query is empty or null (to get all contacts)
+          const query = searchCall.parameters.query;
+          if (query && query.trim() !== '') {
+            return {
+              pass: false,
+              reason: `Expected empty query for "all contacts", got: "${query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Search by name - should extract name from query"
+    vars:
+      user_query: "Find contacts named Alice"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('alice')) {
+            return {
+              pass: false,
+              reason: `Query should contain "alice", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Search by email - should extract email address"
+    vars:
+      user_query: "Who has the email alice@example.com?"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('alice@example.com')) {
+            return {
+              pass: false,
+              reason: `Query should contain email, got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Search by phone - should extract phone number"
+    vars:
+      user_query: "Find the contact with phone 555-1234"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('555') || !query.includes('1234')) {
+            return {
+              pass: false,
+              reason: `Query should contain phone number, got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  # ============================================================================
+  # CONVERSATIONAL QUERIES - Test natural language understanding
+  # ============================================================================
+
+  - description: "Conversational search - should handle 'Can you help me find...'"
+    vars:
+      user_query: "Can you help me find John's contact info?"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('john')) {
+            return {
+              pass: false,
+              reason: `Query should contain "john", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Informal query - should handle 'Show me...'"
+    vars:
+      user_query: "Show me everyone in my contacts"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts for "show me everyone"' };
+          }
+
+          // Empty query is reasonable for "everyone"
+          return { pass: true };
+
+  - description: "Question format - should handle 'Do I have...'"
+    vars:
+      user_query: "Do I have any contacts named Bob?"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('bob')) {
+            return {
+              pass: false,
+              reason: `Query should contain "bob", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  # ============================================================================
+  # TAG SEARCHES - Test tag-based filtering
+  # ============================================================================
+
+  - description: "Search by tag - should extract tag name"
+    vars:
+      user_query: "Show me all family members"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('family')) {
+            return {
+              pass: false,
+              reason: `Query should contain "family", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Search by multiple criteria - should combine terms"
+    vars:
+      user_query: "Find work contacts named John"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          const hasWork = query.includes('work');
+          const hasJohn = query.includes('john');
+
+          if (!hasWork || !hasJohn) {
+            return {
+              pass: false,
+              reason: `Query should contain both "work" and "john", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  # ============================================================================
+  # EDGE CASES - Test boundary conditions and unusual inputs
+  # ============================================================================
+
+  - description: "Edge case: Very short query"
+    vars:
+      user_query: "Find Jo"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('jo')) {
+            return {
+              pass: false,
+              reason: `Query should contain "jo", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Edge case: Query with special characters"
+    vars:
+      user_query: "Find O'Brien"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Did not call search_contacts' };
+          }
+
+          const query = searchCall.parameters.query?.toLowerCase() || '';
+          if (!query.includes('brien')) {
+            return {
+              pass: false,
+              reason: `Query should contain "brien", got: "${searchCall.parameters.query}"`
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Edge case: Ambiguous 'everyone' query"
+    vars:
+      user_query: "Show me everyone"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (!searchCall) {
+            return { pass: false, reason: 'Should call search_contacts for "show me everyone"' };
+          }
+
+          // Empty query is reasonable interpretation
+          return { pass: true };
+
+  # ============================================================================
+  # NEGATIVE CASES - Verify tool is NOT called inappropriately
+  # ============================================================================
+
+  - description: "Negative: Greeting - should NOT call tool"
+    vars:
+      user_query: "Hello! How are you?"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (searchCall) {
+            return {
+              pass: false,
+              reason: 'Should not call search_contacts for greeting'
+            };
+          }
+
+          // Should respond conversationally
+          if (!output.text || output.text.length < 5) {
+            return {
+              pass: false,
+              reason: 'Should provide a conversational response'
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Negative: General question - should NOT call tool"
+    vars:
+      user_query: "What can you help me with?"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (searchCall) {
+            return {
+              pass: false,
+              reason: 'Should not call search_contacts for general question'
+            };
+          }
+
+          // Should respond conversationally
+          if (!output.text || output.text.length < 10) {
+            return {
+              pass: false,
+              reason: 'Should provide a helpful response about capabilities'
+            };
+          }
+
+          return { pass: true };
+
+  - description: "Negative: Thank you - should NOT call tool"
+    vars:
+      user_query: "Thank you for your help!"
+    assert:
+      - type: javascript
+        value: |
+          const toolCalls = output.tool_calls || [];
+          const searchCall = toolCalls.find(t => t.name === 'search_contacts');
+
+          if (searchCall) {
+            return {
+              pass: false,
+              reason: 'Should not call search_contacts for thank you message'
+            };
+          }
+
+          return { pass: true };
+
+# Output configuration
+outputPath: ./promptfoo_results_search_only.json
