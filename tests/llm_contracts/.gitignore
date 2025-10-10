@@ -1,0 +1,10 @@
+# Promptfoo cache and output files
+.promptfoo/
+promptfoo_results.json
+new_results.json
+
+# Keep baseline.json in git (it's our reference)
+!baseline.json
+
+# Node modules if npm is used locally
+node_modules/
