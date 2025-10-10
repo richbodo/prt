@@ -153,12 +153,21 @@ class PRTApp(App):
 
         # Initialize data service
         from prt_src.api import PRTAPI
+        from prt_src.llm_ollama import OllamaLLM
         from prt_src.tui.services.data import DataService
         from prt_src.tui.services.notification import NotificationService
 
         prt_api = PRTAPI()  # PRTAPI creates its own database connection
         self.data_service = DataService(prt_api)
         self.notification_service = NotificationService(self)
+
+        # Initialize LLM service
+        try:
+            self.llm_service = OllamaLLM(prt_api)
+            logger.info("LLM service initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM service: {e}")
+            self.llm_service = None
 
         # Current screen reference
         self.current_screen = None
@@ -171,6 +180,7 @@ class PRTApp(App):
             "nav_service": self.nav_service,
             "data_service": self.data_service,
             "notification_service": self.notification_service,
+            "llm_service": self.llm_service,
             "selection_service": None,  # Will wire Phase 2 service
             "validation_service": None,  # Will wire Phase 2 service
         }
