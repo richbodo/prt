@@ -19,7 +19,7 @@ console = Console()
 class SchemaManager:
     """Simple, safe database schema management."""
 
-    CURRENT_VERSION = 5
+    CURRENT_VERSION = 6
 
     def __init__(self, db):
         """Initialize with database connection."""
@@ -324,7 +324,7 @@ class SchemaManager:
                 self.db.session.execute(
                     text(
                         """
-                    INSERT OR IGNORE INTO relationship_types 
+                    INSERT OR IGNORE INTO relationship_types
                     (type_key, description, inverse_type_key, is_symmetrical)
                     VALUES (:type_key, :description, :inverse_key, :is_symmetrical)
                 """
@@ -379,7 +379,7 @@ class SchemaManager:
             self.db.session.execute(
                 text(
                     """
-                CREATE INDEX IF NOT EXISTS idx_backup_metadata_created 
+                CREATE INDEX IF NOT EXISTS idx_backup_metadata_created
                 ON backup_metadata(created_at DESC)
             """
                 )
@@ -417,34 +417,124 @@ class SchemaManager:
             with open(migration_path) as f:
                 sql_content = f.read()
 
-            # Execute SQL statements one by one (split by semicolon)
-            statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+            # Use raw connection's executescript for FTS5 SQL
+            # This properly handles multi-statement SQL including triggers with BEGIN...END blocks
+            # We can't use the naive split-by-semicolon approach because triggers contain
+            # internal semicolons that would break the parsing
 
-            for statement in statements:
-                if statement and not statement.startswith("--"):
-                    try:
-                        self.db.session.execute(text(statement))
-                    except Exception as e:
-                        # Some statements might fail if objects already exist
-                        # Log but continue
-                        if "already exists" not in str(e).lower():
-                            console.print(f"  ⚠ Warning during FTS5 setup: {e}", style="yellow")
+            # IMPORTANT: Append schema version update to the SQL for atomicity
+            # executescript() auto-commits, so we need everything in one script
+            sql_content += "\n-- Update schema version (part of atomic FTS5 migration)\n"
+            sql_content += "UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP;\n"
 
-            console.print("  ✓ Created FTS5 virtual tables", style="green")
-            console.print("  ✓ Added synchronization triggers", style="green")
-            console.print("  ✓ Indexed existing data", style="green")
+            try:
+                # Get the raw connection from SQLAlchemy
+                raw_connection = self.db.engine.raw_connection()
+                cursor = raw_connection.cursor()
 
-            # Update schema version
-            self.db.session.execute(
-                text("UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP")
-            )
+                # executescript() handles multiple statements and commits automatically
+                # This includes FTS5 table creation AND schema version update atomically
+                cursor.executescript(sql_content)
+                cursor.close()
 
-            self.db.session.commit()
+                # executescript() committed everything, so refresh session state
+                self.db.session.expire_all()
+
+                console.print("  ✓ Created FTS5 virtual tables", style="green")
+                console.print("  ✓ Added synchronization triggers", style="green")
+                console.print("  ✓ Indexed existing data", style="green")
+                console.print("  ✓ Updated schema version to 5", style="green")
+            except Exception as e:
+                # If FTS5 setup fails, executescript will have rolled back automatically
+                # (it wraps everything in BEGIN...COMMIT, and failures trigger rollback)
+                console.print(f"  ❌ Error during FTS5 setup: {e}", style="red")
+                raise  # Re-raise to trigger migration failure
+
             console.print("✅ Full-text search support added successfully!", style="green bold")
 
         except Exception as e:
             self.db.session.rollback()
             raise RuntimeError(f"Failed to add FTS5 support: {e}")
+
+    def apply_migration_v5_to_v6(self):
+        """Add is_you, first_name, and last_name columns to contacts table."""
+        console.print("Adding TUI-specific contact columns...", style="blue")
+
+        try:
+            # Check which columns already exist (for idempotency)
+            # This handles cases where ORM created table with these columns already
+            cursor = self.db.session.execute(text("PRAGMA table_info(contacts)"))
+            existing_columns = {row[1] for row in cursor.fetchall()}
+
+            # Add is_you column if it doesn't exist
+            if "is_you" not in existing_columns:
+                self.db.session.execute(
+                    text("ALTER TABLE contacts ADD COLUMN is_you BOOLEAN DEFAULT 0")
+                )
+                console.print("  ✓ Added is_you column", style="green")
+            else:
+                console.print("  ✓ is_you column already exists", style="dim")
+
+            # Add first_name column if it doesn't exist
+            if "first_name" not in existing_columns:
+                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)"))
+                console.print("  ✓ Added first_name column", style="green")
+            else:
+                console.print("  ✓ first_name column already exists", style="dim")
+
+            # Add last_name column if it doesn't exist
+            if "last_name" not in existing_columns:
+                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)"))
+                console.print("  ✓ Added last_name column", style="green")
+            else:
+                console.print("  ✓ last_name column already exists", style="dim")
+
+            # Create index for "You" contact lookup (SQLite uses 1 for TRUE in partial index)
+            self.db.session.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_contacts_is_you ON contacts(is_you) WHERE is_you = 1"
+                )
+            )
+            console.print("  ✓ Created index for is_you lookup", style="green")
+
+            # Populate first_name and last_name from existing name field (only if columns are empty)
+            # Check if we need to populate (if first_name is NULL for any contact)
+            result = self.db.session.execute(
+                text("SELECT COUNT(*) FROM contacts WHERE first_name IS NULL LIMIT 1")
+            ).fetchone()
+
+            if result and result[0] > 0:
+                self.db.session.execute(
+                    text(
+                        """
+                    UPDATE contacts SET
+                        first_name = CASE
+                            WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, 1, INSTR(name, ' ') - 1)
+                            ELSE name
+                        END,
+                        last_name = CASE
+                            WHEN INSTR(name, ' ') > 0 THEN SUBSTR(name, INSTR(name, ' ') + 1)
+                            ELSE ''
+                        END
+                    WHERE first_name IS NULL
+                    """
+                    )
+                )
+                console.print("  ✓ Populated first_name and last_name from name field", style="green")
+            else:
+                console.print("  ✓ first_name and last_name already populated", style="dim")
+
+            # Update schema version
+            self.db.session.execute(
+                text("UPDATE schema_version SET version = 6, updated_at = CURRENT_TIMESTAMP")
+            )
+
+            self.db.session.commit()
+            console.print("✅ TUI contact columns added successfully!", style="green bold")
+
+        except Exception as e:
+            self.db.session.rollback()
+            raise RuntimeError(f"Failed to add TUI contact columns: {e}")
 
     def migrate_to_version(self, target_version: int, current_version: int):
         """Apply migrations to reach target version."""
@@ -454,6 +544,7 @@ class SchemaManager:
             (2, 3): [self.apply_migration_v2_to_v3],
             (3, 4): [self.apply_migration_v3_to_v4],
             (4, 5): [self.apply_migration_v4_to_v5],
+            (5, 6): [self.apply_migration_v5_to_v6],
             (1, 3): [self.apply_migration_v1_to_v2, self.apply_migration_v2_to_v3],
             (1, 4): [
                 self.apply_migration_v1_to_v2,
@@ -466,13 +557,32 @@ class SchemaManager:
                 self.apply_migration_v3_to_v4,
                 self.apply_migration_v4_to_v5,
             ],
+            (1, 6): [
+                self.apply_migration_v1_to_v2,
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
             (2, 4): [self.apply_migration_v2_to_v3, self.apply_migration_v3_to_v4],
             (2, 5): [
                 self.apply_migration_v2_to_v3,
                 self.apply_migration_v3_to_v4,
                 self.apply_migration_v4_to_v5,
             ],
+            (2, 6): [
+                self.apply_migration_v2_to_v3,
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
             (3, 5): [self.apply_migration_v3_to_v4, self.apply_migration_v4_to_v5],
+            (3, 6): [
+                self.apply_migration_v3_to_v4,
+                self.apply_migration_v4_to_v5,
+                self.apply_migration_v5_to_v6,
+            ],
+            (4, 6): [self.apply_migration_v4_to_v5, self.apply_migration_v5_to_v6],
         }
 
         migration_path = migrations.get((current_version, target_version))

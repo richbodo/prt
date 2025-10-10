@@ -218,3 +218,4 @@ secrets/
 *.sqlite
 *.sqlite3
 your_database_name.db
+tests/llm_contracts/promptfoo_results*.json
