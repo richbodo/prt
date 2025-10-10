@@ -1,12 +1,18 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script to download project library repositories from GitHub.
+# Script to download project library repositories from GitHub into a dedicated
+# subdirectory.
 #
-# This script performs a shallow clone (`--depth 1`) for each repository
-# to minimize download size and time. It will skip any repository
-# that has already been cloned into a directory of the same name.
+# This script will:
+# 1. Create a directory named 'EXTERNAL_DOCS/' if it doesn't exist.
+# 2. Change into that directory.
+# 3. Perform a shallow clone (`--depth 1`) for each repository.
+# 4. Skip any repository that has already been cloned.
 # ==============================================================================
+
+# Define the target directory for all repositories
+TARGET_DIR="EXTERNAL_DOCS"
 
 # Function to clone a Git repository
 clone_repo() {
@@ -21,7 +27,7 @@ clone_repo() {
         echo "Cloning $repo_path..."
         git clone --depth 1 "https://github.com/$repo_path.git"
         if [ $? -eq 0 ]; then
-            echo "👍 Successfully cloned into '$target_dir/'."
+            echo "👍 Successfully cloned into './$target_dir/'."
         else
             echo "❌ Failed to clone $repo_path."
         fi
@@ -29,7 +35,13 @@ clone_repo() {
 }
 
 echo "🚀 Starting download of project library repositories..."
-echo "All repositories will be cloned into the current directory."
+echo "All repositories will be cloned into the '$TARGET_DIR/' directory."
+
+# Create the target directory if it doesn't exist
+mkdir -p "$TARGET_DIR"
+
+# Change into the target directory. Exit script if cd fails.
+cd "$TARGET_DIR" || exit
 
 # --- Core TUI & CLI Libraries ---
 clone_repo "tiangolo/typer"
@@ -40,6 +52,7 @@ clone_repo "Textualize/rich"
 clone_repo "sqlalchemy/sqlalchemy"
 clone_repo "sqlalchemy/sqlalchemy-docs" # SQLAlchemy's separate docs repo
 clone_repo "psf/requests"
+clone_repo "ollama/ollama"
 
 # --- Google API Stack ---
 clone_repo "googleapis/google-auth-library-python"
@@ -64,9 +77,4 @@ clone_repo "promptfoo/promptfoo"
 echo "--------------------------------------------------"
 echo ""
 echo "✨ All cloning tasks complete."
-echo ""
-echo "Notes:"
-echo "  - **Textual Serve**: Included within the main 'textual' repository."
-echo "  - **google.oauth2**: Part of the 'google-auth-library-python' repository."
-echo "  - **Documentation**: For most libraries, docs are in a 'docs/' folder inside the main repo. SQLAlchemy is a notable exception with its separate 'sqlalchemy-docs' repository."
-
+echo "All files are located in the '$TARGET_DIR/' directory."
