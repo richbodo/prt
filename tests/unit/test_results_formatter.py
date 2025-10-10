@@ -118,7 +118,7 @@ class TestTableFormatting:
     @pytest.mark.unit
     def test_table_column_width_handling(self):
         """Handle long text in table columns."""
-        pytest.skip("ResultsFormatter not yet implemented")
+        pytest.skip("Table column width handling not yet implemented - future enhancement")
         # formatter = ResultsFormatter()
         # contacts = [
         #     fixture_contact(
@@ -172,7 +172,7 @@ class TestCardFormatting:
     @pytest.mark.unit
     def test_card_multiple_items(self):
         """Format multiple items as separate cards."""
-        pytest.skip("ResultsFormatter not yet implemented")
+        pytest.skip("Card separator formatting not yet implemented - future enhancement")
         # formatter = ResultsFormatter()
         # contacts = fixture_contacts_batch(count=3)
         #
