@@ -7,6 +7,9 @@ from prt_src.tui.screens.chat import ChatScreen
 from prt_src.tui.screens.search import SearchScreen
 from prt_src.tui.screens.settings import SettingsScreen
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestChatScreen:
     """Test suite for Chat screen rendering and basic navigation."""

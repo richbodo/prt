@@ -8,6 +8,9 @@ from prt_src.tui.widgets import BottomNav
 from prt_src.tui.widgets import DropdownMenu
 from prt_src.tui.widgets import TopNav
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestHomeScreenRendering:
     """Test Home screen rendering."""
