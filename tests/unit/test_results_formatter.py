@@ -8,9 +8,6 @@ import pytest
 from tests.unit.conftest import fixture_contact
 from tests.unit.conftest import fixture_contacts_batch
 
-# Import will be added after implementation
-# from prt_src.tui.formatters.results import ResultsFormatter
-
 
 class TestResultsFormatterBasic:
     """Test basic ResultsFormatter functionality."""
