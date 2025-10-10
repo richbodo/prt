@@ -552,3 +552,8 @@ When creating commit messages:
   - Any AI authorship attribution
 - Focus on the technical changes and business value
 - Keep commits focused and atomic when possible
+
+When developing new features or experiments, always create a new branch from the latest main (or appropriate base). Do not reuse old or unrelated branches.
+Before committing, ensure you’ve pulled the latest changes from main to stay in sync. After a branch has been merged, delete the old branch to keep the repo clean.
+Use clear, descriptive branch names (e.g., feature/contact-sync or fix/import-bug).
+Regularly run git branch -d to remove stale local branches and keep your workspace tidy.
