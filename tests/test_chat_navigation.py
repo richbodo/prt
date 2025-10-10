@@ -11,6 +11,9 @@ from prt_src.tui.app import PRTApp
 from prt_src.tui.constants import WidgetIDs
 from prt_src.tui.types import AppMode
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 async def chat_app():

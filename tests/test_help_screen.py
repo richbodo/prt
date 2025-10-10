@@ -6,6 +6,9 @@ from prt_src.tui.screens.help import HelpScreen
 from prt_src.tui.widgets import BottomNav
 from prt_src.tui.widgets import TopNav
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestHelpScreenRendering:
     """Test Help screen rendering."""

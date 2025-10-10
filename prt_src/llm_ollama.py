@@ -17,6 +17,7 @@ from typing import Optional
 import requests
 
 from .api import PRTAPI
+from .config import LLMConfigManager
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -38,29 +39,45 @@ class OllamaLLM:
     def __init__(
         self,
         api: PRTAPI,
-        base_url: str = "http://localhost:11434/v1",
-        keep_alive: str = "30m",
-        timeout: int = 120,
+        base_url: Optional[str] = None,
+        keep_alive: Optional[str] = None,
+        timeout: Optional[int] = None,
+        config_manager: Optional[LLMConfigManager] = None,
     ):
         """Initialize Ollama LLM client.
 
         Args:
             api: PRTAPI instance for database operations
-            base_url: Ollama API base URL
-            keep_alive: How long to keep model loaded in memory.
-                       Can be a duration string ("5m", "30m", "1h"),
-                       number in seconds, or -1 for infinite.
-                       Default: "30m" (30 minutes)
-            timeout: Request timeout in seconds. Default: 120 (2 minutes)
-                    For large models like gpt-oss:20b, longer timeouts are needed.
+            base_url: Ollama API base URL (deprecated, use config_manager)
+            keep_alive: How long to keep model loaded in memory (deprecated, use config_manager)
+            timeout: Request timeout in seconds (deprecated, use config_manager)
+            config_manager: LLMConfigManager instance. If None, loads config automatically.
+
+        Note:
+            The base_url, keep_alive, and timeout parameters are deprecated in favor of
+            config_manager. They are kept for backward compatibility but will be removed
+            in a future version.
         """
         self.api = api
-        self.base_url = base_url
-        self.model = "gpt-oss:20b"
-        self.keep_alive = keep_alive
-        self.timeout = timeout
+
+        # Load configuration
+        if config_manager is None:
+            config_manager = LLMConfigManager()
+        self.config_manager = config_manager
+
+        # Use config values, falling back to explicit parameters (backward compat)
+        self.base_url = base_url if base_url is not None else config_manager.llm.base_url
+        self.model = config_manager.llm.model
+        self.keep_alive = keep_alive if keep_alive is not None else config_manager.llm.keep_alive
+        self.timeout = timeout if timeout is not None else config_manager.llm.timeout
+        self.temperature = config_manager.llm.temperature
+
         self.tools = self._create_tools()
         self.conversation_history = []
+
+        logger.info(
+            f"[LLM] Initialized OllamaLLM: model={self.model}, keep_alive={self.keep_alive}, timeout={self.timeout}s"
+        )
 
     async def health_check(self, timeout: float = 2.0) -> bool:
         """Quick health check to see if Ollama is responsive.

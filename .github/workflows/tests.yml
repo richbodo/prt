@@ -1,0 +1,125 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allow manual triggers
+  workflow_dispatch:
+  # Run LLM contract tests weekly
+  schedule:
+    # Run every Monday at 9am UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  # ============================================================================
+  # Unit Tests - Run on every commit
+  # ============================================================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov pytest-asyncio
+
+      - name: Run unit tests
+        run: |
+          pytest -m unit --cov=prt_src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-unit
+
+  # ============================================================================
+  # Integration Tests - Run on every commit
+  # ============================================================================
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio
+
+      - name: Run integration tests
+        run: |
+          pytest -m integration --maxfail=5 -v
+
+  # ============================================================================
+  # LLM Contract Tests - Run weekly or on manual trigger
+  # ============================================================================
+  llm-contract-tests:
+    name: LLM Contract Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Only run on schedule or manual workflow_dispatch
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama service
+        run: |
+          ollama serve &
+          sleep 5
+
+      - name: Pull fast model for CI (llama3.2:3b)
+        run: |
+          # Use smaller, faster model for CI
+          ollama pull llama3.2:3b
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo
+
+      - name: Run contract tests
+        run: |
+          cd tests/llm_contracts
+          # Override provider to use fast model
+          npx promptfoo eval \
+            -c promptfooconfig.yaml \
+            --provider ollama:llama3.2:3b \
+            -o results_ci.json
+
+      - name: Upload contract test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: contract-test-results
+          path: tests/llm_contracts/results_ci.json
