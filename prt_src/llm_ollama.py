@@ -364,9 +364,17 @@ class OllamaLLM:
             return {"error": f"Tool '{tool_name}' not found"}
 
         try:
-            # Special handling for search_contacts: default query to empty string
-            if tool_name == "search_contacts" and "query" not in arguments:
-                arguments["query"] = ""
+            # Special handling for search_contacts: clean and default query parameter
+            if tool_name == "search_contacts":
+                if "query" not in arguments:
+                    arguments["query"] = ""
+                else:
+                    # Clean the query: remove trailing punctuation, quotes, whitespace
+                    query = str(arguments["query"]).strip()
+                    # Remove common punctuation that's not part of search terms
+                    query = query.strip("?!.,;:'\"")
+                    # If empty after cleaning, use empty string (searches all)
+                    arguments["query"] = query
 
             result = tool.function(**arguments)
             return result
