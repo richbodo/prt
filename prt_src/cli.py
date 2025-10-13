@@ -143,31 +143,43 @@ def check_database_health(api: PRTAPI) -> dict:
         }
 
 
-def setup_debug_mode():
-    """Set up debug mode with fixture data."""
+def setup_debug_mode(regenerate: bool = False):
+    """Set up debug mode with fixture data.
+
+    Args:
+        regenerate: If True, force regeneration of debug.db even if it exists.
+                   If False, reuse existing debug.db if present.
+    """
     from tests.fixtures import setup_test_database
 
     # Create a temporary database in the data directory
     debug_db_path = data_dir() / "debug.db"
 
-    # Remove existing debug database if it exists
-    if debug_db_path.exists():
-        debug_db_path.unlink()
+    # Check if debug database already exists
+    if debug_db_path.exists() and not regenerate:
+        console.print(f"📂 Using existing debug database: {debug_db_path}", style="blue")
+        console.print("   (Use --regenerate-fixtures to create a fresh fixture database)", style="dim")
+        console.print()
+    else:
+        # Remove existing debug database if regenerating
+        if debug_db_path.exists():
+            debug_db_path.unlink()
+            console.print("🔄 Regenerating debug database...", style="yellow")
 
-    console.print(f"🔧 Creating debug database at: {debug_db_path}", style="blue")
+        console.print(f"🔧 Creating debug database at: {debug_db_path}", style="blue")
 
-    # Create database with fixture data
-    from .db import create_database
+        # Create database with fixture data
+        from .db import create_database
 
-    db = create_database(debug_db_path)
-    fixtures = setup_test_database(db)
+        db = create_database(debug_db_path)
+        fixtures = setup_test_database(db)
 
-    console.print("📊 Loaded fixture data:", style="green")
-    console.print(f"   • {len(fixtures['contacts'])} contacts with profile images", style="green")
-    console.print(f"   • {len(fixtures['tags'])} tags", style="green")
-    console.print(f"   • {len(fixtures['notes'])} notes", style="green")
-    console.print(f"   • {len(fixtures['relationships'])} relationships", style="green")
-    console.print()
+        console.print("📊 Loaded fixture data:", style="green")
+        console.print(f"   • {len(fixtures['contacts'])} contacts with profile images", style="green")
+        console.print(f"   • {len(fixtures['tags'])} tags", style="green")
+        console.print(f"   • {len(fixtures['notes'])} notes", style="green")
+        console.print(f"   • {len(fixtures['relationships'])} relationships", style="green")
+        console.print()
 
     # Return debug configuration
     return {
@@ -2607,13 +2619,13 @@ def smart_continue_prompt(operation_type: str):
 # Encryption handler functions removed as part of Issue #41
 
 
-def run_interactive_cli(debug: bool = False):
+def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
     """Run the main interactive CLI."""
     if debug:
         console.print(
             "🐛 [bold cyan]DEBUG MODE ENABLED[/bold cyan] - Using fixture data", style="cyan"
         )
-        config = setup_debug_mode()
+        config = setup_debug_mode(regenerate=regenerate_fixtures)
     else:
         # Check setup status
         status = check_setup_status()
@@ -2716,7 +2728,7 @@ def run_interactive_cli(debug: bool = False):
             smart_continue_prompt("error")
 
 
-def _launch_tui_with_fallback(debug: bool = False) -> None:
+def _launch_tui_with_fallback(debug: bool = False, regenerate_fixtures: bool = False) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
         from prt_src.tui.app import PRTApp
@@ -2725,7 +2737,7 @@ def _launch_tui_with_fallback(debug: bool = False) -> None:
             console.print(
                 "🐛 [bold cyan]DEBUG MODE ENABLED[/bold cyan] - Using fixture data", style="cyan"
             )
-            config = setup_debug_mode()
+            config = setup_debug_mode(regenerate=regenerate_fixtures)
             app = PRTApp(config=config, debug=True)
         else:
             app = PRTApp()
@@ -2734,31 +2746,37 @@ def _launch_tui_with_fallback(debug: bool = False) -> None:
     except Exception as e:
         console.print(f"Failed to launch TUI: {e}", style="red")
         console.print("Falling back to classic CLI...", style="yellow")
-        run_interactive_cli(debug=debug)
+        run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
 
 
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
+    regenerate_fixtures: bool = typer.Option(
+        False, "--regenerate-fixtures", help="Force regeneration of fixture database (use with --debug)"
+    ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
     if ctx.invoked_subcommand is None:
         if classic:
-            run_interactive_cli(debug=debug)
+            run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
         else:
             # Launch TUI by default or when explicitly requested
-            _launch_tui_with_fallback(debug=debug)
+            _launch_tui_with_fallback(debug=debug, regenerate_fixtures=regenerate_fixtures)
 
 
 @app.command()
 def run(
-    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data")
+    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
+    regenerate_fixtures: bool = typer.Option(
+        False, "--regenerate-fixtures", help="Force regeneration of fixture database (use with --debug)"
+    ),
 ):
     """Run the interactive CLI."""
-    run_interactive_cli(debug=debug)
+    run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
 
 
 @app.command()
