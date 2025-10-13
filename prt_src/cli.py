@@ -2721,7 +2721,15 @@ def _launch_tui_with_fallback(debug: bool = False) -> None:
     try:
         from prt_src.tui.app import PRTApp
 
-        app = PRTApp()
+        if debug:
+            console.print(
+                "🐛 [bold cyan]DEBUG MODE ENABLED[/bold cyan] - Using fixture data", style="cyan"
+            )
+            config = setup_debug_mode()
+            app = PRTApp(config=config, debug=True)
+        else:
+            app = PRTApp()
+
         app.run()
     except Exception as e:
         console.print(f"Failed to launch TUI: {e}", style="red")

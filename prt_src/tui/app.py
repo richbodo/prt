@@ -110,12 +110,20 @@ class PRTApp(App):
         Binding("?", "help", "Help"),
     ]
 
-    def __init__(self):
-        """Initialize the PRT application."""
+    def __init__(self, config: Optional[dict] = None, debug: bool = False):
+        """Initialize the PRT application.
+
+        Args:
+            config: Optional configuration dict. If None, loads from config file.
+            debug: If True, shows debug mode indicator in UI.
+        """
         super().__init__()
         self.title = "Personal Relationship Tracker"
-        self.sub_title = "Modern TUI for Contact Management"
+        self.sub_title = (
+            "🐛 DEBUG MODE - Fixture Data" if debug else "Modern TUI for Contact Management"
+        )
         self.dark = True  # Use dark theme by default
+        self.debug_mode = debug
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
@@ -125,10 +133,14 @@ class PRTApp(App):
 
         # Load config and initialize database
         try:
-            config = load_config()
+            if config is None:
+                config = load_config()
             db_path = Path(config["db_path"])
             self.db = TUIDatabase(db_path)
             self.db.connect()
+
+            if debug:
+                logger.info(f"[DEBUG MODE] Using database: {db_path}")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             # Create a minimal in-memory database for testing
@@ -157,7 +169,8 @@ class PRTApp(App):
         from prt_src.tui.services.data import DataService
         from prt_src.tui.services.notification import NotificationService
 
-        prt_api = PRTAPI()  # PRTAPI creates its own database connection
+        # Pass config to PRTAPI if provided (for debug mode)
+        prt_api = PRTAPI(config) if config else PRTAPI()
         self.data_service = DataService(prt_api)
         self.notification_service = NotificationService(self)
 
