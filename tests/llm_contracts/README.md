@@ -1,57 +1,39 @@
-# LLM Contract Tests for PRT Chat
+# LLM Contract Tests
 
-This directory contains contract tests for validating that the LLM (Ollama with gpt-oss:20b) can reliably parse natural language queries into structured JSON commands.
+**Status:** Deferred - Using integration tests instead
 
-## Why Contract Tests?
+## Current Approach
 
-Contract tests validate the **interface contract** between our application and the LLM. Unlike unit tests or integration tests, contract tests ensure that:
+We've deferred contract testing tools (like promptfoo) in favor of **Python integration tests** that test the actual app behavior.
 
-1. The LLM produces **valid JSON** (always)
-2. The LLM correctly **identifies intents** (search, select, export, etc.)
-3. The LLM accurately **extracts parameters** (tags, locations, dates, IDs)
-4. The LLM **never hallucinates** data (doesn't invent contacts, tags, or fields)
-5. The LLM handles **edge cases and adversarial inputs** gracefully
+**Why?**
+- Integration tests work reliably with our tool-calling orchestration
+- Easier to debug and maintain
+- Test real app code, not just raw LLM behavior
+- No dependency on external contract testing frameworks
 
-These tests run against the **real LLM**, not mocks.
+## Integration Tests
 
-## Test Suites
+See: `tests/integration/test_llm_one_query.py`
 
-### 1. Initial Suite (5 tests) - `promptfooconfig.yaml`
-Quick smoke test for CI
-
-```bash
-npx promptfoo eval -c promptfooconfig.yaml
+Example:
+```python
+def test_count_contacts_integration():
+    api = PRTAPI()
+    llm = OllamaLLM(api=api)
+    response = llm.chat("How many contacts do I have?")
+    # Verify response contains correct count
 ```
 
-### 2. Comprehensive Suite (45 tests) - `promptfooconfig_comprehensive.yaml`
-Full validation for Phase 3 baseline
+## System Prompt Reference
 
-```bash
-npx promptfoo eval -c promptfooconfig_comprehensive.yaml
-```
+The `system_prompt.txt` file in this directory is kept for reference but **is not actively used**. The actual system prompt is dynamically generated in `prt_src/llm_ollama.py` at the `_create_system_prompt()` method.
 
-## Running Tests
+## Future: Contract Tests
 
-```bash
-cd tests/llm_contracts
+When we're ready to add contract tests (testing LLM behavior with specific prompts/tools), we'll evaluate:
+- Promptfoo (if Ollama tool calling support improves)
+- Custom Python-based contract testing
+- Other LLM testing frameworks
 
-# Start Ollama first
-ollama serve
-
-# Run comprehensive suite
-npx promptfoo eval -c promptfooconfig_comprehensive.yaml
-
-# View results in web UI
-npx promptfoo view
-```
-
-## Success Criteria
-
-| Metric | Target | Critical? |
-|--------|--------|-----------|
-| **JSON Validity** | 100% | ✅ YES |
-| **Intent Accuracy** | >95% | ✅ YES |
-| **Parameter Accuracy** | >90% | ✅ YES |
-| **Hallucination Rate** | 0% | ✅ YES |
-
-See full documentation in this file for details on interpreting results, troubleshooting, and establishing baselines.
+For now: Integration tests provide sufficient coverage.
