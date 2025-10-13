@@ -216,6 +216,66 @@ SAMPLE_CONTACT_RELATIONSHIPS = [
 ]
 
 
+def get_fixture_spec():
+    """Get fixture specification for test verification.
+
+    Tests should use this instead of hardcoding expectations.
+    Single source of truth for what fixtures contain.
+
+    Returns:
+        dict: Comprehensive specification of fixture data including:
+            - contacts: count, items, names, emails, etc.
+            - tags: count, items
+            - notes: count, items, titles
+            - relationships: contact-to-tag/note relationships
+            - relationship_types: contact-to-contact relationship types
+            - contact_relationships: specific contact-to-contact links
+
+    Example:
+        spec = get_fixture_spec()
+        expected_count = spec["contacts"]["count"]
+        assert len(api.list_all_contacts()) == expected_count
+    """
+    return {
+        "contacts": {
+            "count": len(SAMPLE_CONTACTS),
+            "items": SAMPLE_CONTACTS,
+            "names": [c["name"] for c in SAMPLE_CONTACTS],
+            "with_email": [c for c in SAMPLE_CONTACTS if c.get("email")],
+            "without_email": [c for c in SAMPLE_CONTACTS if not c.get("email")],
+            "is_you_contact": [c for c in SAMPLE_CONTACTS if c.get("is_you")],
+            "regular_contacts": [c for c in SAMPLE_CONTACTS if not c.get("is_you")],
+        },
+        "tags": {
+            "count": len(SAMPLE_TAGS),
+            "items": SAMPLE_TAGS,
+        },
+        "notes": {
+            "count": len(SAMPLE_NOTES),
+            "items": SAMPLE_NOTES,
+            "titles": [n["title"] for n in SAMPLE_NOTES],
+        },
+        "relationships": {
+            "count": len(SAMPLE_RELATIONSHIPS),
+            "items": SAMPLE_RELATIONSHIPS,
+            # Helper: Get contacts by tag
+            "by_tag": {
+                tag: [r["contact_name"] for r in SAMPLE_RELATIONSHIPS if tag in r.get("tags", [])]
+                for tag in SAMPLE_TAGS
+            },
+        },
+        "relationship_types": {
+            "count": len(SAMPLE_RELATIONSHIP_TYPES),
+            "items": SAMPLE_RELATIONSHIP_TYPES,
+            "type_keys": [rt["type_key"] for rt in SAMPLE_RELATIONSHIP_TYPES],
+        },
+        "contact_relationships": {
+            "count": len(SAMPLE_CONTACT_RELATIONSHIPS),
+            "items": SAMPLE_CONTACT_RELATIONSHIPS,
+        },
+    }
+
+
 def create_sample_contacts(db):
     """Create sample contacts in the database (schema v6 compatible)."""
     from prt_src.models import Contact
