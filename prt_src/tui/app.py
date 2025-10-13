@@ -131,6 +131,9 @@ class PRTApp(App):
         # Track current container for proper cleanup
         self.current_container_id: Optional[str] = None
 
+        # Store the provided config for later use with PRTAPI
+        provided_config = config
+
         # Load config and initialize database
         try:
             if config is None:
@@ -146,6 +149,8 @@ class PRTApp(App):
             # Create a minimal in-memory database for testing
             self.db = TUIDatabase(Path(":memory:"))
             self.db.connect()
+            # Clear provided_config if initialization failed
+            provided_config = None
 
         # Ensure database tables are created
         try:
@@ -169,8 +174,9 @@ class PRTApp(App):
         from prt_src.tui.services.data import DataService
         from prt_src.tui.services.notification import NotificationService
 
-        # Pass config to PRTAPI if provided (for debug mode)
-        prt_api = PRTAPI(config) if config else PRTAPI()
+        # Only pass config to PRTAPI if explicitly provided (debug mode)
+        # Otherwise let PRTAPI load its own config
+        prt_api = PRTAPI(provided_config) if provided_config is not None else PRTAPI()
         self.data_service = DataService(prt_api)
         self.notification_service = NotificationService(self)
 
