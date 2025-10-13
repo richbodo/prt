@@ -148,198 +148,206 @@ class OllamaLLM:
             return False
 
     def _create_tools(self) -> List[Tool]:
-        """Create the available tools for the LLM."""
+        """Create the available tools for the LLM.
+
+        PHASE 1: Starting with just search_contacts to prove the concept.
+        Other tools are commented out until we validate this approach works.
+        """
         return [
             Tool(
                 name="search_contacts",
-                description="Search for contacts by name, email, or other criteria",
+                description="Search for contacts by name, email, or other criteria. Pass empty string to get ALL contacts.",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string", "description": "Search term to find contacts"}
+                        "query": {
+                            "type": "string",
+                            "description": 'Search term to find contacts. Use empty string "" to return all contacts.',
+                        }
                     },
-                    "required": ["query"],
+                    "required": [],  # query is optional - defaults to empty string
                 },
                 function=self.api.search_contacts,
             ),
-            Tool(
-                name="list_all_contacts",
-                description="Get a list of all contacts in the database",
-                parameters={"type": "object", "properties": {}},
-                function=self.api.list_all_contacts,
-            ),
-            Tool(
-                name="get_contact_details",
-                description="Get detailed information about a specific contact",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "contact_id": {
-                            "type": "integer",
-                            "description": "ID of the contact to get details for",
-                        }
-                    },
-                    "required": ["contact_id"],
-                },
-                function=self.api.get_contact_details,
-            ),
-            Tool(
-                name="search_tags",
-                description="Search for tags by name",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search term to find tags"}
-                    },
-                    "required": ["query"],
-                },
-                function=self.api.search_tags,
-            ),
-            Tool(
-                name="list_all_tags",
-                description="Get a list of all tags in the database",
-                parameters={"type": "object", "properties": {}},
-                function=self.api.list_all_tags,
-            ),
-            Tool(
-                name="get_contacts_by_tag",
-                description="Get all contacts that have a specific tag",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "tag_name": {
-                            "type": "string",
-                            "description": "Name of the tag to search for",
-                        }
-                    },
-                    "required": ["tag_name"],
-                },
-                function=self.api.get_contacts_by_tag,
-            ),
-            Tool(
-                name="search_notes",
-                description="Search for notes by title or content",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "Search term to find notes"}
-                    },
-                    "required": ["query"],
-                },
-                function=self.api.search_notes,
-            ),
-            Tool(
-                name="list_all_notes",
-                description="Get a list of all notes in the database",
-                parameters={"type": "object", "properties": {}},
-                function=self.api.list_all_notes,
-            ),
-            Tool(
-                name="get_contacts_by_note",
-                description="Get all contacts that have a specific note",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "note_title": {
-                            "type": "string",
-                            "description": "Title of the note to search for",
-                        }
-                    },
-                    "required": ["note_title"],
-                },
-                function=self.api.get_contacts_by_note,
-            ),
-            Tool(
-                name="add_tag_to_contact",
-                description="Add a tag to a contact's relationship",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "contact_id": {"type": "integer", "description": "ID of the contact"},
-                        "tag_name": {"type": "string", "description": "Name of the tag to add"},
-                    },
-                    "required": ["contact_id", "tag_name"],
-                },
-                function=self.api.add_tag_to_contact,
-            ),
-            Tool(
-                name="add_note_to_contact",
-                description="Add a note to a contact's relationship",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "contact_id": {"type": "integer", "description": "ID of the contact"},
-                        "note_title": {"type": "string", "description": "Title of the note"},
-                        "note_content": {"type": "string", "description": "Content of the note"},
-                    },
-                    "required": ["contact_id", "note_title", "note_content"],
-                },
-                function=self.api.add_note_to_contact,
-            ),
-            Tool(
-                name="create_tag",
-                description="Create a new tag",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string", "description": "Name of the tag to create"}
-                    },
-                    "required": ["name"],
-                },
-                function=self.api.create_tag,
-            ),
-            Tool(
-                name="create_note",
-                description="Create a new note",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "title": {"type": "string", "description": "Title of the note"},
-                        "content": {"type": "string", "description": "Content of the note"},
-                    },
-                    "required": ["title", "content"],
-                },
-                function=self.api.create_note,
-            ),
-            Tool(
-                name="get_database_stats",
-                description="Get database statistics including contact and relationship counts",
-                parameters={"type": "object", "properties": {}},
-                function=self.api.get_database_stats,
-            ),
-            Tool(
-                name="create_backup_with_comment",
-                description="Create a manual database backup with an optional comment",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "comment": {
-                            "type": "string",
-                            "description": "Optional description for the backup",
-                        }
-                    },
-                },
-                function=self.api.create_backup_with_comment,
-            ),
-            Tool(
-                name="execute_sql",
-                description="Execute a raw SQL query. Write operations require confirm=true and trigger an automatic backup",
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "sql": {
-                            "type": "string",
-                            "description": "SQL to execute",
-                        },
-                        "confirm": {
-                            "type": "boolean",
-                            "description": "Must be true for write operations",
-                        },
-                    },
-                    "required": ["sql"],
-                },
-                function=self.api.execute_sql,
-            ),
+            # PHASE 2: Add these tools after search_contacts is proven reliable
+            # Tool(
+            #     name="list_all_contacts",
+            #     description="Get a list of all contacts in the database",
+            #     parameters={"type": "object", "properties": {}},
+            #     function=self.api.list_all_contacts,
+            # ),
+            # Tool(
+            #     name="get_contact_details",
+            #     description="Get detailed information about a specific contact",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "contact_id": {
+            #                 "type": "integer",
+            #                 "description": "ID of the contact to get details for",
+            #             }
+            #         },
+            #         "required": ["contact_id"],
+            #     },
+            #     function=self.api.get_contact_details,
+            # ),
+            # Tool(
+            #     name="search_tags",
+            #     description="Search for tags by name",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "query": {"type": "string", "description": "Search term to find tags"}
+            #         },
+            #         "required": ["query"],
+            #     },
+            #     function=self.api.search_tags,
+            # ),
+            # Tool(
+            #     name="list_all_tags",
+            #     description="Get a list of all tags in the database",
+            #     parameters={"type": "object", "properties": {}},
+            #     function=self.api.list_all_tags,
+            # ),
+            # Tool(
+            #     name="get_contacts_by_tag",
+            #     description="Get all contacts that have a specific tag",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "tag_name": {
+            #                 "type": "string",
+            #                 "description": "Name of the tag to search for",
+            #             }
+            #         },
+            #         "required": ["tag_name"],
+            #     },
+            #     function=self.api.get_contacts_by_tag,
+            # ),
+            # Tool(
+            #     name="search_notes",
+            #     description="Search for notes by title or content",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "query": {"type": "string", "description": "Search term to find notes"}
+            #         },
+            #         "required": ["query"],
+            #     },
+            #     function=self.api.search_notes,
+            # ),
+            # Tool(
+            #     name="list_all_notes",
+            #     description="Get a list of all notes in the database",
+            #     parameters={"type": "object", "properties": {}},
+            #     function=self.api.list_all_notes,
+            # ),
+            # Tool(
+            #     name="get_contacts_by_note",
+            #     description="Get all contacts that have a specific note",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "note_title": {
+            #                 "type": "string",
+            #                 "description": "Title of the note to search for",
+            #             }
+            #         },
+            #         "required": ["note_title"],
+            #     },
+            #     function=self.api.get_contacts_by_note,
+            # ),
+            # Tool(
+            #     name="add_tag_to_contact",
+            #     description="Add a tag to a contact's relationship",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "contact_id": {"type": "integer", "description": "ID of the contact"},
+            #             "tag_name": {"type": "string", "description": "Name of the tag to add"},
+            #         },
+            #         "required": ["contact_id", "tag_name"],
+            #     },
+            #     function=self.api.add_tag_to_contact,
+            # ),
+            # Tool(
+            #     name="add_note_to_contact",
+            #     description="Add a note to a contact's relationship",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "contact_id": {"type": "integer", "description": "ID of the contact"},
+            #             "note_title": {"type": "string", "description": "Title of the note"},
+            #             "note_content": {"type": "string", "description": "Content of the note"},
+            #         },
+            #         "required": ["contact_id", "note_title", "note_content"],
+            #     },
+            #     function=self.api.add_note_to_contact,
+            # ),
+            # Tool(
+            #     name="create_tag",
+            #     description="Create a new tag",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "name": {"type": "string", "description": "Name of the tag to create"}
+            #         },
+            #         "required": ["name"],
+            #     },
+            #     function=self.api.create_tag,
+            # ),
+            # Tool(
+            #     name="create_note",
+            #     description="Create a new note",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "title": {"type": "string", "description": "Title of the note"},
+            #             "content": {"type": "string", "description": "Content of the note"},
+            #         },
+            #         "required": ["title", "content"],
+            #     },
+            #     function=self.api.create_note,
+            # ),
+            # Tool(
+            #     name="get_database_stats",
+            #     description="Get database statistics including contact and relationship counts",
+            #     parameters={"type": "object", "properties": {}},
+            #     function=self.api.get_database_stats,
+            # ),
+            # Tool(
+            #     name="create_backup_with_comment",
+            #     description="Create a manual database backup with an optional comment",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "comment": {
+            #                 "type": "string",
+            #                 "description": "Optional description for the backup",
+            #             }
+            #         },
+            #     },
+            #     function=self.api.create_backup_with_comment,
+            # ),
+            # Tool(
+            #     name="execute_sql",
+            #     description="Execute a raw SQL query. Write operations require confirm=true and trigger an automatic backup",
+            #     parameters={
+            #         "type": "object",
+            #         "properties": {
+            #             "sql": {
+            #                 "type": "string",
+            #                 "description": "SQL to execute",
+            #             },
+            #             "confirm": {
+            #                 "type": "boolean",
+            #                 "description": "Must be true for write operations",
+            #             },
+            #         },
+            #         "required": ["sql"],
+            #     },
+            #     function=self.api.execute_sql,
+            # ),
         ]
 
     def _get_tool_by_name(self, name: str) -> Optional[Tool]:
@@ -356,6 +364,10 @@ class OllamaLLM:
             return {"error": f"Tool '{tool_name}' not found"}
 
         try:
+            # Special handling for search_contacts: default query to empty string
+            if tool_name == "search_contacts" and "query" not in arguments:
+                arguments["query"] = ""
+
             result = tool.function(**arguments)
             return result
         except Exception as e:

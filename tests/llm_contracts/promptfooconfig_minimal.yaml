@@ -1,0 +1,41 @@
+description: "Minimal contract test - ONE test to prove tool calling works"
+
+# System prompt
+prompts:
+  - file://system_prompt_search_only.txt
+
+# Ollama provider with ONE tool
+providers:
+  - id: ollama:llama3.2:3b
+    config:
+      tools:
+        - name: search_contacts
+          description: "Search contacts by name, email, phone, or tags. Returns matching contacts with full details."
+          parameters:
+            type: object
+            properties:
+              query:
+                type: string
+                description: "Search term to find contacts. Leave empty to get all contacts."
+            required: []
+      temperature: 0.1
+      num_predict: 500
+
+defaultTest:
+  options:
+    timeout: 30000
+
+# Just ONE test to start
+tests:
+  - description: "Count all contacts - LLM should call search_contacts"
+    vars:
+      user_query: "How many contacts do I have?"
+    assert:
+      # Simple boolean assertion - did it call ANY tool?
+      - type: javascript
+        value: |
+          // Return true if tool_calls exists and has at least one call
+          const hasToolCalls = output.tool_calls && output.tool_calls.length > 0;
+          return hasToolCalls;
+
+outputPath: ./promptfoo_results_minimal.json
