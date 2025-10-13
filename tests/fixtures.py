@@ -4,6 +4,14 @@ Test fixtures for PRT database.
 This module provides test data and utilities for setting up test databases
 with realistic sample data including contacts, relationships, tags, notes,
 and profile images.
+
+Schema Compatibility: v6
+- Supports first_name, last_name fields
+- Supports is_you flag for identifying the user's contact
+- Includes 7 contacts (6 regular + 1 "You" contact)
+- Compatible with all current database operations
+
+Last Updated: 2025-10-13 (Phase 1: Quick fix for schema v6 compatibility)
 """
 
 import base64
@@ -35,43 +43,70 @@ def _generate_profile_images():
 # Generate realistic 256x256 JPEG profile images
 SAMPLE_IMAGES = _generate_profile_images()
 
-# Sample contact data
+# Sample contact data (schema v6 compatible)
 SAMPLE_CONTACTS = [
     {
         "name": "John Doe",
+        "first_name": "John",
+        "last_name": "Doe",
         "email": "john.doe@example.com",
         "phone": "+1-555-0101",
+        "is_you": False,
         "image_key": "john_doe.jpg",
     },
     {
         "name": "Jane Smith",
+        "first_name": "Jane",
+        "last_name": "Smith",
         "email": "jane.smith@email.com",
         "phone": "+1-555-0102",
+        "is_you": False,
         "image_key": "jane_smith.jpg",
     },
     {
         "name": "Bob Wilson",
+        "first_name": "Bob",
+        "last_name": "Wilson",
         "email": "bob@work.com",
         "phone": "+1-555-0103",
+        "is_you": False,
         "image_key": "bob_wilson.jpg",
     },
     {
         "name": "Alice Johnson",
+        "first_name": "Alice",
+        "last_name": "Johnson",
         "email": "alice.johnson@gmail.com",
         "phone": "+1-555-0104",
+        "is_you": False,
         "image_key": "alice_johnson.jpg",
     },
     {
         "name": "Charlie Brown",
+        "first_name": "Charlie",
+        "last_name": "Brown",
         "email": "charlie@company.org",
         "phone": "+1-555-0105",
+        "is_you": False,
         "image_key": "charlie_brown.jpg",
     },
     {
         "name": "Diana Prince",
+        "first_name": "Diana",
+        "last_name": "Prince",
         "email": "diana.prince@hero.com",
         "phone": "+1-555-0106",
+        "is_you": False,
         "image_key": "diana_prince.jpg",
+    },
+    {
+        "name": "You",
+        "first_name": "You",
+        "last_name": "",
+        "email": None,
+        "phone": None,
+        "is_you": True,
+        "image_key": None,
     },
 ]
 
@@ -182,7 +217,7 @@ SAMPLE_CONTACT_RELATIONSHIPS = [
 
 
 def create_sample_contacts(db):
-    """Create sample contacts in the database."""
+    """Create sample contacts in the database (schema v6 compatible)."""
     from prt_src.models import Contact
 
     contacts = {}
@@ -200,8 +235,11 @@ def create_sample_contacts(db):
 
         contact = Contact(
             name=contact_data["name"],
-            email=contact_data["email"],
-            phone=contact_data["phone"],
+            first_name=contact_data.get("first_name"),
+            last_name=contact_data.get("last_name"),
+            email=contact_data.get("email"),
+            phone=contact_data.get("phone"),
+            is_you=contact_data.get("is_you", False),
             profile_image=profile_image,
             profile_image_filename=profile_image_filename,
             profile_image_mime_type=profile_image_mime_type,
