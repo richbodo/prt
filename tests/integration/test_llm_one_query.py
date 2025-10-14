@@ -5,13 +5,24 @@ If this passes, tool calling works. If it fails, we have a real problem.
 """
 
 import pytest
+import requests
 
 from prt_src.api import PRTAPI
 from prt_src.llm_ollama import OllamaLLM
 from tests.fixtures import get_fixture_spec
 
 
+def is_ollama_available() -> bool:
+    """Check if Ollama is running and available."""
+    try:
+        response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        return response.status_code == 200
+    except (requests.RequestException, ConnectionError):
+        return False
+
+
 @pytest.mark.integration
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
 def test_count_contacts_integration(test_db):
     """Integration: 'How many contacts?' should return correct count.
 
