@@ -152,13 +152,21 @@ def setup_debug_mode(regenerate: bool = False):
     """
     from tests.fixtures import setup_test_database
 
+    # Enable DEBUG logging in debug mode for better troubleshooting
+    from .logging_config import setup_logging
+
+    setup_logging(log_level="DEBUG")
+    console.print("🔍 DEBUG logging enabled (check prt_data/prt.log)", style="dim")
+
     # Create a temporary database in the data directory
     debug_db_path = data_dir() / "debug.db"
 
     # Check if debug database already exists
     if debug_db_path.exists() and not regenerate:
         console.print(f"📂 Using existing debug database: {debug_db_path}", style="blue")
-        console.print("   (Use --regenerate-fixtures to create a fresh fixture database)", style="dim")
+        console.print(
+            "   (Use --regenerate-fixtures to create a fresh fixture database)", style="dim"
+        )
         console.print()
     else:
         # Remove existing debug database if regenerating
@@ -175,7 +183,9 @@ def setup_debug_mode(regenerate: bool = False):
         fixtures = setup_test_database(db)
 
         console.print("📊 Loaded fixture data:", style="green")
-        console.print(f"   • {len(fixtures['contacts'])} contacts with profile images", style="green")
+        console.print(
+            f"   • {len(fixtures['contacts'])} contacts with profile images", style="green"
+        )
         console.print(f"   • {len(fixtures['tags'])} tags", style="green")
         console.print(f"   • {len(fixtures['notes'])} notes", style="green")
         console.print(f"   • {len(fixtures['relationships'])} relationships", style="green")
@@ -2754,7 +2764,9 @@ def main(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
     regenerate_fixtures: bool = typer.Option(
-        False, "--regenerate-fixtures", help="Force regeneration of fixture database (use with --debug)"
+        False,
+        "--regenerate-fixtures",
+        help="Force regeneration of fixture database (use with --debug)",
     ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
@@ -2772,7 +2784,9 @@ def main(
 def run(
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
     regenerate_fixtures: bool = typer.Option(
-        False, "--regenerate-fixtures", help="Force regeneration of fixture database (use with --debug)"
+        False,
+        "--regenerate-fixtures",
+        help="Force regeneration of fixture database (use with --debug)",
     ),
 ):
     """Run the interactive CLI."""
