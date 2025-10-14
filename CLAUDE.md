@@ -9,6 +9,35 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 
+## Testing Philosophy: Headless First
+
+**CRITICAL**: Always write automated, headless tests wherever possible.
+
+- ✅ **Default**: Write headless tests using pytest + Pilot (for TUI) or pytest alone (for non-TUI code)
+- ⚠️ **Exception**: Manual testing only when headless testing is technically impossible
+- 📝 **Document**: When you determine manual testing is required, note this in `docs/MANUAL_TESTING.md`
+
+### Quick Reference:
+- **TUI testing**: Use Textual Pilot for headless screen testing (see `EXTERNAL_DOCS/textual/docs/guide/testing.md`)
+- **LLM testing**: Use fixtures and mocks; skip real LLM calls in CI with `@pytest.mark.skipif`
+- **Database testing**: Use real SQLite with fixtures from `tests/fixtures.py`
+- **Detailed guidance**: See `docs/TESTING_STRATEGY.md` for the complete 4-layer testing pyramid
+
+### Test Commands:
+```bash
+# Run all tests
+./prt_env/bin/pytest tests/ -v
+
+# Run only unit tests (< 1 sec)
+./prt_env/bin/pytest -m unit
+
+# Run only integration tests (< 5 sec)
+./prt_env/bin/pytest -m integration
+
+# Run specific test file
+./prt_env/bin/pytest tests/test_home_screen.py -v
+```
+
 ## External Documentation Policy
 
 **ALWAYS check `EXTERNAL_DOCS/` directory FIRST** before requesting documentation or library source code:
@@ -214,18 +243,10 @@ python -m prt_src.tui
 ### Virtual Environment
 The project uses a Python virtual environment in `prt_env/` created by `init.sh`. The script handles platform-specific dependency installation (macOS via Homebrew, Linux via apt).
 
-### Testing and Code Quality
+### Code Quality
 ```bash
 # IMPORTANT: Always activate virtual environment first
 source ./init.sh  # This also installs dev dependencies
-
-# Run all tests
-./prt_env/bin/python -m pytest tests/ -v
-
-# Run specific test files or modules
-./prt_env/bin/python -m pytest tests/test_api.py -v
-./prt_env/bin/python -m pytest tests/test_relationship_cli.py -v
-./prt_env/bin/python -m pytest tests/test_home_screen.py -v
 
 # Run linting and formatting (MUST use venv binaries)
 ./prt_env/bin/ruff check prt_src/ --fix
@@ -234,10 +255,9 @@ source ./init.sh  # This also installs dev dependencies
 # Run both linter and formatter on specific files
 ./prt_env/bin/ruff check prt_src/cli.py prt_src/db.py --fix
 ./prt_env/bin/black prt_src/cli.py prt_src/db.py
-
-# Create standalone test database with fixture data
-cd tests && python fixtures.py
 ```
+
+**For testing guidance**, see the "Testing Philosophy" section above and `docs/TESTING_STRATEGY.md`.
 
 ## High-Level Architecture
 
@@ -484,11 +504,19 @@ func.count(), func.max(), func.min()
 
 ## TUI Development Guidelines
 
-### Testing with Textual
-- **Textual Testing Guide**: See `EXTERNAL_DOCS/textual/docs/guide/testing.md` for comprehensive Textual testing patterns and best practices
-- The guide covers async testing with pytest, UI interaction testing, and Textual's dedicated test features
-- **Future Task**: Refactor all TUI tests to use Textual's recommended testing patterns, which will enable Claude Code to perform more automated testing
-- Current tests use basic pytest patterns; Textual's approach provides better UI interaction testing capabilities
+### Testing TUI Components
+**Always write headless tests using Textual Pilot** - see "Testing Philosophy" section at the top of this file.
+
+**Key Resources**:
+- **Textual Testing Guide**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` (official Textual testing patterns)
+- **PRT Testing Strategy**: `docs/TESTING_STRATEGY.md` (4-layer pyramid, examples, best practices)
+- **TUI-Specific Tips**: `docs/TUI/TUI_Dev_Tips.md` (common patterns, debugging)
+
+**Current Tests** (examples to follow):
+- `tests/test_home_screen.py` - Home screen navigation with Pilot
+- `tests/test_help_screen.py` - Help screen rendering and navigation
+- `tests/test_chat_navigation.py` - Chat screen modes and scrolling
+- `tests/unit/` - Unit tests for formatters, services
 
 ### Parallel Development
 - When working on multiple parallel features, expect merge conflicts in `__init__.py` and `styles.tcss`
@@ -515,14 +543,6 @@ func.count(), func.max(), func.min()
   @on(Button.Pressed, "#save-btn")
   def handle_save(self) -> None:
       ...
-  ```
-
-### Testing Approach
-- Use lightweight TDD: Write 2-3 failing tests → implement → expand tests
-- Run tests with: `./prt_env/bin/python -m pytest tests/test_*.py -v`
-- Always lint before committing: 
-  ```bash
-  ./prt_env/bin/ruff check prt_src/tui/ --fix && ./prt_env/bin/black prt_src/tui/
   ```
 
 ### Widget Organization

@@ -38,9 +38,11 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Launch TUI | `python -m prt_src` |
 | Run classic CLI | `python -m prt_src --classic` |
 | Debug TUI with fixtures | `python -m prt_src --debug` |
-| Quick tests | `./prt_env/bin/python -m pytest tests/ -x` |
-| Full tests | `./prt_env/bin/python -m pytest tests/ -v` |
-| Coverage report | `./prt_env/bin/python -m pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
+| Quick tests (fast) | `./prt_env/bin/pytest tests/ -x` |
+| Unit tests only (< 1 sec) | `./prt_env/bin/pytest -m unit` |
+| Integration tests only (< 5 sec) | `./prt_env/bin/pytest -m integration` |
+| Full test suite | `./prt_env/bin/pytest tests/ -v` |
+| Coverage report | `./prt_env/bin/pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
 | Lint | `./prt_env/bin/ruff check prt_src/ tests/` |
 | Auto-fix formatting | `./prt_env/bin/ruff check --fix prt_src/ tests/ && ./prt_env/bin/black prt_src/ tests/` |
 | Clean caches/builds | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; find . -type f -name "*.pyc" -delete` |
@@ -48,6 +50,70 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Run pre-commit everywhere | `./prt_env/bin/pre-commit run --all-files` |
 
 > **Cursor/LLM tip:** Paste the table above into your prompt or keep it pinned in a scratchpad so Codex/Claude can cite the correct commands for you.
+
+## 5. Testing Philosophy: Headless First
+
+**ALWAYS write automated, headless tests wherever possible.**
+
+This applies to both humans and LLMs working on PRT. The project has comprehensive headless testing infrastructure:
+- **TUI testing**: Use Textual Pilot to simulate user interactions without rendering to terminal
+- **LLM testing**: Use fixtures and mocks; skip real LLM calls in CI with `@pytest.mark.skipif`
+- **Database testing**: Use real SQLite with fixtures (no mocking needed - SQLite is fast)
+
+### The 4-Layer Testing Pyramid
+
+Tests are organized in layers from fast/frequent (bottom) to slow/rare (top):
+
+1. **Unit Tests** ⚡ (< 1 sec) - Pure functions, formatters, no external dependencies
+   - `./prt_env/bin/pytest -m unit`
+   - Examples: `tests/unit/test_results_formatter.py`, `tests/unit/test_selection_service.py`
+
+2. **Integration Tests** ⚙️ (< 5 sec) - Component interactions, workflows, screen navigation
+   - `./prt_env/bin/pytest -m integration`
+   - Examples: `tests/test_home_screen.py`, `tests/integration/test_llm_one_query.py`
+
+3. **Contract Tests** 🧪 (1-5 min) - LLM behavior validation with Promptfoo
+   - `npx promptfoo@latest eval -c tests/llm_contracts/promptfooconfig.yaml`
+
+4. **Manual Tests** 🐢 (5-10 min) - Visual validation, performance, accessibility
+   - See `docs/MANUAL_TESTING.md` for specific scenarios
+
+### Key Testing Resources
+
+- **Comprehensive Guide**: `docs/TESTING_STRATEGY.md` - Complete testing strategy, examples, best practices
+- **TUI Testing**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` - Official Textual testing patterns
+- **TUI Dev Tips**: `docs/TUI/TUI_Dev_Tips.md` - PRT-specific patterns and debugging
+- **Manual Testing**: `docs/MANUAL_TESTING.md` - Scenarios requiring manual testing
+- **Test Fixtures**: `tests/fixtures.py` - Sample data (SAMPLE_CONTACTS, get_fixture_spec)
+
+### Quick Examples
+
+**TUI Test with Pilot (headless)**:
+```python
+async def test_home_screen_navigation(pilot_screen):
+    """Test navigation using Textual Pilot."""
+    async with pilot_screen(HomeScreen) as pilot:
+        await pilot.press("h")  # Press 'h' to navigate to help
+        assert isinstance(pilot.app.screen, HelpScreen)
+```
+
+**LLM Integration Test (skipped in CI)**:
+```python
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
+def test_count_contacts(test_db):
+    api = PRTAPI(config=test_db_config)
+    llm = OllamaLLM(api=api)
+    response = llm.chat("How many contacts do I have?")
+    assert "7" in response or "seven" in response.lower()
+```
+
+### When Manual Testing Is Required
+
+See `docs/MANUAL_TESTING.md` for full list. Common cases:
+- Visual regression (colors, alignment, responsive layout)
+- Performance profiling (memory usage, render time)
+- Accessibility testing (screen readers, keyboard-only navigation)
+- Platform-specific rendering (different terminals)
 
 ## 6. Git Quick Reference
 
@@ -75,10 +141,15 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 
 ## 8. Documentation Map & Freshness
 
-| Doc | Status | Why you’d read it |
+| Doc | Status | Why you'd read it |
 | --- | --- | --- |
 | `README.md` | USE | High-level project overview and links into the doc set. |
-| `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, AI helper guidance. |
+| `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, testing cheat sheet. |
+| `docs/TESTING_STRATEGY.md` | USE | **Canonical testing guide** - 4-layer pyramid, examples, best practices. |
+| `docs/MANUAL_TESTING.md` | USE | Scenarios requiring manual testing (visual, performance, etc). |
+| `docs/TUI/TUI_Dev_Tips.md` | USE | TUI-specific patterns, debugging, common issues. |
+| `docs/TUI/Chat_Screen_Testing_Strategy.md` | USE | LLM-powered UI testing strategy. |
+| `CLAUDE.md` | USE | LLM instructions - includes testing philosophy, debugging patterns. |
 | `docs/INSTALL.md` | NEEDS WORK | Legacy SQLCipher install steps. Prefer the quick setup above. |
 | `docs/ENCRYPTION_IMPLEMENTATION.md` | NEEDS WORK | Design discussion for future encryption work. |
 | `docs/TUI_Specification.md` | NEEDS WORK | Requirements and flows for the modern TUI. |
