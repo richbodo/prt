@@ -170,52 +170,58 @@ python -m prt_src db-status
 python -m prt_src --classic
 ```
 
-## 11. TUI Debugging System
+## 11. TUI Testing & Debugging
 
-### **Automated Textual Debug Workflow**
+### **Headless Testing with Textual Pilot**
 
-WORK IN PROGRESS - WORTH A TRY
+PRT uses Textual Pilot for automated, headless TUI testing. This allows testing screen navigation, key presses, and widget interactions without rendering to a terminal.
 
-For TUI development and debugging, use the comprehensive debug system in `docs/TUI/DEBUGGING/`:
+**Quick Example**:
+```python
+async def test_home_screen_navigation(pilot_screen):
+    """Test navigation using Textual Pilot."""
+    async with pilot_screen(HomeScreen) as pilot:
+        # Simulate pressing 'h' key
+        await pilot.press("h")
 
-```bash
-# Setup environment first (always start here)
-source ./init.sh
-
-# Setup (2-terminal workflow)
-# Terminal 1: Start debug console
-textual console --port 7342 -v
-
-# Terminal 2: Run TUI with debugging
-textual run --dev --port 7342 python -m prt_src
+        # Verify help screen is now active
+        assert isinstance(pilot.app.screen, HelpScreen)
 ```
 
-### **Interactive Debug Features**
-When the TUI is running with debug mode:
-- **`d`** - Toggle visual debug borders (containers, scrollable regions)
-- **`l`** - Log comprehensive layout analysis with widget tree
-- **`n`** - Test notification system with different severity levels
-- **`s`** - Trigger screenshot capture (requires screenpipe integration)
-- **`r`** - Test responsive behavior at multiple screen sizes
+**Running TUI Tests**:
+```bash
+# Run all TUI integration tests
+./prt_env/bin/pytest tests/test_*_screen.py -v
 
-### **Debug Capabilities**
-- **Layout Analysis**: Complete widget tree with size/style information
-- **Issue Detection**: Automatic overflow, sizing, and responsive problem identification
-- **Visual Debugging**: CSS borders and highlights for layout visualization
-- **Performance Monitoring**: Render time tracking and widget count analysis
-- **Screenpipe Integration**: Visual state capture correlated with app state (manually start screenpipe and guide LLMs to grab screenshots)
+# Run specific TUI test
+./prt_env/bin/pytest tests/test_home_screen.py::test_navigation -v
+```
 
-### **When to Use TUI Debugging**
-- Layout issues (widgets not appearing, incorrect sizing)
-- Container and scrolling problems
-- Screen resizing and responsive behavior issues
-- Performance optimization and bottleneck identification
-- Visual regression testing during development
+**Current TUI Tests** (examples to follow):
+- `tests/test_home_screen.py` - Home screen navigation
+- `tests/test_help_screen.py` - Help screen rendering
+- `tests/test_chat_navigation.py` - Chat screen modes and scrolling
+- `tests/test_phase2_screens.py` - Search and Settings screens
 
-### **TUI DEBUG Documentation References**
-- **Main Guide**: `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md`
-- **Demo App**: `docs/TUI/DEBUGGING/textual_debug_demo.py`
-- **Development Tips**: `docs/TUI/TUI_Dev_Tips.md`
-- **Common Patterns**: Widget inheritance, CSS debugging, container management
+### **Debugging TUI Issues**
+
+**Primary Tools**:
+1. **Logging** - Add comprehensive logging to trace event flow (see `docs/TUI/TUI_Dev_Tips.md`)
+2. **Pilot** - Write failing test to reproduce issue, then fix
+3. **Textual Devtools** - Use `textual run --dev` for visual debugging
+
+**Watch Logs** (2-terminal setup):
+```bash
+# Terminal 1: Watch logs in real-time
+tail -f prt_data/prt.log | grep '\[SCREEN\]'
+
+# Terminal 2: Run TUI
+./prt_env/bin/python -m prt_src
+```
+
+**For Complete TUI Development Guidance**:
+- **Testing**: `docs/TESTING_STRATEGY.md` - Complete guide with Pilot examples
+- **Debugging**: `docs/TUI/TUI_Dev_Tips.md` - Logging patterns, common issues, Pilot debugging
+- **Textual Docs**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` - Official Textual testing guide
 
 

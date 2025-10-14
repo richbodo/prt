@@ -108,10 +108,19 @@ def test_count_contacts_integration(test_db):
 - **Speed**: 1-5 minutes
 - **Frequency**: Before merging PR
 - **What**: LLM behavior validation with real model
-- **Tool**: Promptfoo for systematic LLM testing
+- **Status**: ⚠️ **Not Currently Active** - Infrastructure exists but not actively maintained
 
-**Example**: `tests/llm_contracts/promptfooconfig_search_only.yaml`
+**Note**: Contract testing files exist in `tests/llm_contracts/` but are not currently part of the standard test flow. Instead, we rely on:
+- Layer 2 integration tests with `@pytest.mark.skipif` for LLM validation
+- Manual testing documented in `docs/MANUAL_TESTING.md`
+
+**If/when we reactivate contract testing**, the infrastructure uses Promptfoo:
+
+<details>
+<summary>Example Promptfoo Configuration (click to expand)</summary>
+
 ```yaml
+# tests/llm_contracts/promptfooconfig_search_only.yaml
 prompts:
   - "How many contacts do I have?"
   - "Find contacts named John"
@@ -128,6 +137,8 @@ tests:
 ```
 
 **Run**: `npx promptfoo@latest eval -c tests/llm_contracts/promptfooconfig_search_only.yaml`
+
+</details>
 
 ### Layer 4: E2E / Manual Tests 🐢
 - **Speed**: 5-10 minutes
@@ -203,10 +214,7 @@ def test_search_workflow_with_mock_llm(mock_llm):
     assert "Alice" in result.contacts[0].name
 ```
 
-**Contract Tests**: Real LLM with Promptfoo (validates model behavior)
-```bash
-npx promptfoo@latest eval -c tests/llm_contracts/promptfooconfig.yaml
-```
+**Contract Tests**: ⚠️ **Not currently active** - use integration tests with `@pytest.mark.skipif` instead
 
 **Skip in CI When Ollama Unavailable**:
 ```python
@@ -336,7 +344,7 @@ tests/
 ├── test_db.py
 ├── test_relationships.py
 │
-├── llm_contracts/         # Layer 3: Contract tests (Promptfoo)
+├── llm_contracts/         # Layer 3: Contract tests (not currently active)
 │   ├── promptfooconfig_search_only.yaml
 │   └── promptfooconfig_comprehensive.yaml
 │
@@ -537,7 +545,6 @@ Follow TDD cycle where appropriate:
 ### External
 - **Textual Testing Guide**: `EXTERNAL_DOCS/textual/docs/guide/testing.md`
 - **Pytest Documentation**: https://docs.pytest.org/
-- **Promptfoo**: https://promptfoo.dev/docs/
 
 ---
 
