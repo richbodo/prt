@@ -272,7 +272,7 @@ def run_setup_wizard():
     except Exception as e:
         console.print(f"✗ Setup failed: {e}", style="bold red")
         console.print("Please check the error and try again.", style="yellow")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def show_main_menu(api: PRTAPI):
@@ -492,10 +492,9 @@ def handle_note_search_results(api: PRTAPI, query: str) -> None:
                     console.print(f"   Preview: {preview}", style="dim")
 
                 # Ask if user wants to see full note
-                if len(note_content) > 100:
-                    if Confirm.ask("   Show full note?", default=False):
-                        show_full_note(note_title, note_content)
-                        continue
+                if len(note_content) > 100 and Confirm.ask("   Show full note?", default=False):
+                    show_full_note(note_title, note_content)
+                    continue
 
                 # Get contacts associated with this note
                 contacts = api.get_contacts_by_note(note_title)
@@ -2648,7 +2647,7 @@ def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
                 config = run_setup_wizard()
             else:
                 console.print("Setup is required to use PRT. Exiting.", style="red")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from None
         else:
             config = status["config"]
 
@@ -2657,7 +2656,7 @@ def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
         api = PRTAPI(config)
     except Exception as e:
         console.print(f"Failed to initialize API: {e}", style="bold red")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Check database health on startup (only in non-debug mode)
     if not debug:
@@ -2806,14 +2805,14 @@ def test():
         config = load_config()
         if not config:
             console.print("No configuration found. Run 'setup' first.", style="red")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
         db_path = Path(config.get("db_path", "prt_data/prt.db"))
         console.print(f"Testing database connection to: {db_path}", style="blue")
 
         if not db_path.exists():
             console.print("Database file not found.", style="red")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
         # Try to connect to database
         db = create_database(db_path)
@@ -2824,11 +2823,11 @@ def test():
             console.print(f"  Relationships: {db.count_relationships()}", style="green")
         else:
             console.print("✗ Database is corrupted or invalid", style="red")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     except Exception as e:
         console.print(f"✗ Database test failed: {e}", style="red")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -2845,7 +2844,7 @@ def chat():
             config = run_setup_wizard()
         else:
             console.print("Setup is required to use PRT chat. Exiting.", style="red")
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
     else:
         config = status["config"]
 
@@ -2854,7 +2853,7 @@ def chat():
         api = PRTAPI(config)
     except Exception as e:
         console.print(f"Failed to initialize API: {e}", style="bold red")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Start chat mode directly
     console.print("Starting LLM chat mode...", style="blue")
@@ -2865,7 +2864,7 @@ def chat():
         console.print(
             "Make sure Ollama is running and gpt-oss:20b model is available.", style="yellow"
         )
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 # encrypt-db and decrypt-db commands removed as part of Issue #41
@@ -2878,7 +2877,7 @@ def db_status():
 
     if status["needs_setup"]:
         console.print(f"PRT needs setup: {status['reason']}", style="yellow")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     config = status["config"]
     db_path = Path(config.get("db_path", "prt_data/prt.db"))
