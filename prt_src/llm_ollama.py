@@ -376,6 +376,17 @@ class OllamaLLM:
                     # If empty after cleaning, use empty string (searches all)
                     arguments["query"] = query
 
+            # Filter arguments to only include parameters defined in tool schema
+            # This prevents LLM from passing extra parameters like 'limit' that the function doesn't accept
+            if tool.parameters and "properties" in tool.parameters:
+                allowed_params = set(tool.parameters["properties"].keys())
+                filtered_args = {k: v for k, v in arguments.items() if k in allowed_params}
+                logger.debug(
+                    f"[LLM] Filtered arguments from {list(arguments.keys())} "
+                    f"to {list(filtered_args.keys())}"
+                )
+                arguments = filtered_args
+
             result = tool.function(**arguments)
             return result
         except Exception as e:
@@ -484,11 +495,26 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                     return "Error: Too many tool calls requested. Please try a simpler query."
 
                 for tool_call in tool_calls:
+                    # Enhanced debugging: Log raw tool_call structure
+                    logger.debug(
+                        f"[LLM] Raw tool_call structure: {json.dumps(tool_call, indent=2)}"
+                    )
+
                     if not tool_call.get("function"):
+                        logger.warning(f"[LLM] Tool call missing 'function' field: {tool_call}")
                         continue
 
-                    tool_name = tool_call["function"]["name"]
+                    tool_name = tool_call["function"].get("name", "")
                     arguments_str = tool_call["function"].get("arguments", "{}")
+
+                    # Check for empty tool name
+                    if not tool_name:
+                        logger.error(
+                            f"[LLM] Tool call has empty name field! "
+                            f"Full tool_call: {json.dumps(tool_call, indent=2)}"
+                        )
+                        continue
+
                     logger.info(f"[LLM] Executing tool: {tool_name}")
 
                     # Parse arguments if it's a string
@@ -530,7 +556,19 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                     )
 
                 # Get final response from LLM
-                logger.info("[LLM] Requesting final response after tool calls")
+                logger.info(
+                    f"[LLM] Requesting final response after tool calls "
+                    f"(collected {len(tool_results)} tool results)"
+                )
+
+                # Debug: Log conversation history size and last few messages
+                logger.debug(
+                    f"[LLM] Conversation history has {len(self.conversation_history)} messages"
+                )
+                logger.debug(
+                    f"[LLM] Last 3 messages: {json.dumps(self.conversation_history[-3:], indent=2, default=str)}"
+                )
+
                 final_request = {
                     "model": self.model,
                     "messages": [{"role": "system", "content": self._create_system_prompt()}]
@@ -554,6 +592,7 @@ Remember: You can only use the tools listed above. You cannot access files, run 
                     return "Error: Invalid final response from Ollama"
 
                 assistant_message = final_result["choices"][0]["message"]["content"]
+                logger.debug(f"[LLM] Final assistant_message length: {len(assistant_message)}")
                 logger.info(f"[LLM] Final response received: {assistant_message[:100]}...")
 
                 # Add final assistant message to history
