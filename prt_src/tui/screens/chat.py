@@ -134,7 +134,7 @@ class ChatScreen(BaseScreen):
             # Chat input box - using custom TextArea subclass
             self.chat_input = ChatTextArea(
                 id=WidgetIDs.CHAT_INPUT,
-                placeholder="Enter your prompt here...",
+                placeholder="Enter your prompt here... (Ctrl+J inserts newline)",
             )
             self.chat_input.styles.height = 5
             self.chat_input._parent_screen = self  # Link to parent for ENTER handling
