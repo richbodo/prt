@@ -57,68 +57,7 @@ class SearchTextArea(TextArea):
         await super()._on_key(event)
 
 
-def search_contacts_stub(query: str) -> list[dict]:
-    """Stub function - returns test contact search results.
-
-    TODO Phase 2B: Replace with real DataService integration.
-
-    Args:
-        query: Search query string
-
-    Returns:
-        List of contact dictionaries
-    """
-    return [
-        {"id": 1, "name": "Test Contact 1", "email": "test1@example.com"},
-        {"id": 2, "name": "Test Contact 2", "email": "test2@example.com"},
-        {"id": 3, "name": "Test Contact 3", "email": "test3@example.com"},
-    ]
-
-
-def search_relationships_stub(query: str) -> list[dict]:
-    """Stub function - returns test relationship search results.
-
-    TODO Phase 2B: Replace with real DataService integration.
-    """
-    return [
-        {"id": 1, "from": "Alice", "to": "Bob", "type": "Friend"},
-        {"id": 2, "from": "Bob", "to": "Carol", "type": "Colleague"},
-    ]
-
-
-def search_relationship_types_stub(query: str) -> list[dict]:
-    """Stub function - returns test relationship type search results.
-
-    TODO Phase 2B: Replace with real DataService integration.
-    """
-    return [
-        {"id": 1, "key": "friend", "label": "Friend"},
-        {"id": 2, "key": "colleague", "label": "Colleague"},
-        {"id": 3, "key": "family", "label": "Family Member"},
-    ]
-
-
-def search_notes_stub(query: str) -> list[dict]:
-    """Stub function - returns test note search results.
-
-    TODO Phase 2B: Replace with real DataService integration.
-    """
-    return [
-        {"id": 1, "title": "Meeting Notes", "content": "Discussed project timeline"},
-        {"id": 2, "title": "Follow-up", "content": "Send email about proposal"},
-    ]
-
-
-def search_tags_stub(query: str) -> list[dict]:
-    """Stub function - returns test tag search results.
-
-    TODO Phase 2B: Replace with real DataService integration.
-    """
-    return [
-        {"id": 1, "name": "work"},
-        {"id": 2, "name": "personal"},
-        {"id": 3, "name": "important"},
-    ]
+# Stub functions removed - now using real DataService integration
 
 
 class SearchScreen(BaseScreen):
@@ -157,13 +96,6 @@ class SearchScreen(BaseScreen):
         self.screen_title = "SEARCH"
         self.current_search_type = self.SEARCH_CONTACTS
         self._processing_enter = False  # Flag to prevent double-processing
-        self.search_functions = {
-            self.SEARCH_CONTACTS: search_contacts_stub,
-            self.SEARCH_RELATIONSHIPS: search_relationships_stub,
-            self.SEARCH_RELATIONSHIP_TYPES: search_relationship_types_stub,
-            self.SEARCH_NOTES: search_notes_stub,
-            self.SEARCH_TAGS: search_tags_stub,
-        }
 
     def compose(self) -> ComposeResult:
         """Compose the search screen layout."""
@@ -331,56 +263,119 @@ class SearchScreen(BaseScreen):
 
     def action_execute_search(self) -> None:
         """Execute search with current query and type."""
+        # Schedule async search execution
+        self.run_worker(self._async_execute_search(), exclusive=True)
+
+    async def _async_execute_search(self) -> None:
+        """Async method to execute search with current query and type."""
         query = self.search_input.text.strip()
 
+        # Empty query = list all items of selected type
         if not query:
-            self.results_content.update("Please enter a search query.")
-            self.bottom_nav.show_status("Please enter a search query")
+            logger.info(f"Listing all {self.current_search_type}")
+            self.bottom_nav.show_status(f"Loading all {self.current_search_type}...")
+            self.results_content.update(f"Loading all {self.current_search_type}...")
+        else:
+            logger.info(f"Executing {self.current_search_type} search for: {query}")
+            self.bottom_nav.show_status(f"Searching {self.current_search_type} for '{query}'...")
+            self.results_content.update(f"Searching {self.current_search_type}...")
+
+        # Call appropriate DataService method (search or list all)
+        try:
+            if not query:
+                # Empty query - list all items
+                if self.current_search_type == self.SEARCH_CONTACTS:
+                    results = await self.data_service.list_all_contacts()
+                elif self.current_search_type == self.SEARCH_TAGS:
+                    results = await self.data_service.list_all_tags()
+                elif self.current_search_type == self.SEARCH_NOTES:
+                    results = await self.data_service.list_all_notes()
+                elif self.current_search_type == self.SEARCH_RELATIONSHIPS:
+                    results = await self.data_service.list_all_relationships()
+                elif self.current_search_type == self.SEARCH_RELATIONSHIP_TYPES:
+                    results = await self.data_service.list_all_relationship_types()
+                else:
+                    results = []
+                    logger.error(f"Unknown search type: {self.current_search_type}")
+            else:
+                # Query provided - search
+                if self.current_search_type == self.SEARCH_CONTACTS:
+                    results = await self.data_service.search_contacts(query)
+                elif self.current_search_type == self.SEARCH_TAGS:
+                    results = await self.data_service.search_tags(query)
+                elif self.current_search_type == self.SEARCH_NOTES:
+                    results = await self.data_service.search_notes(query)
+                elif self.current_search_type == self.SEARCH_RELATIONSHIPS:
+                    results = await self.data_service.search_relationships(query)
+                elif self.current_search_type == self.SEARCH_RELATIONSHIP_TYPES:
+                    results = await self.data_service.search_relationship_types(query)
+                else:
+                    results = []
+                    logger.error(f"Unknown search type: {self.current_search_type}")
+        except Exception as e:
+            logger.error(f"Search/list failed: {e}", exc_info=True)
+            self.results_content.update(f"Operation failed: {e}")
+            self.bottom_nav.show_status(f"Operation failed: {e}")
             return
-
-        logger.info(f"Executing {self.current_search_type} search for: {query}")
-
-        # Show searching status
-        self.bottom_nav.show_status(f"Searching {self.current_search_type} for '{query}'...")
-        self.results_content.update(f"Searching {self.current_search_type}...\n\n(Using stub data)")
-
-        # Get stub results
-        search_func = self.search_functions[self.current_search_type]
-        results = search_func(query)
 
         # Format and display results
         if not results:
-            self.results_content.update(
-                f"No {self.current_search_type} found matching '{query}'\n\n(Stub search - would search real database)"
-            )
-            self.bottom_nav.show_status(f"No results found for '{query}'")
+            if query:
+                self.results_content.update(
+                    f"No {self.current_search_type} found matching '{query}'"
+                )
+                self.bottom_nav.show_status(f"No results found for '{query}'")
+            else:
+                self.results_content.update(f"No {self.current_search_type} found in database")
+                self.bottom_nav.show_status(f"No {self.current_search_type} found")
         else:
-            result_text = f"Search Results ({len(results)} found) - STUB DATA:\n\n"
+            if query:
+                result_text = f"Search Results ({len(results)} found):\n\n"
+            else:
+                result_text = f"All {self.current_search_type.replace('_', ' ').title()} ({len(results)} total):\n\n"
             for item in results:
                 result_text += self._format_result_item(item) + "\n"
-            result_text += "\n(These are stub results. Phase 2B will connect to real database.)"
             self.results_content.update(result_text)
-            self.bottom_nav.show_status(f"Found {len(results)} stub results for '{query}'")
+            if query:
+                self.bottom_nav.show_status(f"Found {len(results)} results for '{query}'")
+            else:
+                self.bottom_nav.show_status(
+                    f"Showing all {len(results)} {self.current_search_type}"
+                )
 
     def _format_result_item(self, item: dict) -> str:
         """Format a single result item for display.
 
         Args:
-            item: Result dictionary
+            item: Result dictionary from database
 
         Returns:
             Formatted string
         """
         if self.current_search_type == self.SEARCH_CONTACTS:
-            return f"• {item['name']} - {item['email']}"
+            email = item.get("email") or "(no email)"
+            return f"• {item['name']} - {email}"
         elif self.current_search_type == self.SEARCH_RELATIONSHIPS:
-            return f"• {item['from']} → {item['to']} ({item['type']})"
+            from_name = item.get("from_contact_name") or "(unknown)"
+            to_name = item.get("to_contact_name") or "(unknown)"
+            rel_type = item.get("type_description") or item.get("type_key") or "(unknown)"
+            return f"• {from_name} → {to_name} ({rel_type})"
         elif self.current_search_type == self.SEARCH_RELATIONSHIP_TYPES:
-            return f"• {item['label']} ({item['key']})"
+            type_key = item.get("type_key") or "(unknown)"
+            description = item.get("description") or "(no description)"
+            usage = item.get("usage_count", 0)
+            return f"• {description} (key: {type_key}, used: {usage} times)"
         elif self.current_search_type == self.SEARCH_NOTES:
-            return f"• {item['title']}: {item['content']}"
+            title = item.get("title") or "(untitled)"
+            content = item.get("content") or "(no content)"
+            # Truncate content for display
+            if len(content) > 100:
+                content = content[:100] + "..."
+            return f"• {title}: {content}"
         elif self.current_search_type == self.SEARCH_TAGS:
-            return f"• {item['name']}"
+            name = item.get("name") or "(unnamed)"
+            contact_count = item.get("contact_count", 0)
+            return f"• {name} ({contact_count} contacts)"
         return str(item)
 
     def _update_button_highlights(self) -> None:
