@@ -127,7 +127,7 @@ class DataService:
         try:
             return self.api.search_contacts(query)
         except Exception as e:
-            logger.error(f"Failed to search contacts: {e}")
+            logger.error(f"Failed to search contacts: {e}", exc_info=True)
             return []
 
     async def search_tags(self, query: str) -> List[Dict]:
@@ -142,7 +142,7 @@ class DataService:
         try:
             return self.api.search_tags(query)
         except Exception as e:
-            logger.error(f"Failed to search tags: {e}")
+            logger.error(f"Failed to search tags: {e}", exc_info=True)
             return []
 
     async def search_notes(self, query: str) -> List[Dict]:
@@ -157,7 +157,7 @@ class DataService:
         try:
             return self.api.search_notes(query)
         except Exception as e:
-            logger.error(f"Failed to search notes: {e}")
+            logger.error(f"Failed to search notes: {e}", exc_info=True)
             return []
 
     async def search_relationships(self, query: str) -> List[Dict]:
@@ -172,7 +172,7 @@ class DataService:
         try:
             return self.api.search_relationships(query)
         except Exception as e:
-            logger.error(f"Failed to search relationships: {e}")
+            logger.error(f"Failed to search relationships: {e}", exc_info=True)
             return []
 
     async def search_relationship_types(self, query: str) -> List[Dict]:
@@ -187,7 +187,7 @@ class DataService:
         try:
             return self.api.search_relationship_types(query)
         except Exception as e:
-            logger.error(f"Failed to search relationship types: {e}")
+            logger.error(f"Failed to search relationship types: {e}", exc_info=True)
             return []
 
     async def list_all_contacts(self) -> List[Dict]:
@@ -199,7 +199,7 @@ class DataService:
         try:
             return self.api.list_all_contacts()
         except Exception as e:
-            logger.error(f"Failed to list all contacts: {e}")
+            logger.error(f"Failed to list all contacts: {e}", exc_info=True)
             return []
 
     async def list_all_tags(self) -> List[Dict]:
@@ -211,7 +211,7 @@ class DataService:
         try:
             return self.api.list_all_tags()
         except Exception as e:
-            logger.error(f"Failed to list all tags: {e}")
+            logger.error(f"Failed to list all tags: {e}", exc_info=True)
             return []
 
     async def list_all_notes(self) -> List[Dict]:
@@ -223,7 +223,7 @@ class DataService:
         try:
             return self.api.list_all_notes()
         except Exception as e:
-            logger.error(f"Failed to list all notes: {e}")
+            logger.error(f"Failed to list all notes: {e}", exc_info=True)
             return []
 
     async def list_all_relationships(self) -> List[Dict]:
@@ -235,7 +235,7 @@ class DataService:
         try:
             return self.api.list_all_relationships()
         except Exception as e:
-            logger.error(f"Failed to list all relationships: {e}")
+            logger.error(f"Failed to list all relationships: {e}", exc_info=True)
             return []
 
     async def list_all_relationship_types(self) -> List[Dict]:
@@ -247,7 +247,7 @@ class DataService:
         try:
             return self.api.list_all_relationship_types()
         except Exception as e:
-            logger.error(f"Failed to list all relationship types: {e}")
+            logger.error(f"Failed to list all relationship types: {e}", exc_info=True)
             return []
 
     # Relationship operations

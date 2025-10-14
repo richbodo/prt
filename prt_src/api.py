@@ -261,11 +261,15 @@ class PRTAPI:
             for n in notes
         ]
 
-    def search_relationships(self, query: str) -> List[Dict[str, Any]]:
-        """Search contact-to-contact relationships by contact name or relationship type.
+    def _query_relationships(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Query contact-to-contact relationships with optional filtering.
+
+        Private helper method used by both search_relationships and list_all_relationships
+        to reduce code duplication.
 
         Args:
-            query: Search query (case-insensitive partial match)
+            query: Optional search query (case-insensitive partial match on contact names
+                   or relationship type). If None, returns all relationships.
 
         Returns:
             List of relationship dictionaries with from/to contact info and type
@@ -280,21 +284,26 @@ class PRTAPI:
         FromContact = aliased(Contact)
         ToContact = aliased(Contact)
 
-        # Search by contact name (from or to) or relationship type key/description
-        relationships = (
+        # Build base query
+        relationship_query = (
             self.db.session.query(ContactRelationship, FromContact, ToContact, RelationshipType)
             .join(FromContact, ContactRelationship.from_contact_id == FromContact.id)
             .join(ToContact, ContactRelationship.to_contact_id == ToContact.id, isouter=True)
             .join(RelationshipType, ContactRelationship.type_id == RelationshipType.id)
-            .filter(
+        )
+
+        # Add filter if query provided
+        if query:
+            relationship_query = relationship_query.filter(
                 (FromContact.name.ilike(f"%{query}%"))
                 | (ToContact.name.ilike(f"%{query}%"))
                 | (RelationshipType.type_key.ilike(f"%{query}%"))
                 | (RelationshipType.description.ilike(f"%{query}%"))
             )
-            .all()
-        )
 
+        relationships = relationship_query.all()
+
+        # Format results and deduplicate
         results = []
         seen = set()  # Track (from_id, to_id, type_id) to avoid duplicates
 
@@ -319,6 +328,17 @@ class PRTAPI:
             )
 
         return results
+
+    def search_relationships(self, query: str) -> List[Dict[str, Any]]:
+        """Search contact-to-contact relationships by contact name or relationship type.
+
+        Args:
+            query: Search query (case-insensitive partial match)
+
+        Returns:
+            List of relationship dictionaries with from/to contact info and type
+        """
+        return self._query_relationships(query=query)
 
     def list_all_relationships(self) -> List[Dict[str, Any]]:
         """List all contact-to-contact relationships.
@@ -326,49 +346,7 @@ class PRTAPI:
         Returns:
             List of all relationship dictionaries with from/to contact info and type
         """
-        from sqlalchemy.orm import aliased
-
-        from .models import Contact
-        from .models import ContactRelationship
-        from .models import RelationshipType
-
-        # Create aliases for from_contact and to_contact to distinguish them in the query
-        FromContact = aliased(Contact)
-        ToContact = aliased(Contact)
-
-        # Get all relationships
-        relationships = (
-            self.db.session.query(ContactRelationship, FromContact, ToContact, RelationshipType)
-            .join(FromContact, ContactRelationship.from_contact_id == FromContact.id)
-            .join(ToContact, ContactRelationship.to_contact_id == ToContact.id, isouter=True)
-            .join(RelationshipType, ContactRelationship.type_id == RelationshipType.id)
-            .all()
-        )
-
-        results = []
-        seen = set()  # Track (from_id, to_id, type_id) to avoid duplicates
-
-        for rel, from_contact, to_contact, rel_type in relationships:
-            key = (rel.from_contact_id, rel.to_contact_id, rel.type_id)
-            if key in seen:
-                continue
-            seen.add(key)
-
-            results.append(
-                {
-                    "relationship_id": rel.id,
-                    "from_contact_id": from_contact.id,
-                    "from_contact_name": from_contact.name,
-                    "to_contact_id": to_contact.id if to_contact else None,
-                    "to_contact_name": to_contact.name if to_contact else None,
-                    "type_key": rel_type.type_key,
-                    "type_description": rel_type.description,
-                    "start_date": rel.start_date.isoformat() if rel.start_date else None,
-                    "end_date": rel.end_date.isoformat() if rel.end_date else None,
-                }
-            )
-
-        return results
+        return self._query_relationships(query=None)
 
     def search_relationship_types(self, query: str) -> List[Dict[str, Any]]:
         """Search relationship types by type key or description.
