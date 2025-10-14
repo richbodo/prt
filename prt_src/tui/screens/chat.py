@@ -92,6 +92,7 @@ class ChatScreen(BaseScreen):
         self.response_buffer = ""
         self._processing_enter = False  # Flag to prevent double-processing
         self.llm_ready = False  # Track LLM availability
+        self.queued_message = None  # Queue message if LLM not ready
         # Note: self.llm_service comes from BaseScreen via kwargs
 
     def compose(self) -> ComposeResult:
@@ -162,13 +163,17 @@ class ChatScreen(BaseScreen):
         yield self.bottom_nav
 
     async def on_mount(self) -> None:
-        """Handle screen mount."""
-        await super().on_mount()
-        logger.info("Chat screen mounted")
+        """Handle screen mount.
 
-        # LLM service comes from BaseScreen (injected via kwargs)
-        # Check LLM health
-        await self._check_llm_health()
+        IMPORTANT: Screen renders IMMEDIATELY, LLM loads in background.
+        This ensures:
+        - User can type in input box right away
+        - Esc works to navigate back
+        - Loading status is visible
+        - No frozen UI while model loads (can take 8-30s)
+        """
+        await super().on_mount()
+        logger.info("[CHAT] Chat screen mounted - starting background LLM initialization")
 
         # Start in EDIT mode since chat input is the primary purpose
         from prt_src.tui.types import AppMode
@@ -177,7 +182,12 @@ class ChatScreen(BaseScreen):
         self.top_nav.set_mode(AppMode.EDIT)
         # Focus the chat input box
         self.chat_input.focus()
-        logger.debug("Chat screen: Set mode to EDIT on mount and focused input")
+        logger.debug("[CHAT] Set mode to EDIT on mount and focused input")
+
+        # LLM service comes from BaseScreen (injected via kwargs)
+        # Check LLM health in BACKGROUND (don't await - screen rendered immediately)
+        self.run_worker(self._check_llm_health(), exclusive=False, name="llm_health_check")
+        logger.info("[CHAT] Started background worker for LLM health check")
 
     async def _check_llm_health(self) -> None:
         """Check if Ollama LLM is available and update status."""
@@ -206,12 +216,24 @@ class ChatScreen(BaseScreen):
                         f"✅ LLM: ONLINE │ READY ({self.llm_service.model})"
                     )
                     self.chat_loading.display = False
-                    logger.info("LLM model preloaded successfully")
+                    logger.info("[CHAT] LLM model preloaded successfully")
+
+                    # Process queued message if user sent one while loading
+                    if self.queued_message:
+                        logger.info("[CHAT] Processing queued message after LLM ready")
+                        await self._send_queued_message()
                 else:
                     self.llm_ready = True  # Still mark as ready, model will load on first use
                     self.chat_status_text.update("⚠️  LLM: ONLINE │ Model will load on first use")
                     self.chat_loading.display = False
-                    logger.warning("LLM model preload failed, but service is available")
+                    logger.warning("[CHAT] LLM model preload failed, but service is available")
+
+                    # Process queued message if any
+                    if self.queued_message:
+                        logger.info(
+                            "[CHAT] Processing queued message (model will load on first use)"
+                        )
+                        await self._send_queued_message()
             else:
                 self.llm_ready = False
                 self.chat_status_text.update("❌ LLM: OFFLINE │ Cannot connect to Ollama")
@@ -272,20 +294,23 @@ class ChatScreen(BaseScreen):
                     action()
                     event.prevent_default()
 
-    async def action_send_message(self) -> None:
-        """Send message to LLM and display response."""
-        message = self.chat_input.text.strip()
-
-        if not message:
-            self.bottom_nav.show_status("Please enter a message")
+    async def _send_queued_message(self) -> None:
+        """Send the queued message to LLM."""
+        if not self.queued_message:
             return
 
-        # Check if LLM is ready
-        if not self.llm_ready or not self.llm_service:
-            self.bottom_nav.show_status("LLM is not available. Please check Ollama is running.")
-            return
+        message = self.queued_message
+        self.queued_message = None  # Clear queue
 
-        logger.info(f"Sending message to LLM: {message[:50]}...")
+        # Temporarily restore message to input to show what's being sent
+        self.chat_input.text = message
+
+        # Now send it
+        await self._send_message_to_llm(message)
+
+    async def _send_message_to_llm(self, message: str) -> None:
+        """Internal method to send message to LLM (used by both immediate and queued sends)."""
+        logger.info(f"[CHAT] Sending message to LLM: {message[:50]}...")
 
         # Show processing status with animated loading indicator
         self.chat_status_text.update("⏳ LLM: PROCESSING │ Generating response...")
@@ -314,14 +339,33 @@ class ChatScreen(BaseScreen):
 
             # Clear input
             self.chat_input.clear()
-
-            logger.info("[CHAT] LLM response received and displayed")
-
         except Exception as e:
-            logger.error(f"[CHAT] Error sending message to LLM: {e}", exc_info=True)
+            logger.error(f"[CHAT] Error sending message to LLM: {e}")
+            self.bottom_nav.show_status(f"Error: {str(e)[:50]}")
             self.chat_loading.display = False
-            self.chat_status_text.update("❌ LLM: ERROR │ Failed to get response")
-            self.bottom_nav.show_status(f"Error: {str(e)[:60]}")
+            self.chat_status_text.update(f"❌ LLM: ERROR │ {str(e)[:40]}")
+
+    async def action_send_message(self) -> None:
+        """Send message to LLM and display response."""
+        message = self.chat_input.text.strip()
+
+        if not message:
+            self.bottom_nav.show_status("Please enter a message")
+            return
+
+        # Check if LLM is ready
+        if not self.llm_ready or not self.llm_service:
+            # Queue the message for when LLM is ready
+            self.queued_message = message
+            self.bottom_nav.show_status("⏳ Message queued - LLM is still loading...")
+            logger.info(f"[CHAT] Message queued (LLM not ready): {message[:50]}...")
+            # Clear input to show it was accepted
+            self.chat_input.clear()
+            return
+
+        # LLM is ready - send immediately
+        await self._send_message_to_llm(message)
+        logger.info("[CHAT] Message sent successfully")
 
     def _add_to_response_buffer(self, text: str) -> None:
         """Add text to response buffer with 64KB limit.
