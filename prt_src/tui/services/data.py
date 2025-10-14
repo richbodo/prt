@@ -127,7 +127,127 @@ class DataService:
         try:
             return self.api.search_contacts(query)
         except Exception as e:
-            logger.error(f"Failed to search contacts: {e}")
+            logger.error(f"Failed to search contacts: {e}", exc_info=True)
+            return []
+
+    async def search_tags(self, query: str) -> List[Dict]:
+        """Search tags.
+
+        Args:
+            query: Search query
+
+        Returns:
+            List of matching tags
+        """
+        try:
+            return self.api.search_tags(query)
+        except Exception as e:
+            logger.error(f"Failed to search tags: {e}", exc_info=True)
+            return []
+
+    async def search_notes(self, query: str) -> List[Dict]:
+        """Search notes.
+
+        Args:
+            query: Search query
+
+        Returns:
+            List of matching notes
+        """
+        try:
+            return self.api.search_notes(query)
+        except Exception as e:
+            logger.error(f"Failed to search notes: {e}", exc_info=True)
+            return []
+
+    async def search_relationships(self, query: str) -> List[Dict]:
+        """Search contact-to-contact relationships.
+
+        Args:
+            query: Search query (matches contact name or relationship type)
+
+        Returns:
+            List of matching relationships
+        """
+        try:
+            return self.api.search_relationships(query)
+        except Exception as e:
+            logger.error(f"Failed to search relationships: {e}", exc_info=True)
+            return []
+
+    async def search_relationship_types(self, query: str) -> List[Dict]:
+        """Search relationship types.
+
+        Args:
+            query: Search query (matches type key or description)
+
+        Returns:
+            List of matching relationship types
+        """
+        try:
+            return self.api.search_relationship_types(query)
+        except Exception as e:
+            logger.error(f"Failed to search relationship types: {e}", exc_info=True)
+            return []
+
+    async def list_all_contacts(self) -> List[Dict]:
+        """List all contacts.
+
+        Returns:
+            List of all contacts
+        """
+        try:
+            return self.api.list_all_contacts()
+        except Exception as e:
+            logger.error(f"Failed to list all contacts: {e}", exc_info=True)
+            return []
+
+    async def list_all_tags(self) -> List[Dict]:
+        """List all tags.
+
+        Returns:
+            List of all tags
+        """
+        try:
+            return self.api.list_all_tags()
+        except Exception as e:
+            logger.error(f"Failed to list all tags: {e}", exc_info=True)
+            return []
+
+    async def list_all_notes(self) -> List[Dict]:
+        """List all notes.
+
+        Returns:
+            List of all notes
+        """
+        try:
+            return self.api.list_all_notes()
+        except Exception as e:
+            logger.error(f"Failed to list all notes: {e}", exc_info=True)
+            return []
+
+    async def list_all_relationships(self) -> List[Dict]:
+        """List all contact-to-contact relationships.
+
+        Returns:
+            List of all relationships
+        """
+        try:
+            return self.api.list_all_relationships()
+        except Exception as e:
+            logger.error(f"Failed to list all relationships: {e}", exc_info=True)
+            return []
+
+    async def list_all_relationship_types(self) -> List[Dict]:
+        """List all relationship types.
+
+        Returns:
+            List of all relationship types
+        """
+        try:
+            return self.api.list_all_relationship_types()
+        except Exception as e:
+            logger.error(f"Failed to list all relationship types: {e}", exc_info=True)
             return []
 
     # Relationship operations
