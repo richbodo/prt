@@ -38,9 +38,11 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Launch TUI | `python -m prt_src` |
 | Run classic CLI | `python -m prt_src --classic` |
 | Debug TUI with fixtures | `python -m prt_src --debug` |
-| Quick tests | `./prt_env/bin/python -m pytest tests/ -x` |
-| Full tests | `./prt_env/bin/python -m pytest tests/ -v` |
-| Coverage report | `./prt_env/bin/python -m pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
+| Quick tests (fast) | `./prt_env/bin/pytest tests/ -x` |
+| Unit tests only (< 1 sec) | `./prt_env/bin/pytest -m unit` |
+| Integration tests only (< 5 sec) | `./prt_env/bin/pytest -m integration` |
+| Full test suite | `./prt_env/bin/pytest tests/ -v` |
+| Coverage report | `./prt_env/bin/pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
 | Lint | `./prt_env/bin/ruff check prt_src/ tests/` |
 | Auto-fix formatting | `./prt_env/bin/ruff check --fix prt_src/ tests/ && ./prt_env/bin/black prt_src/ tests/` |
 | Clean caches/builds | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; find . -type f -name "*.pyc" -delete` |
@@ -48,6 +50,70 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Run pre-commit everywhere | `./prt_env/bin/pre-commit run --all-files` |
 
 > **Cursor/LLM tip:** Paste the table above into your prompt or keep it pinned in a scratchpad so Codex/Claude can cite the correct commands for you.
+
+## 5. Testing Philosophy: Headless First
+
+**ALWAYS write automated, headless tests wherever possible.**
+
+This applies to both humans and LLMs working on PRT. The project has comprehensive headless testing infrastructure:
+- **TUI testing**: Use Textual Pilot to simulate user interactions without rendering to terminal
+- **LLM testing**: Use fixtures and mocks; skip real LLM calls in CI with `@pytest.mark.skipif`
+- **Database testing**: Use real SQLite with fixtures (no mocking needed - SQLite is fast)
+
+### The 4-Layer Testing Pyramid
+
+Tests are organized in layers from fast/frequent (bottom) to slow/rare (top):
+
+1. **Unit Tests** ⚡ (< 1 sec) - Pure functions, formatters, no external dependencies
+   - `./prt_env/bin/pytest -m unit`
+   - Examples: `tests/unit/test_results_formatter.py`, `tests/unit/test_selection_service.py`
+
+2. **Integration Tests** ⚙️ (< 5 sec) - Component interactions, workflows, screen navigation
+   - `./prt_env/bin/pytest -m integration`
+   - Examples: `tests/test_home_screen.py`, `tests/integration/test_llm_one_query.py`
+
+3. **Contract Tests** 🧪 (1-5 min) - LLM behavior validation with Promptfoo
+   - `npx promptfoo@latest eval -c tests/llm_contracts/promptfooconfig.yaml`
+
+4. **Manual Tests** 🐢 (5-10 min) - Visual validation, performance, accessibility
+   - See `docs/MANUAL_TESTING.md` for specific scenarios
+
+### Key Testing Resources
+
+- **Comprehensive Guide**: `docs/TESTING_STRATEGY.md` - Complete testing strategy, examples, best practices
+- **TUI Testing**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` - Official Textual testing patterns
+- **TUI Dev Tips**: `docs/TUI/TUI_Dev_Tips.md` - PRT-specific patterns and debugging
+- **Manual Testing**: `docs/MANUAL_TESTING.md` - Scenarios requiring manual testing
+- **Test Fixtures**: `tests/fixtures.py` - Sample data (SAMPLE_CONTACTS, get_fixture_spec)
+
+### Quick Examples
+
+**TUI Test with Pilot (headless)**:
+```python
+async def test_home_screen_navigation(pilot_screen):
+    """Test navigation using Textual Pilot."""
+    async with pilot_screen(HomeScreen) as pilot:
+        await pilot.press("h")  # Press 'h' to navigate to help
+        assert isinstance(pilot.app.screen, HelpScreen)
+```
+
+**LLM Integration Test (skipped in CI)**:
+```python
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
+def test_count_contacts(test_db):
+    api = PRTAPI(config=test_db_config)
+    llm = OllamaLLM(api=api)
+    response = llm.chat("How many contacts do I have?")
+    assert "7" in response or "seven" in response.lower()
+```
+
+### When Manual Testing Is Required
+
+See `docs/MANUAL_TESTING.md` for full list. Common cases:
+- Visual regression (colors, alignment, responsive layout)
+- Performance profiling (memory usage, render time)
+- Accessibility testing (screen readers, keyboard-only navigation)
+- Platform-specific rendering (different terminals)
 
 ## 6. Git Quick Reference
 
@@ -75,10 +141,15 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 
 ## 8. Documentation Map & Freshness
 
-| Doc | Status | Why you’d read it |
+| Doc | Status | Why you'd read it |
 | --- | --- | --- |
 | `README.md` | USE | High-level project overview and links into the doc set. |
-| `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, AI helper guidance. |
+| `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, testing cheat sheet. |
+| `docs/TESTING_STRATEGY.md` | USE | **Canonical testing guide** - 4-layer pyramid, examples, best practices. |
+| `docs/MANUAL_TESTING.md` | USE | Scenarios requiring manual testing (visual, performance, etc). |
+| `docs/TUI/TUI_Dev_Tips.md` | USE | TUI-specific patterns, debugging, common issues. |
+| `docs/TUI/Chat_Screen_Testing_Strategy.md` | USE | LLM-powered UI testing strategy. |
+| `CLAUDE.md` | USE | LLM instructions - includes testing philosophy, debugging patterns. |
 | `docs/INSTALL.md` | NEEDS WORK | Legacy SQLCipher install steps. Prefer the quick setup above. |
 | `docs/ENCRYPTION_IMPLEMENTATION.md` | NEEDS WORK | Design discussion for future encryption work. |
 | `docs/TUI_Specification.md` | NEEDS WORK | Requirements and flows for the modern TUI. |
@@ -99,52 +170,58 @@ python -m prt_src db-status
 python -m prt_src --classic
 ```
 
-## 11. TUI Debugging System
+## 11. TUI Testing & Debugging
 
-### **Automated Textual Debug Workflow**
+### **Headless Testing with Textual Pilot**
 
-WORK IN PROGRESS - WORTH A TRY
+PRT uses Textual Pilot for automated, headless TUI testing. This allows testing screen navigation, key presses, and widget interactions without rendering to a terminal.
 
-For TUI development and debugging, use the comprehensive debug system in `docs/TUI/DEBUGGING/`:
+**Quick Example**:
+```python
+async def test_home_screen_navigation(pilot_screen):
+    """Test navigation using Textual Pilot."""
+    async with pilot_screen(HomeScreen) as pilot:
+        # Simulate pressing 'h' key
+        await pilot.press("h")
 
-```bash
-# Setup environment first (always start here)
-source ./init.sh
-
-# Setup (2-terminal workflow)
-# Terminal 1: Start debug console
-textual console --port 7342 -v
-
-# Terminal 2: Run TUI with debugging
-textual run --dev --port 7342 python -m prt_src
+        # Verify help screen is now active
+        assert isinstance(pilot.app.screen, HelpScreen)
 ```
 
-### **Interactive Debug Features**
-When the TUI is running with debug mode:
-- **`d`** - Toggle visual debug borders (containers, scrollable regions)
-- **`l`** - Log comprehensive layout analysis with widget tree
-- **`n`** - Test notification system with different severity levels
-- **`s`** - Trigger screenshot capture (requires screenpipe integration)
-- **`r`** - Test responsive behavior at multiple screen sizes
+**Running TUI Tests**:
+```bash
+# Run all TUI integration tests
+./prt_env/bin/pytest tests/test_*_screen.py -v
 
-### **Debug Capabilities**
-- **Layout Analysis**: Complete widget tree with size/style information
-- **Issue Detection**: Automatic overflow, sizing, and responsive problem identification
-- **Visual Debugging**: CSS borders and highlights for layout visualization
-- **Performance Monitoring**: Render time tracking and widget count analysis
-- **Screenpipe Integration**: Visual state capture correlated with app state (manually start screenpipe and guide LLMs to grab screenshots)
+# Run specific TUI test
+./prt_env/bin/pytest tests/test_home_screen.py::test_navigation -v
+```
 
-### **When to Use TUI Debugging**
-- Layout issues (widgets not appearing, incorrect sizing)
-- Container and scrolling problems
-- Screen resizing and responsive behavior issues
-- Performance optimization and bottleneck identification
-- Visual regression testing during development
+**Current TUI Tests** (examples to follow):
+- `tests/test_home_screen.py` - Home screen navigation
+- `tests/test_help_screen.py` - Help screen rendering
+- `tests/test_chat_navigation.py` - Chat screen modes and scrolling
+- `tests/test_phase2_screens.py` - Search and Settings screens
 
-### **TUI DEBUG Documentation References**
-- **Main Guide**: `docs/TUI/DEBUGGING/TEXTUAL_DEBUG_WORKFLOW.md`
-- **Demo App**: `docs/TUI/DEBUGGING/textual_debug_demo.py`
-- **Development Tips**: `docs/TUI/TUI_Dev_Tips.md`
-- **Common Patterns**: Widget inheritance, CSS debugging, container management
+### **Debugging TUI Issues**
+
+**Primary Tools**:
+1. **Logging** - Add comprehensive logging to trace event flow (see `docs/TUI/TUI_Dev_Tips.md`)
+2. **Pilot** - Write failing test to reproduce issue, then fix
+3. **Textual Devtools** - Use `textual run --dev` for visual debugging
+
+**Watch Logs** (2-terminal setup):
+```bash
+# Terminal 1: Watch logs in real-time
+tail -f prt_data/prt.log | grep '\[SCREEN\]'
+
+# Terminal 2: Run TUI
+./prt_env/bin/python -m prt_src
+```
+
+**For Complete TUI Development Guidance**:
+- **Testing**: `docs/TESTING_STRATEGY.md` - Complete guide with Pilot examples
+- **Debugging**: `docs/TUI/TUI_Dev_Tips.md` - Logging patterns, common issues, Pilot debugging
+- **Textual Docs**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` - Official Textual testing guide
 
 
