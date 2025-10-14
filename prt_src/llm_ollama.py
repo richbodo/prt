@@ -376,6 +376,17 @@ class OllamaLLM:
                     # If empty after cleaning, use empty string (searches all)
                     arguments["query"] = query
 
+            # Filter arguments to only include parameters defined in tool schema
+            # This prevents LLM from passing extra parameters like 'limit' that the function doesn't accept
+            if tool.parameters and "properties" in tool.parameters:
+                allowed_params = set(tool.parameters["properties"].keys())
+                filtered_args = {k: v for k, v in arguments.items() if k in allowed_params}
+                logger.debug(
+                    f"[LLM] Filtered arguments from {list(arguments.keys())} "
+                    f"to {list(filtered_args.keys())}"
+                )
+                arguments = filtered_args
+
             result = tool.function(**arguments)
             return result
         except Exception as e:

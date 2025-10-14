@@ -2831,22 +2831,33 @@ def test():
 
 
 @app.command()
-def chat():
+def chat(
+    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
+    regenerate_fixtures: bool = typer.Option(
+        False,
+        "--regenerate-fixtures",
+        help="Force regeneration of fixture database (use with --debug)",
+    ),
+):
     """Start LLM chat mode directly."""
-    # Check setup status
-    status = check_setup_status()
-
-    if status["needs_setup"]:
-        console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
-        console.print()
-
-        if Confirm.ask("Would you like to run the setup wizard now?"):
-            config = run_setup_wizard()
-        else:
-            console.print("Setup is required to use PRT chat. Exiting.", style="red")
-            raise typer.Exit(1) from None
+    # Handle debug mode
+    if debug:
+        config = setup_debug_mode(regenerate=regenerate_fixtures)
     else:
-        config = status["config"]
+        # Check setup status
+        status = check_setup_status()
+
+        if status["needs_setup"]:
+            console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
+            console.print()
+
+            if Confirm.ask("Would you like to run the setup wizard now?"):
+                config = run_setup_wizard()
+            else:
+                console.print("Setup is required to use PRT chat. Exiting.", style="red")
+                raise typer.Exit(1) from None
+        else:
+            config = status["config"]
 
     # Create API instance
     try:
