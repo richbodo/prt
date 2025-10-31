@@ -2,6 +2,10 @@
 
 This document outlines the development roadmap for the Personal Relationship Toolkit (PRT).  Not exactly doing these in order, but there is a [Project](https://github.com/users/richbodo/projects/2) that shows what is being worked on, more or less. 
 
+## Status: Needs a Rewrite
+
+Importantly, I am trying to now see how far I can get with natural language interfaces across the board.  So natural language db queries, actions, and confirmation, etc.  The settings and debugging all need to work, though, because the system needs a "dumb-mode" in which no LLM is available.  But that is a complete change in priorities, so the order of all of the tactical tasks and modules herein needs to change.  We'll keep the fun factors and start organizing those into features.
+
 ## Database Encryption 
 ### Tasks
 - [ ] **Implement database encryption** at rest - pulled sqlcipher - simplifying
