@@ -4,7 +4,7 @@ This document outlines the development roadmap for the Personal Relationship Too
 
 ## Status: Needs a Rewrite
 
-Importantly, I am trying to now see how far I can get with natural language interfaces across the board.  So natural language db queries, actions, and confirmation, etc.  The settings and debugging all need to work, though, because the system needs a "dumb-mode" in which no LLM is available.  But that is a complete change in priorities, so the order of all of the tactical tasks and modules herein needs to change.  We'll keep the fun factors and start organizing those into features.  Some things, like, "show me a directory of the people in my improv class with face, name, and email address."
+This document is now out of date.  Importantly, I am trying to now see how far I can get with natural language interfaces across the board.  So natural language db queries, actions, and confirmation, etc.  The settings and debugging all need to work in cli/tui mode, so those are going to be next. The system needs a "dumb-mode" in which no LLM is available, where search, edit, and make directory are available.  But that is a complete change in priorities, so the order of all of the tactical tasks and modules herein needs to change.  We'll keep the fun factors and start organizing those into features.  Some things, like, "show me a directory of the people in my improv class with face, name, and email address."
 
 ## Database Encryption 
 ### Tasks
