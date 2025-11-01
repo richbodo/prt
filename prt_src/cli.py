@@ -2737,7 +2737,9 @@ def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
             smart_continue_prompt("error")
 
 
-def _launch_tui_with_fallback(debug: bool = False, regenerate_fixtures: bool = False) -> None:
+def _launch_tui_with_fallback(
+    debug: bool = False, regenerate_fixtures: bool = False, force_setup: bool = False
+) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
         from prt_src.tui.app import PRTApp
@@ -2747,9 +2749,9 @@ def _launch_tui_with_fallback(debug: bool = False, regenerate_fixtures: bool = F
                 "🐛 [bold cyan]DEBUG MODE ENABLED[/bold cyan] - Using fixture data", style="cyan"
             )
             config = setup_debug_mode(regenerate=regenerate_fixtures)
-            app = PRTApp(config=config, debug=True)
+            app = PRTApp(config=config, debug=True, force_setup=force_setup)
         else:
-            app = PRTApp()
+            app = PRTApp(force_setup=force_setup)
 
         app.run()
     except Exception as e:
@@ -2767,6 +2769,9 @@ def main(
         "--regenerate-fixtures",
         help="Force regeneration of fixture database (use with --debug)",
     ),
+    setup: bool = typer.Option(
+        False, "--setup", help="Force setup mode for importing contacts or loading fixtures"
+    ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
 ):
@@ -2776,7 +2781,9 @@ def main(
             run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
         else:
             # Launch TUI by default or when explicitly requested
-            _launch_tui_with_fallback(debug=debug, regenerate_fixtures=regenerate_fixtures)
+            _launch_tui_with_fallback(
+                debug=debug, regenerate_fixtures=regenerate_fixtures, force_setup=setup
+            )
 
 
 @app.command()
