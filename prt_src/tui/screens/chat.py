@@ -191,13 +191,17 @@ class ChatScreen(BaseScreen):
         logger.info("[CHAT] Started background worker for LLM health check")
 
     async def _check_llm_health(self) -> None:
-        """Check if Ollama LLM is available and update status."""
+        """Check if LLM is available and update status."""
         if not self.llm_service:
             self.llm_ready = False
             self.chat_status_text.update("❌ LLM: ERROR │ Service not initialized")
             self.chat_loading.display = False
             logger.error("LLM service is not available")
             return
+
+        # Log which LLM provider we're checking
+        llm_provider = type(self.llm_service).__name__
+        logger.info(f"[CHAT] Checking health of LLM provider: {llm_provider}")
 
         try:
             # Check health with timeout
@@ -244,7 +248,10 @@ class ChatScreen(BaseScreen):
             self.llm_ready = False
             self.chat_status_text.update(f"❌ LLM: ERROR │ {str(e)[:40]}")
             self.chat_loading.display = False
-            logger.error(f"LLM health check error: {e}")
+            logger.error(
+                f"LLM health check error for {type(self.llm_service).__name__}: {e}",
+                exc_info=True,
+            )
 
     async def _handle_textarea_submit(self) -> bool:
         """Handle Enter key from ChatTextArea for submission.

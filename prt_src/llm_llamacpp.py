@@ -83,6 +83,9 @@ class LlamaCppLLM:
         if not model_file.exists():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
 
+        # Extract friendly model name for display (filename without extension)
+        self.model = model_file.stem  # e.g., "Meta-Llama-3-8B-Instruct-Q4_K_M"
+
         # Initialize llama-cpp-python
         logger.info(f"[LLM] Loading model from {self.model_path}")
         logger.info(
@@ -120,17 +123,21 @@ class LlamaCppLLM:
         Returns:
             True if model is available and responsive, False otherwise
         """
+        logger.debug(f"[LLM] Starting health check (timeout={timeout}s)")
         try:
             # Try a simple completion to verify model works
+            logger.debug("[LLM] Running test completion...")
             result = await asyncio.to_thread(
                 self.llm.create_completion,
                 prompt="Hi",
                 max_tokens=1,
                 temperature=0.0,
             )
-            return result is not None and "choices" in result
+            is_healthy = result is not None and "choices" in result
+            logger.info(f"[LLM] Health check result: {'PASS' if is_healthy else 'FAIL'}")
+            return is_healthy
         except Exception as e:
-            logger.error(f"[LLM] Health check failed: {e}")
+            logger.error(f"[LLM] Health check failed with exception: {e}", exc_info=True)
             return False
 
     async def preload_model(self) -> bool:
