@@ -127,9 +127,15 @@ class PRTApp(App):
         """
         super().__init__()
         self.title = "Personal Relationship Tracker"
-        self.sub_title = (
-            "🐛 DEBUG MODE - Fixture Data" if debug else "Modern TUI for Contact Management"
-        )
+
+        # Determine subtitle based on mode
+        if debug:
+            self.sub_title = "🐛 DEBUG MODE - Fixture Data"
+        elif config and self._is_fixture_mode(config):
+            self.sub_title = "🎯 DEMO MODE - Sample Data (Your real data is safe)"
+        else:
+            self.sub_title = "Modern TUI for Contact Management"
+
         self.dark = True  # Use dark theme by default
         self.debug_mode = debug
         self._force_setup = force_setup
@@ -153,6 +159,8 @@ class PRTApp(App):
 
             if debug:
                 logger.info(f"[DEBUG MODE] Using database: {db_path}")
+            elif self._is_fixture_mode(config):
+                logger.info(f"[FIXTURE MODE] Using isolated demo database: {db_path}")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             # Create a minimal in-memory database for testing
@@ -661,6 +669,26 @@ class PRTApp(App):
 
         except Exception as e:
             logger.error(f"Failed to initialize database data: {e}")
+
+    def _is_fixture_mode(self, config: dict) -> bool:
+        """Check if the given configuration is for fixture mode.
+
+        Args:
+            config: Configuration dictionary
+
+        Returns:
+            True if config points to fixture database, False otherwise
+        """
+        if not config:
+            return False
+
+        # Check if db_path points to fixture database
+        db_path = config.get("db_path", "")
+        if "fixture.db" in str(db_path):
+            return True
+
+        # Check explicit mode marker
+        return config.get("database_mode") == "fixture"
 
 
 # TUI Database Extensions

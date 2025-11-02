@@ -303,26 +303,67 @@ def run_setup_wizard():
     console.print("Welcome to PRT! Let's get you set up.", style="green")
     console.print()
 
+    # Ask user what type of setup they want
+    console.print("Choose your setup option:", style="bold")
+    console.print()
+    console.print("[1] Set up for real use")
+    console.print("    → Create your personal contact database")
+    console.print()
+    console.print("[2] Try with demo data")
+    console.print("    → Safe mode with sample contacts (your real data stays safe)")
+    console.print()
+
+    while True:
+        choice = Prompt.ask("Enter your choice", choices=["1", "2"], default="1")
+        if choice in ["1", "2"]:
+            break
+        console.print("Please enter 1 or 2", style="red")
+
     try:
-        # Run the setup process
-        config = setup_database()
-        console.print("✓ Configuration created successfully", style="green")
+        if choice == "1":
+            # Regular setup for real use
+            console.print("\n🔧 Setting up your personal database...", style="blue")
+            config = setup_database()
+            console.print("✓ Configuration created successfully", style="green")
 
-        # Initialize the database
-        if initialize_database(config):
-            console.print("✓ Database initialized successfully", style="green")
+            # Initialize the database
+            if initialize_database(config):
+                console.print("✓ Database initialized successfully", style="green")
+            else:
+                console.print("✗ Database initialization failed", style="red")
+                raise Exception("Database initialization failed")
+
+            console.print()
+            console.print("🎉 PRT setup completed successfully!", style="bold green")
+            console.print(f"Configuration saved to: {config_path()}", style="cyan")
+            console.print(
+                f"Database location: {config.get('db_path', 'prt_data/prt.db')}", style="cyan"
+            )
+            console.print()
+            console.print(
+                "You can now use PRT to manage your personal relationships!", style="green"
+            )
+
         else:
-            console.print("✗ Database initialization failed", style="red")
-            raise Exception("Database initialization failed")
+            # Demo/fixture mode setup
+            console.print("\n🎯 Setting up demo mode with sample data...", style="blue")
+            from .fixture_manager import setup_fixture_mode
 
-        console.print()
-        console.print("🎉 PRT setup completed successfully!", style="bold green")
-        console.print(f"Configuration saved to: {config_path()}", style="cyan")
-        console.print(
-            f"Database location: {config.get('db_path', 'prt_data/prt.db')}", style="cyan"
-        )
-        console.print()
-        console.print("You can now use PRT to manage your personal relationships!", style="green")
+            config = setup_fixture_mode(regenerate=True, quiet=False)
+            console.print()
+            console.print("🎉 Demo mode setup completed successfully!", style="bold green")
+            console.print(
+                "🔒 Your real data is completely safe - demo uses isolated database", style="green"
+            )
+            console.print(
+                f"Demo database location: {config.get('db_path', 'prt_data/fixture.db')}",
+                style="cyan",
+            )
+            console.print()
+            console.print("You can now explore PRT with sample data!", style="green")
+            console.print(
+                "💡 To switch back to real mode later, restart PRT without --setup", style="dim"
+            )
 
         return config
 
@@ -2843,7 +2884,7 @@ def main(
         help="Force regeneration of fixture database (use with --debug)",
     ),
     setup: bool = typer.Option(
-        False, "--setup", help="Force setup mode for importing contacts or loading fixtures"
+        False, "--setup", help="Force setup mode for importing contacts or trying demo data (safe)"
     ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),

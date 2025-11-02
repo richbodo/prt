@@ -112,7 +112,8 @@ class SetupScreen(BaseScreen):
             # Option 2: Fixtures
             with Container(classes="setup-option"):
                 yield Static(
-                    "[2] Load Demo Data (Fixtures)\n" "    → Try PRT with 7 sample contacts",
+                    "[2] Load Demo Data (Fixtures)\n"
+                    "    → Try PRT with 7 sample contacts (safe - uses isolated database)",
                     markup=True,
                 )
 
@@ -216,47 +217,52 @@ class SetupScreen(BaseScreen):
             self._show_error(detailed_error)
 
     async def _handle_load_fixtures(self) -> None:
-        """Handle fixture loading workflow."""
+        """Handle fixture loading workflow with isolated database."""
         try:
-            if not self._fixture_service:
-                self._show_error("Fixture service not available")
-                return
-
             self._show_status("📊 Preparing demo data...")
-            logger.info("[SETUP] Loading fixtures")
+            logger.info("[SETUP] Setting up isolated fixture database")
 
-            # Get summary
-            summary = self._fixture_service.get_fixture_summary()
+            # Get fixture summary for preview
+            from prt_src.fixture_manager import get_fixture_summary
+
+            summary = get_fixture_summary()
             self._show_status(
                 f"Demo data includes:\n"
                 f"• {summary['contacts']} contacts\n"
                 f"• {summary['tags']} tags\n"
                 f"• {summary['notes']} notes\n"
                 f"• Profile images included\n\n"
-                "⚠️  This will replace existing data.\n"
-                "💾 Loading..."
+                "✅ Your real data is safe - using isolated database.\n"
+                "💾 Setting up demo database..."
             )
 
-            # Clear and load
-            result = await self._fixture_service.clear_and_load_fixtures()
+            # Create isolated fixture database (does not touch real data)
+            from prt_src.fixture_manager import setup_fixture_mode
 
-            if result.get("success"):
-                # Build detailed success summary
-                summary = self._build_fixture_summary(result)
-                self._show_status(summary)
+            fixture_config = await self._run_in_executor(
+                setup_fixture_mode, True, True
+            )  # regenerate=True, quiet=True
+
+            if fixture_config:
+                # Update the app to use the fixture database
+                await self._update_app_with_fixture_config(fixture_config)
+
+                # Build success summary
+                summary_text = self._build_fixture_success_summary(summary)
+                self._show_status(summary_text)
 
                 # Wait for user keypress before navigating
                 self._wait_for_keypress = True
                 self._navigation_pending = "home"
-                logger.info("[SETUP] Fixtures loaded successfully, waiting for user keypress")
+                logger.info(
+                    "[SETUP] Fixture database created successfully, waiting for user keypress"
+                )
             else:
-                error_msg = result.get("error", "Unknown error")
-                detailed_error = self._build_detailed_error(error_msg)
-                self._show_error(detailed_error)
-                logger.error(f"[SETUP] Fixture load failed: {error_msg}")
+                self._show_error("Failed to create fixture database")
+                logger.error("[SETUP] Failed to create fixture database")
 
         except Exception as e:
-            logger.error(f"[SETUP] Error loading fixtures: {e}", exc_info=True)
+            logger.error(f"[SETUP] Error setting up fixture database: {e}", exc_info=True)
             detailed_error = self._build_detailed_error(str(e), exception=e)
             self._show_error(detailed_error)
 
@@ -572,3 +578,58 @@ class SetupScreen(BaseScreen):
             self._error_widget.update(message)
         if self._status_widget:
             self._status_widget.update("")
+
+    async def _run_in_executor(self, func, *args):
+        """Run a function in an executor to prevent blocking."""
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, func, *args)
+
+    async def _update_app_with_fixture_config(self, fixture_config: dict) -> None:
+        """Update the app to use the fixture database configuration."""
+        try:
+            logger.info(f"[SETUP] Updating app with fixture config: {fixture_config}")
+
+            # Update the data service if available
+            if hasattr(self, "data_service") and self.data_service:
+                logger.info("[SETUP] Updating data service with fixture database")
+                # Create new API instance with fixture config
+                from prt_src.api import PRTAPI
+
+                new_api = PRTAPI(fixture_config)
+
+                # Update the data service
+                self.data_service.api = new_api
+                logger.info("[SETUP] Data service updated successfully")
+
+            # Update the app's configuration
+            if hasattr(self.app, "config"):
+                self.app.config = fixture_config
+                logger.info("[SETUP] App configuration updated")
+
+        except Exception as e:
+            logger.error(f"[SETUP] Error updating app with fixture config: {e}", exc_info=True)
+            raise
+
+    def _build_fixture_success_summary(self, summary: dict) -> str:
+        """Build fixture loading success summary."""
+        lines = [
+            "✅ Successfully set up demo database!",
+            "",
+            "📊 Demo Data Summary:",
+            f"  • Total contacts: {summary.get('contacts', 0)}",
+            f"  • Tags: {summary.get('tags', 0)}",
+            f"  • Notes: {summary.get('notes', 0)}",
+            "  • Profile images: Included",
+            "",
+            "🔒 Data Safety:",
+            "  • Your real data is completely safe",
+            "  • Demo data uses isolated database",
+            "  • Next restart returns to your real data",
+            "",
+            "━" * 44,
+            "",
+            "Press any key to continue to home screen",
+        ]
+        return "\n".join(lines)

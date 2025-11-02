@@ -123,6 +123,60 @@ def get_database_url(config: Dict[str, Any]) -> str:
     return f"sqlite:///{db_path}"
 
 
+def get_current_database_mode() -> str:
+    """Get the current database mode from the active configuration.
+
+    Returns:
+        Database mode: "real", "fixture", "debug", or "unknown"
+    """
+    try:
+        config = load_config()
+        return get_database_mode_from_config(config)
+    except Exception:
+        return "unknown"
+
+
+def get_database_mode_from_config(config: Dict[str, Any]) -> str:
+    """Get the database mode from a configuration dictionary.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Database mode: "real", "fixture", "debug", or "unknown"
+    """
+    if not config:
+        return "unknown"
+
+    # Check explicit mode marker first
+    explicit_mode = config.get("database_mode")
+    if explicit_mode:
+        return explicit_mode
+
+    # Infer from database path
+    db_path = str(config.get("db_path", ""))
+    if "debug.db" in db_path:
+        return "debug"
+    elif "fixture.db" in db_path:
+        return "fixture"
+    elif "prt.db" in db_path:
+        return "real"
+    else:
+        return "unknown"
+
+
+def is_safe_mode() -> bool:
+    """Check if the application is running in a safe mode (fixture or debug).
+
+    Safe modes use isolated databases that don't affect user's real data.
+
+    Returns:
+        True if running in fixture or debug mode, False otherwise
+    """
+    mode = get_current_database_mode()
+    return mode in ["fixture", "debug"]
+
+
 # ============================================================================
 # LLM Configuration Management
 # ============================================================================

@@ -12,6 +12,13 @@ This guide consolidates everything you need to get productive quickly on PRT. It
 | Optional: [Cursor](https://cursor.sh), OpenAI Codex, Claude Code | Works great alongside this repository - used in development |
 | LLM Interface | We are using ollama various LLM models (gptoss20b, vaultgemma), so you will need to get one of those running and available to use the chat feature |
 
+### Download and install a model that works
+
+ollama pull gpt-oss:20b
+ollama run gpt-oss:20b
+
+Then test it in the ollama app.  You're good to go.
+
 Note: LLMs and agents will work a lot better for you if they have access to local copies of all the library code and docs they need.  The script "download_library_src.sh" in the root of this project will create an EXTERNAL_DOCS folder with all the libraries LLMs will commonly benefit from.  That folder is gitignored.  The claude.md file references the EXTERNAL_DOCS folder.
 
 ## 2. Start-of-Day Setup
