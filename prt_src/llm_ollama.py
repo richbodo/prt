@@ -1063,9 +1063,27 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
 Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, respect privacy, always create backups before modifications, and ALWAYS get user confirmation before executing SQL."""
 
     def _format_tool_calls(self) -> List[Dict[str, Any]]:
-        """Format tools for Ollama API."""
+        """Format tools for Ollama native API.
+
+        Tools must be in the format:
+        {
+            "type": "function",
+            "function": {
+                "name": "tool_name",
+                "description": "tool description",
+                "parameters": {...}
+            }
+        }
+        """
         return [
-            {"name": tool.name, "description": tool.description, "parameters": tool.parameters}
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.parameters,
+                },
+            }
             for tool in self.tools
         ]
 
@@ -1094,12 +1112,18 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         try:
             # Send request to Ollama
             logger.debug("[LLM] Making POST request to Ollama native API...")
+            logger.debug(f"[LLM] Request data: {json.dumps(request_data, indent=2, default=str)}")
             response = requests.post(
                 url,
                 json=request_data,
                 timeout=self.timeout,
             )
             logger.debug(f"[LLM] Received response with status code: {response.status_code}")
+
+            # Log error response body if we got an error
+            if response.status_code >= 400:
+                logger.error(f"[LLM] Error response body: {response.text}")
+
             response.raise_for_status()
 
             result = response.json()
@@ -1247,6 +1271,49 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         except requests.exceptions.ConnectionError as e:
             logger.error(f"[LLM] Connection error: {e}")
             return "Error: Cannot connect to Ollama. Please make sure Ollama is running on localhost:11434"
+        except requests.exceptions.HTTPError as e:
+            # Check if the error is about tool support
+            if e.response is not None and e.response.status_code == 400:
+                try:
+                    error_detail = e.response.json().get("error", "")
+                    if "does not support tools" in error_detail:
+                        logger.warning(
+                            f"[LLM] Model {self.model} does not support tools. Retrying without tools..."
+                        )
+                        # Retry without tools
+                        request_data_no_tools = {
+                            "model": self.model,
+                            "messages": [
+                                {"role": "system", "content": self._create_system_prompt()}
+                            ]
+                            + self.conversation_history,
+                            "stream": False,
+                            "keep_alive": self.keep_alive,
+                        }
+                        retry_response = requests.post(
+                            url, json=request_data_no_tools, timeout=self.timeout
+                        )
+                        retry_response.raise_for_status()
+                        result = retry_response.json()
+
+                        if not result.get("message"):
+                            logger.error("[LLM] Invalid retry response: no message found")
+                            return "Error: Invalid response from Ollama - no message found"
+
+                        message_obj = result["message"]
+                        assistant_message = message_obj["content"]
+                        logger.info(
+                            f"[LLM] Retry response (no tools): {assistant_message[:100]}..."
+                        )
+                        self.conversation_history.append(
+                            {"role": "assistant", "content": assistant_message}
+                        )
+                        return assistant_message
+                except (ValueError, KeyError):
+                    pass  # Fall through to generic error handling
+
+            logger.error(f"[LLM] HTTP error: {e}", exc_info=True)
+            return f"Error communicating with Ollama: {str(e)}"
         except requests.exceptions.RequestException as e:
             logger.error(f"[LLM] Request exception: {e}", exc_info=True)
             return f"Error communicating with Ollama: {str(e)}"
