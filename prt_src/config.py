@@ -138,7 +138,7 @@ class LLMConfig:
     """
 
     provider: str = "ollama"
-    model: str = "phi4-mini"
+    model: str = "gpt-oss:20b"
 
     # Model discovery and defaults
     default_model: Optional[str] = None  # Model alias to use by default (e.g., "llama8")
@@ -224,7 +224,7 @@ class LLMConfigManager:
         """Load LLM connection configuration with validation."""
         return LLMConfig(
             provider=llm_dict.get("provider", "ollama"),
-            model=llm_dict.get("model", "phi4-mini"),
+            model=llm_dict.get("model", "gpt-oss:20b"),
             # Model discovery and defaults
             default_model=llm_dict.get("default_model"),
             fallback_models=llm_dict.get("fallback_models"),
