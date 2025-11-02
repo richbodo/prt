@@ -18,7 +18,9 @@ import requests
 
 from .api import PRTAPI
 from .config import LLMConfigManager
+from .llm_memory import llm_memory
 from .logging_config import get_logger
+from .schema_info import get_schema_for_llm
 
 logger = get_logger(__name__)
 
@@ -231,7 +233,7 @@ class OllamaLLM:
         - Without preloading, the first chat request after idle time must:
           1. Load the 13GB model (20-40 seconds)
           2. Process the request (10-80+ seconds depending on complexity)
-          Total: Can exceed 120 second timeout, causing failures
+          Total: Can exceed 300 second timeout for very large requests, causing failures
         - Preloading on screen mount ensures the model is ready before user sends messages
         - The keep_alive setting (default 30m) keeps model loaded between requests
 
@@ -327,6 +329,12 @@ class OllamaLLM:
                 description="Get database statistics including total contact count and relationship count. Use this for quick overview questions like 'How many contacts do I have?'",
                 parameters={"type": "object", "properties": {}},
                 function=self.api.get_database_stats,
+            ),
+            Tool(
+                name="get_database_schema",
+                description="Get complete database schema information including table names, column names, data types, and relationships. Use when user asks 'Show me the database schema', 'What tables exist?', or needs to understand the database structure for SQL queries.",
+                parameters={"type": "object", "properties": {}},
+                function=self.api.get_database_schema,
             ),
             # ============================================================
             # READ-ONLY TOOLS - Priority 2 (API exists, tests to be added)
@@ -558,13 +566,13 @@ class OllamaLLM:
             # ============================================================
             Tool(
                 name="execute_sql",
-                description="Execute a raw SQL query against the database. IMPORTANT: ALL queries (read and write) require confirm=true. Use this only for complex queries that other tools cannot handle. Always ask user to confirm before executing.",
+                description="Execute a raw SQL query against the database. IMPORTANT: ALL queries (read and write) require confirm=true. Use this only for complex queries that other tools cannot handle. Always ask user to confirm before executing. CRITICAL: Only use columns and tables that exist in the database schema - use get_database_schema tool first if unsure about table structure.",
                 parameters={
                     "type": "object",
                     "properties": {
                         "sql": {
                             "type": "string",
-                            "description": "SQL query to execute (SQLite syntax)",
+                            "description": "SQL query to execute (SQLite syntax). MUST use only tables and columns that exist in the database schema. Common tables: contacts (id, name, email, phone, first_name, last_name), tags (id, name), notes (id, title, content).",
                         },
                         "confirm": {
                             "type": "boolean",
@@ -580,27 +588,75 @@ class OllamaLLM:
                 function=self._execute_sql_safe,
             ),
             # ============================================================
+            # ADVANCED TOOLS - Contact Query Optimization (Phase 4)
+            # Fast queries for specific contact subsets
+            # ============================================================
+            Tool(
+                name="get_contacts_with_images",
+                description="Get all contacts that have profile images. Optimized with database index for fast performance. Use this when the user wants contacts with profile pictures/images to create directories or visualizations.",
+                parameters={
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                },
+                function=self._get_contacts_with_images,
+            ),
+            Tool(
+                name="save_contacts_with_images",
+                description="STEP 1 of creating directory: Get all contacts that have profile images and save them to memory. Returns a memory ID that MUST then be used with generate_directory to complete the user's request. Always follow this with generate_directory tool call using the returned memory_id.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Optional description for the saved results (e.g., 'contacts with images for directory')",
+                        },
+                    },
+                    "required": [],
+                },
+                function=self._save_contacts_with_images,
+            ),
+            # ============================================================
             # ADVANCED TOOLS - Visualization (Phase 4)
             # User must explicitly request directory generation
             # ============================================================
             Tool(
                 name="generate_directory",
-                description="Generate an interactive D3.js visualization of contacts as a network graph. ONLY use when user explicitly requests a directory or visualization. Creates a self-contained HTML file. Use after showing search results with 10+ contacts.",
+                description="STEP 2 of creating directory: Generate an interactive D3.js visualization of contacts as a network graph. Can use either a search_query OR a memory_id from save_contacts_with_images. When user requests directory of contacts with images, use memory_id from save_contacts_with_images tool.",
                 parameters={
                     "type": "object",
                     "properties": {
                         "search_query": {
                             "type": "string",
-                            "description": "Search query to filter contacts (e.g., 'family', 'work')",
+                            "description": "Search query to filter contacts (e.g., 'family', 'work'). Optional if using memory_id.",
+                        },
+                        "memory_id": {
+                            "type": "string",
+                            "description": "ID from saved query results (e.g., from save_contacts_with_images). Optional if using search_query.",
                         },
                         "output_name": {
                             "type": "string",
-                            "description": "Optional name for the output directory (defaults to query name)",
+                            "description": "Optional name for the output directory (defaults to query name or memory description)",
                         },
                     },
-                    "required": ["search_query"],
+                    "required": [],
                 },
                 function=self._generate_directory,
+            ),
+            Tool(
+                name="list_memory",
+                description="List saved query results that can be used with other tools. Shows available memory IDs and what they contain.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "result_type": {
+                            "type": "string",
+                            "description": "Optional filter by type (e.g., 'contacts', 'query')",
+                        },
+                    },
+                    "required": [],
+                },
+                function=self._list_memory,
             ),
             # ============================================================
             # ADVANCED TOOLS - Relationship Management (Phase 4)
@@ -791,11 +847,285 @@ class OllamaLLM:
                 "message": f"Query affected {result['rowcount']} rows. Backup was created automatically.",
             }
 
-    def _generate_directory(self, search_query: str, output_name: str = None) -> Dict[str, Any]:
+    def _get_contacts_with_images(self) -> Dict[str, Any]:
+        """Get all contacts that have profile images.
+
+        Optimized query using database index for fast performance.
+        This is specifically designed for the LLM use case:
+        'create a directory of all contacts with images'
+
+        Returns:
+            Dict with success status and contact data
+        """
+        try:
+            logger.info("[LLM] Getting contacts with images using optimized query")
+            contacts = self.api.get_contacts_with_images()
+
+            logger.info(f"[LLM] Found {len(contacts)} contacts with images")
+
+            return {
+                "success": True,
+                "contacts": contacts,
+                "count": len(contacts),
+                "message": f"Found {len(contacts)} contacts with profile images",
+            }
+        except Exception as e:
+            logger.error(f"[LLM] Error getting contacts with images: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "contacts": [],
+                "count": 0,
+            }
+
+    def _save_contacts_with_images(self, description: str = None) -> Dict[str, Any]:
+        """Save contacts with images to memory for later use with other tools.
+
+        Args:
+            description: Optional description for the saved results
+
+        Returns:
+            Dict with success status and memory ID for chaining
+        """
+        try:
+            # Get contacts with images using optimized query
+            logger.info("[LLM] Getting contacts with images to save to memory")
+            contacts_result = self._get_contacts_with_images()
+
+            if not contacts_result["success"]:
+                return contacts_result
+
+            contacts = contacts_result["contacts"]
+
+            if not contacts:
+                return {
+                    "success": False,
+                    "error": "No contacts with images found to save",
+                    "count": 0,
+                }
+
+            # Clean contacts for JSON serialization (remove binary data)
+            import copy
+
+            clean_contacts = copy.deepcopy(contacts)
+
+            for contact in clean_contacts:
+                # Mark contacts that have images but remove binary data for JSON
+                if contact.get("profile_image"):
+                    contact["has_profile_image"] = True
+                    # Remove binary data that can't be JSON serialized
+                    contact.pop("profile_image", None)
+                else:
+                    contact["has_profile_image"] = False
+
+            # Save to memory with descriptive ID
+            desc = description or f"contacts with images ({len(clean_contacts)} contacts)"
+            memory_id = llm_memory.save_result(
+                data=clean_contacts, result_type="contacts", description=desc
+            )
+
+            return {
+                "success": True,
+                "memory_id": memory_id,
+                "count": len(clean_contacts),
+                "message": f"Saved {len(clean_contacts)} contacts with images to memory",
+                "usage": f"Use memory ID '{memory_id}' with generate_directory or other tools",
+            }
+
+        except Exception as e:
+            logger.error(f"[LLM] Error saving contacts with images to memory: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    def _list_memory(self, result_type: str = None) -> Dict[str, Any]:
+        """List saved results in memory.
+
+        Args:
+            result_type: Optional filter by result type
+
+        Returns:
+            Dict with success status and list of available results
+        """
+        try:
+            results = llm_memory.list_results(result_type=result_type)
+            stats = llm_memory.get_stats()
+
+            return {
+                "success": True,
+                "results": results,
+                "total_count": len(results),
+                "stats": stats,
+                "message": f"Found {len(results)} saved results in memory",
+            }
+
+        except Exception as e:
+            logger.error(f"[LLM] Error listing memory: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "results": [],
+            }
+
+    def _create_directory_from_contacts_with_images(
+        self, output_name: str = None
+    ) -> Dict[str, Any]:
+        """Create an interactive directory specifically for contacts with images.
+
+        This function combines two operations:
+        1. Get contacts with images (using optimized query)
+        2. Generate directory from those contacts
+
+        Args:
+            output_name: Optional name for output directory
+
+        Returns:
+            Dict with success status, output path, and performance metrics
+        """
+        import time
+
+        start_time = time.time()
+
+        try:
+            import json
+            import sys
+            import tempfile
+            from datetime import datetime
+            from pathlib import Path
+
+            sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
+            from make_directory import DirectoryGenerator
+
+            # Step 1: Get contacts with images using optimized query
+            logger.info("[LLM] Getting contacts with images for directory creation")
+            contacts_result = self._get_contacts_with_images()
+
+            if not contacts_result["success"]:
+                return contacts_result
+
+            contacts = contacts_result["contacts"]
+            query_time = time.time() - start_time
+
+            if not contacts:
+                return {
+                    "success": False,
+                    "error": "No contacts with images found",
+                    "count": 0,
+                    "query_time_ms": round(query_time * 1000, 2),
+                }
+
+            # Step 2: Create temporary export directory
+            export_dir = Path(tempfile.mkdtemp(prefix="prt_contacts_with_images_"))
+            images_dir = export_dir / "profile_images"
+            images_dir.mkdir(parents=True)
+
+            logger.info(f"[LLM] Creating directory for {len(contacts)} contacts with images")
+
+            # Step 3: Export profile images
+            exported_contacts = []
+            for contact in contacts:
+                try:
+                    # Copy contact data and add image path
+                    contact_copy = contact.copy()
+
+                    # Remove binary data before JSON serialization
+                    if contact["profile_image"]:
+                        image_path = images_dir / f"{contact['id']}.jpg"
+                        with open(image_path, "wb") as img_file:
+                            img_file.write(contact["profile_image"])
+                        contact_copy["exported_image_path"] = f"profile_images/{contact['id']}.jpg"
+                        contact_copy["has_profile_image"] = True  # Required by DirectoryGenerator
+                    else:
+                        contact_copy["has_profile_image"] = False
+
+                    # Remove binary fields that can't be JSON serialized
+                    contact_copy.pop("profile_image", None)
+
+                    exported_contacts.append(contact_copy)
+                except Exception as e:
+                    logger.warning(f"[LLM] Failed to export image for contact {contact['id']}: {e}")
+                    exported_contacts.append(contact)
+
+            # Step 4: Create export JSON (match expected format for directory generator)
+            export_data = {
+                "export_info": {
+                    "query": "contacts_with_images",
+                    "search_type": "contacts",
+                    "total_results": len(exported_contacts),
+                    "exported_at": datetime.now().isoformat(),
+                },
+                "results": exported_contacts,
+            }
+
+            # Write export JSON (must end with _search_results.json for directory generator)
+            output_filename = output_name or "contacts_with_images"
+            export_json = export_dir / f"{output_filename}_search_results.json"
+            with open(export_json, "w") as f:
+                json.dump(export_data, f, indent=2)
+
+            # Step 5: Generate directory
+            export_time = time.time()
+            output_path = Path("directories") / f"{output_filename}_directory"
+            generator = DirectoryGenerator(
+                export_path=export_dir, output_path=output_path, layout="graph"
+            )
+
+            if not generator.generate():
+                return {
+                    "success": False,
+                    "error": "Failed to generate directory visualization",
+                    "count": len(contacts),
+                    "query_time_ms": round(query_time * 1000, 2),
+                }
+
+            # Step 6: Cleanup and return results
+            try:
+                import shutil
+
+                shutil.rmtree(export_dir)
+                logger.info(f"[LLM] Cleaned up temp directory: {export_dir}")
+            except Exception as cleanup_error:
+                logger.warning(
+                    f"[LLM] Failed to cleanup temp directory {export_dir}: {cleanup_error}"
+                )
+
+            total_time = time.time() - start_time
+            directory_time = time.time() - export_time
+
+            return {
+                "success": True,
+                "output_path": str(output_path.absolute()),
+                "url": f"file://{output_path.absolute() / 'index.html'}",
+                "contact_count": len(contacts),
+                "message": f"Successfully created directory with {len(contacts)} contacts with images",
+                "performance": {
+                    "query_time_ms": round(query_time * 1000, 2),
+                    "directory_time_ms": round(directory_time * 1000, 2),
+                    "total_time_ms": round(total_time * 1000, 2),
+                },
+            }
+
+        except Exception as e:
+            logger.error(
+                f"[LLM] Error creating directory from contacts with images: {e}", exc_info=True
+            )
+            total_time = time.time() - start_time
+            return {
+                "success": False,
+                "error": str(e),
+                "count": 0,
+                "total_time_ms": round(total_time * 1000, 2),
+            }
+
+    def _generate_directory(
+        self, search_query: str = None, memory_id: str = None, output_name: str = None
+    ) -> Dict[str, Any]:
         """Generate an interactive D3.js visualization of contacts.
 
         Args:
-            search_query: Search query to filter contacts
+            search_query: Search query to filter contacts (optional if using memory_id)
+            memory_id: ID of saved results from memory (optional if using search_query)
             output_name: Optional name for output directory
 
         Returns:
@@ -813,15 +1143,52 @@ class OllamaLLM:
             sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
             from make_directory import DirectoryGenerator
 
-            # Step 1: Search for contacts
-            logger.info(f"[LLM] Searching contacts with query: {search_query}")
-            contacts = self.api.search_contacts(search_query)
+            # Step 1: Get contacts either from search or memory
+            if memory_id:
+                logger.info(f"[LLM] Loading contacts from memory: {memory_id}")
+                memory_result = llm_memory.load_result(memory_id)
+                if not memory_result:
+                    return {
+                        "success": False,
+                        "error": f"Memory ID '{memory_id}' not found or expired",
+                        "message": "Use list_memory to see available results",
+                    }
+
+                contacts = memory_result["data"]
+                query_name = memory_result.get("description", memory_id)
+                logger.info(f"[LLM] Loaded {len(contacts)} contacts from memory")
+
+                # Memory contacts don't have binary image data, so we need to fetch it
+                # for contacts that are marked as having images
+                for contact in contacts:
+                    if contact.get("has_profile_image") and not contact.get("profile_image"):
+                        # Fetch the full contact with binary image data
+                        full_contact = self.api.get_contact_details(contact["id"])
+                        if full_contact and full_contact.get("profile_image"):
+                            contact["profile_image"] = full_contact["profile_image"]
+                            contact["profile_image_filename"] = full_contact.get(
+                                "profile_image_filename"
+                            )
+                            contact["profile_image_mime_type"] = full_contact.get(
+                                "profile_image_mime_type"
+                            )
+
+            elif search_query:
+                logger.info(f"[LLM] Searching contacts with query: {search_query}")
+                contacts = self.api.search_contacts(search_query)
+                query_name = search_query
+            else:
+                return {
+                    "success": False,
+                    "error": "Either search_query or memory_id must be provided",
+                    "message": "Specify a search query or use a saved memory ID",
+                }
 
             if not contacts:
                 return {
                     "success": False,
                     "error": "No contacts found",
-                    "message": f"No contacts found matching '{search_query}'",
+                    "message": f"No contacts found matching '{query_name}'",
                 }
 
             # Step 2: Create temporary export directory
@@ -871,7 +1238,9 @@ class OllamaLLM:
                 json.dump(export_data, f, indent=2)
 
             # Step 5: Generate directory
-            output_path = Path("directories") / (output_name or f"chat_{search_query}")
+            output_path = Path("directories") / (
+                output_name or f"chat_{query_name.replace(' ', '_')}"
+            )
             generator = DirectoryGenerator(
                 export_path=export_dir, output_path=output_path, layout="graph"
             )
@@ -1009,6 +1378,13 @@ class OllamaLLM:
         # Count tools for context
         tool_count = len(self.tools)
 
+        # Get database schema information
+        try:
+            schema_info = get_schema_for_llm()
+        except Exception as e:
+            logger.warning(f"[LLM] Failed to get schema info: {e}")
+            schema_info = "Schema information unavailable due to error."
+
         return f"""You are an AI assistant for the Personal Relationship Toolkit (PRT), a privacy-first personal contact management system.
 
 ## ABOUT PRT
@@ -1029,7 +1405,14 @@ Key responsibilities:
 - Help users search, view, and understand their contact data
 - Answer questions about their relationships, tags, and notes
 - Suggest helpful visualizations when appropriate (but never auto-generate)
+- **Execute tool chains for complex workflows** (e.g., "directory of contacts with images")
 - Provide a conversational, helpful interface to their private data
+
+**IMPORTANT - Tool Chaining for Contact Directories:**
+When user requests "directory of contacts with images", always use this 2-step process:
+1. Call `save_contacts_with_images` → get memory_id
+2. Call `generate_directory` with that memory_id
+Never stop after step 1 - users want the final HTML directory, not just saved data.
 
 ## USER INTERFACE CONTEXT
 
@@ -1076,6 +1459,8 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
 
 {tools_description}
 
+{schema_info}
+
 ## USAGE INSTRUCTIONS
 
 1. **Search First**: When users ask about contacts/tags/notes, use appropriate search/list tools to get real data
@@ -1106,13 +1491,15 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
    - NEVER auto-generate directories - only create when user explicitly requests
    - You MAY offer to generate when showing many contacts (>10)
    - Example: "I found 25 family contacts. Would you like me to generate an interactive visualization?"
-   - Directory generation creates a self-contained HTML file the user can open
+
 8. **Relationship Management**:
    - Use add_contact_relationship and remove_contact_relationship for contact-to-contact links
    - Relationships types: parent, child, friend, colleague, spouse, etc.
    - These create automatic backups before modifying data
-9. **Error Handling**: If a tool fails, explain the error clearly and suggest alternatives
-10. **Result Limits**: If query returns many results (>50), summarize and offer to narrow the search
+
+10. **Error Handling**: If a tool fails, explain the error clearly and suggest alternatives
+
+11. **Result Limits**: If query returns many results (>50), summarize and offer to narrow the search
 
 ## COMMON USE CASES
 
@@ -1150,6 +1537,10 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
 **Visualizations (Directory Generation):**
 - "Generate a directory of my family contacts" → use generate_directory
 - "Create a visualization of my work network" → use generate_directory
+- "Create a directory of contacts with images" →
+  STEP 1: Use save_contacts_with_images (gets memory_id)
+  STEP 2: Use generate_directory with memory_id
+  STEP 3: Tell user the HTML file location to open
 - ONLY when user explicitly requests, never auto-generate
 
 **Relationship Management:**
@@ -1179,6 +1570,43 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
 - You cannot see tool results - the system shows them to you in follow-up messages
 - You cannot generate directories without explicit user request
 - You cannot restore from backups (users must do this through TUI or API)
+
+## SQL QUERY OPTIMIZATION PATTERNS (Critical for Large Databases)
+
+When using execute_sql tool with databases containing 1000+ contacts, follow these 5 essential patterns to prevent timeouts:
+
+**1. LIMIT LARGE QUERIES**: Always add LIMIT to prevent overwhelming results
+```sql
+-- Instead of: SELECT * FROM contacts WHERE profile_image IS NOT NULL
+-- Use: SELECT id, name, email FROM contacts WHERE profile_image IS NOT NULL LIMIT 50
+```
+
+**2. COUNT BEFORE SELECTING**: Use COUNT(*) to check result size before full queries
+```sql
+-- First: SELECT COUNT(*) FROM contacts WHERE profile_image IS NOT NULL
+-- Then: SELECT * FROM contacts WHERE profile_image IS NOT NULL LIMIT 100
+```
+
+**3. EXCLUDE BINARY DATA**: Avoid selecting profile_image column unless specifically needed
+```sql
+-- Good: SELECT id, name, email, phone FROM contacts WHERE profile_image IS NOT NULL
+-- Avoid: SELECT * FROM contacts (includes large binary profile_image data)
+```
+
+**4. USE INDEXED COLUMNS**: Query against indexed fields for better performance
+```sql
+-- Fast (indexed): SELECT * FROM contacts WHERE name LIKE 'John%' LIMIT 50
+-- Fast (indexed): SELECT * FROM contacts WHERE email IS NOT NULL LIMIT 50
+-- Slower: SELECT * FROM contacts WHERE phone LIKE '%555%' LIMIT 50
+```
+
+**5. SAMPLE FOR EXPLORATION**: Use RANDOM() for data exploration instead of full scans
+```sql
+-- For data exploration: SELECT * FROM contacts ORDER BY RANDOM() LIMIT 20
+-- For pattern analysis: SELECT name, email FROM contacts WHERE profile_image IS NOT NULL ORDER BY RANDOM() LIMIT 10
+```
+
+**Performance Note**: Database has indexes on: name, email, profile_image (WHERE NOT NULL), created_at, contact_metadata.contact_id
 
 ## IMPORTANT REMINDERS
 
@@ -1317,7 +1745,14 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
 
                     # Call the tool
                     tool_result = self._call_tool(tool_name, arguments)
-                    logger.debug(f"[LLM] Tool {tool_name} result: {str(tool_result)[:200]}")
+
+                    # Enhanced logging for execute_sql tool - show full response for debugging
+                    if tool_name == "execute_sql":
+                        logger.info(
+                            f"[LLM] Tool {tool_name} FULL result: {json.dumps(tool_result, indent=2, default=self._json_serializer)}"
+                        )
+                    else:
+                        logger.debug(f"[LLM] Tool {tool_name} result: {str(tool_result)[:200]}")
                     tool_results.append(
                         {
                             "tool_call_id": tool_call.get("id", ""),
