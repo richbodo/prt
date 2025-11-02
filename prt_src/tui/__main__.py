@@ -7,8 +7,8 @@ This module allows running the TUI directly with:
 Example usage:
     python -m prt_src.tui
     python -m prt_src.tui --debug
-    python -m prt_src.tui --llm-provider llamacpp --llm-model MODELS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf
-    python -m prt_src.tui --llm-provider ollama --llm-model gpt-oss:20b
+    python -m prt_src.tui --model llama8
+    python -m prt_src.tui --model gpt-oss-20b
 """
 
 import argparse
@@ -30,11 +30,9 @@ Examples:
   # Run in debug mode with fixture data
   python -m prt_src.tui --debug
 
-  # Use llama-cpp-python with local model
-  python -m prt_src.tui --llm-provider llamacpp --llm-model MODELS/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf
-
-  # Use Ollama with specific model
-  python -m prt_src.tui --llm-provider ollama --llm-model gpt-oss:20b
+  # Use friendly model alias (auto-detects provider)
+  python -m prt_src.tui --model llama8
+  python -m prt_src.tui --model gpt-oss-20b
 
   # Force setup screen
   python -m prt_src.tui --setup
@@ -55,16 +53,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--llm-provider",
+        "--model",
+        "-m",
         type=str,
-        choices=["ollama", "llamacpp"],
-        help="LLM provider to use: 'ollama' (default) or 'llamacpp'",
-    )
-
-    parser.add_argument(
-        "--llm-model",
-        type=str,
-        help="Model name (for ollama) or path to .gguf file (for llamacpp)",
+        help="Model alias to use (e.g., 'llama8', 'gpt-oss-20b'). Auto-detects provider.",
     )
 
     args = parser.parse_args()
@@ -74,8 +66,7 @@ Examples:
         app = PRTApp(
             debug=args.debug,
             force_setup=args.setup,
-            llm_provider=args.llm_provider,
-            llm_model=args.llm_model,
+            model=args.model,
         )
         app.run()
     except KeyboardInterrupt:

@@ -11,6 +11,7 @@ from typing import Union
 
 from .api import PRTAPI
 from .config import LLMConfigManager
+from .llm_model_registry import OllamaModelRegistry
 from .logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -18,6 +19,108 @@ if TYPE_CHECKING:
     from .llm_ollama import OllamaLLM
 
 logger = get_logger(__name__)
+
+# Global registry instance (cached)
+_registry: Optional[OllamaModelRegistry] = None
+
+
+def get_registry() -> OllamaModelRegistry:
+    """Get or create the global model registry instance.
+
+    Returns:
+        Shared OllamaModelRegistry instance
+    """
+    global _registry
+    if _registry is None:
+        _registry = OllamaModelRegistry()
+    return _registry
+
+
+def resolve_model_alias(
+    model_alias: Optional[str] = None, config_manager: Optional[LLMConfigManager] = None
+) -> tuple[str, str]:
+    """Resolve a model alias to (provider, model_name).
+
+    Strategy:
+    1. If no alias provided, use config default_model or llama8
+    2. Check if alias is in Ollama registry
+    3. If in registry, prefer 'ollama' provider
+    4. If not in registry but ends with .gguf, use 'llamacpp'
+    5. Fall back to config if Ollama offline
+
+    Args:
+        model_alias: Model alias or full name (e.g., "llama8", "gpt-oss-20b")
+        config_manager: Config manager instance
+
+    Returns:
+        Tuple of (provider, resolved_model_name)
+    """
+    if config_manager is None:
+        config_manager = LLMConfigManager()
+
+    # Get the model to use
+    if model_alias is None:
+        # Try config first
+        model_alias = getattr(config_manager.llm, "default_model", None)
+        if model_alias:
+            logger.debug(f"Using default_model from config: {model_alias}")
+        else:
+            # Use config's model setting (defaults to gpt-oss:20b)
+            model_alias = config_manager.llm.model
+            logger.debug(f"No model specified, using config model: {model_alias}")
+
+    logger.info(f"[Model Resolution] Resolving alias: {model_alias}")
+
+    # Try Ollama registry first
+    registry = get_registry()
+    ollama_available = registry.is_available()
+
+    if ollama_available:
+        # Check if it's a known alias
+        resolved_name = registry.resolve_alias(model_alias)
+
+        if resolved_name:
+            logger.info(f"[Model Resolution] Found in Ollama: {model_alias} -> {resolved_name}")
+            return ("ollama", resolved_name)
+        else:
+            # Not in registry - check if it's a direct model name in Ollama
+            model_info = registry.get_model_info(model_alias)
+            if model_info:
+                logger.info(f"[Model Resolution] Direct match in Ollama: {model_alias}")
+                return ("ollama", model_alias)
+    else:
+        logger.warning("[Model Resolution] Ollama not available, checking config fallback")
+
+    # Ollama offline or model not found - check config fallback
+    fallback_models = getattr(config_manager.llm, "fallback_models", {}) or {}
+
+    if fallback_models and model_alias in fallback_models:
+        fallback = fallback_models[model_alias]
+        provider = fallback.get("provider", "ollama")
+        model_name = fallback.get("model_name", model_alias)
+        logger.info(
+            f"[Model Resolution] Using config fallback: {model_alias} -> {provider}/{model_name}"
+        )
+        return (provider, model_name)
+
+    # Special case: if we're using the default "llama8" and Ollama is available,
+    # use the registry's default model instead of assuming "llama8" exists
+    if model_alias == "llama8" and ollama_available:
+        default_model = registry.get_default_model()
+        if default_model:
+            logger.info(f"[Model Resolution] Using registry default model: {default_model}")
+            return ("ollama", default_model)
+
+    # Check if it looks like a .gguf path
+    if model_alias.endswith(".gguf"):
+        logger.info(f"[Model Resolution] Detected .gguf file: {model_alias}")
+        return ("llamacpp", model_alias)
+
+    # Last resort - assume it's an Ollama model name
+    logger.warning(
+        f"[Model Resolution] Could not resolve '{model_alias}', " f"assuming Ollama model"
+    )
+    return ("ollama", model_alias)
 
 
 def create_llm(
@@ -30,9 +133,9 @@ def create_llm(
     """Create an LLM instance based on provider type.
 
     Args:
-        provider: LLM provider name ("ollama" or "llamacpp"). If None, uses config.
+        provider: LLM provider name ("ollama" or "llamacpp"). If None, auto-detects from model.
         api: PRTAPI instance for database operations. If None, creates a new instance.
-        model: Model name or path override. If None, uses config.
+        model: Model alias or name (e.g., "llama8", "gpt-oss-20b"). If None, uses config default.
         config_manager: LLMConfigManager instance. If None, loads from config.
         **kwargs: Additional provider-specific arguments
 
@@ -51,12 +154,23 @@ def create_llm(
     if api is None:
         api = PRTAPI()
 
-    # Determine provider
+    # Determine provider and resolve model name
     if provider is None:
-        provider = config_manager.llm.provider
+        # Auto-detect provider based on model alias
+        resolved_provider, resolved_model = resolve_model_alias(model, config_manager)
+        provider = resolved_provider
+        model = resolved_model
+        logger.info(f"[LLM Factory] Auto-detected provider: {provider}, resolved model: {model}")
+    else:
+        # Explicit provider given - use it directly
+        logger.info(f"[LLM Factory] Using explicit provider: {provider}")
+        # If model is None, resolve_model_alias will use config default
+        if model is None:
+            _, model = resolve_model_alias(None, config_manager)
+            logger.info(f"[LLM Factory] Resolved model from config: {model}")
 
     provider = provider.lower()
-    logger.info(f"[LLM Factory] Creating LLM provider: {provider}")
+    logger.info(f"[LLM Factory] Creating LLM with provider={provider}, model={model}")
 
     if provider == "ollama":
         return _create_ollama_llm(api, model, config_manager, **kwargs)

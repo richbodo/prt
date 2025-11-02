@@ -115,8 +115,7 @@ class PRTApp(App):
         config: Optional[dict] = None,
         debug: bool = False,
         force_setup: bool = False,
-        llm_provider: Optional[str] = None,
-        llm_model: Optional[str] = None,
+        model: Optional[str] = None,
     ):
         """Initialize the PRT application.
 
@@ -124,8 +123,7 @@ class PRTApp(App):
             config: Optional configuration dict. If None, loads from config file.
             debug: If True, shows debug mode indicator in UI.
             force_setup: If True, force setup screen even if DB has data.
-            llm_provider: LLM provider override ('ollama' or 'llamacpp'). If None, uses config.
-            llm_model: Model name/path override. If None, uses config.
+            model: Model alias (e.g., 'llama8', 'gpt-oss-20b'). Auto-detects provider. If None, uses config.
         """
         super().__init__()
         self.title = "Personal Relationship Tracker"
@@ -193,11 +191,10 @@ class PRTApp(App):
 
         # Initialize LLM service using factory
         try:
-            self.llm_service = create_llm(provider=llm_provider, api=prt_api, model=llm_model)
-            # Log which provider was selected
-            provider_name = llm_provider or "default (from config)"
-            model_name = llm_model or "default (from config)"
-            logger.info(f"LLM service initialized: provider={provider_name}, model={model_name}")
+            self.llm_service = create_llm(api=prt_api, model=model)
+            # Log which model was selected
+            model_name = model or "default (from config)"
+            logger.info(f"LLM service initialized: model={model_name}")
         except Exception as e:
             logger.error(f"Failed to initialize LLM service: {e}")
             self.llm_service = None
