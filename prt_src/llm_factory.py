@@ -65,9 +65,9 @@ def resolve_model_alias(
         if model_alias:
             logger.debug(f"Using default_model from config: {model_alias}")
         else:
-            # Default to llama8
-            model_alias = "llama8"
-            logger.debug("No model specified, defaulting to 'llama8'")
+            # Use config's model setting (defaults to gpt-oss:20b)
+            model_alias = config_manager.llm.model
+            logger.debug(f"No model specified, using config model: {model_alias}")
 
     logger.info(f"[Model Resolution] Resolving alias: {model_alias}")
 
