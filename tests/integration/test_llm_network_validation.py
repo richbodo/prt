@@ -9,6 +9,9 @@ from unittest.mock import patch
 
 import pytest
 
+from prt_src.llm_ollama import ALLOWED_CONTENT_TYPES
+from prt_src.llm_ollama import MAX_RESPONSE_SIZE_BYTES
+from prt_src.llm_ollama import MAX_RESPONSE_SIZE_WARNING
 from prt_src.llm_ollama import OllamaLLM
 
 
@@ -17,12 +20,14 @@ class TestLLMNetworkValidation:
 
     def setup_method(self):
         """Set up test instance."""
-        self.llm = OllamaLLM()
+        # Create a mock API for testing
+        mock_api = Mock()
+        self.llm = OllamaLLM(mock_api)
 
     def test_validate_response_valid_json(self):
         """Test validation of valid JSON response."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json"}
+        mock_response.headers = {"Content-Type": "application/json"}
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
         result = self.llm._validate_and_parse_response(mock_response, "test")
@@ -32,7 +37,7 @@ class TestLLMNetworkValidation:
     def test_validate_response_valid_json_with_charset(self):
         """Test validation of valid JSON response with charset."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json; charset=utf-8"}
+        mock_response.headers = {"Content-Type": "application/json; charset=utf-8"}
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
         result = self.llm._validate_and_parse_response(mock_response, "test")
@@ -42,22 +47,20 @@ class TestLLMNetworkValidation:
     def test_validate_response_invalid_content_type_html(self):
         """Test rejection of HTML content type."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "text/html"}
+        mock_response.headers = {"Content-Type": "text/html"}
         mock_response.iter_content.return_value = [b"<html><body>Error</body></html>"]
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid Content-Type"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_invalid_content_type_plain_text(self):
         """Test rejection of plain text content type."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "text/plain"}
+        mock_response.headers = {"Content-Type": "text/plain"}
         mock_response.iter_content.return_value = [b"Error message"]
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid Content-Type"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_missing_content_type(self):
         """Test handling of missing content-type header."""
@@ -65,41 +68,38 @@ class TestLLMNetworkValidation:
         mock_response.headers = {}
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid Content-Type"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_oversized_content_length(self):
         """Test rejection of oversized response via Content-Length."""
         mock_response = Mock()
         mock_response.headers = {
-            "content-type": "application/json",
-            "content-length": str(11 * 1024 * 1024),  # 11MB > 10MB limit
+            "Content-Type": "application/json",
+            "Content-Length": str(11 * 1024 * 1024),  # 11MB > 10MB limit
         }
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Response size.*exceeds maximum"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_oversized_while_reading(self):
         """Test rejection of oversized response while reading."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json"}
+        mock_response.headers = {"Content-Type": "application/json"}
 
         # Simulate reading chunks that exceed the limit
         large_chunk = b"x" * (6 * 1024 * 1024)  # 6MB chunks
         mock_response.iter_content.return_value = [large_chunk, large_chunk]  # Total: 12MB
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Response size exceeded.*limit"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_large_response_warning(self):
         """Test warning for large but acceptable response."""
         mock_response = Mock()
         mock_response.headers = {
             "content-type": "application/json",
-            "content-length": str(6 * 1024 * 1024),  # 6MB (> 5MB warning threshold)
+            "Content-Length": str(6 * 1024 * 1024),  # 6MB (> 5MB warning threshold)
         }
         mock_response.iter_content.return_value = [
             b'{"large": "' + b"x" * (6 * 1024 * 1024 - 20) + b'"}'
@@ -115,32 +115,29 @@ class TestLLMNetworkValidation:
     def test_validate_response_malformed_json(self):
         """Test handling of malformed JSON."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json"}
+        mock_response.headers = {"Content-Type": "application/json"}
         mock_response.iter_content.return_value = [b'{"invalid": json}']
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid JSON response"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_truncated_json(self):
         """Test handling of truncated JSON."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json"}
+        mock_response.headers = {"Content-Type": "application/json"}
         mock_response.iter_content.return_value = [b'{"incomplete":']
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid JSON response"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_empty_response(self):
         """Test handling of empty response."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/json"}
+        mock_response.headers = {"Content-Type": "application/json"}
         mock_response.iter_content.return_value = [b""]
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid JSON response"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_health_check_with_validation(self):
         """Test health_check uses validation."""
@@ -222,35 +219,30 @@ class TestLLMNetworkValidation:
 
     def test_security_constants_defined(self):
         """Test that security constants are properly defined."""
-        assert hasattr(self.llm, "MAX_RESPONSE_SIZE_BYTES")
-        assert hasattr(self.llm, "MAX_RESPONSE_SIZE_WARNING")
-        assert hasattr(self.llm, "ALLOWED_CONTENT_TYPES")
-
-        assert self.llm.MAX_RESPONSE_SIZE_BYTES == 10 * 1024 * 1024  # 10MB
-        assert self.llm.MAX_RESPONSE_SIZE_WARNING == 5 * 1024 * 1024  # 5MB
-        assert "application/json" in self.llm.ALLOWED_CONTENT_TYPES
+        # Test module-level constants
+        assert MAX_RESPONSE_SIZE_BYTES == 10 * 1024 * 1024  # 10MB
+        assert MAX_RESPONSE_SIZE_WARNING == 5 * 1024 * 1024  # 5MB
+        assert "application/json" in ALLOWED_CONTENT_TYPES
 
     def test_validation_prevents_memory_exhaustion(self):
         """Test that validation prevents memory exhaustion attacks."""
         mock_response = Mock()
         mock_response.headers = {
-            "content-type": "application/json",
-            "content-length": str(100 * 1024 * 1024),  # 100MB attack
+            "Content-Type": "application/json",
+            "Content-Length": str(100 * 1024 * 1024),  # 100MB attack
         }
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
+        with pytest.raises(ValueError, match="Response size.*exceeds maximum"):
+            self.llm._validate_and_parse_response(mock_response, "test")
 
         # Should reject without trying to read the response
-        assert result is None
         mock_response.iter_content.assert_not_called()
 
     def test_validation_prevents_type_confusion(self):
         """Test that validation prevents type confusion attacks."""
         mock_response = Mock()
-        mock_response.headers = {"content-type": "application/javascript"}
+        mock_response.headers = {"Content-Type": "application/javascript"}
         mock_response.iter_content.return_value = [b'alert("xss")']
 
-        result = self.llm._validate_and_parse_response(mock_response, "test")
-
-        # Should reject JavaScript content
-        assert result is None
+        with pytest.raises(ValueError, match="Invalid Content-Type"):
+            self.llm._validate_and_parse_response(mock_response, "test")
