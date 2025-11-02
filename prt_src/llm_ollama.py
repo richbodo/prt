@@ -22,6 +22,11 @@ from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Response validation limits (prevent memory exhaustion attacks)
+MAX_RESPONSE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB - reasonable for LLM responses
+MAX_RESPONSE_SIZE_WARNING = 5 * 1024 * 1024  # 5MB - log warning for large responses
+ALLOWED_CONTENT_TYPES = ["application/json", "application/json; charset=utf-8"]
+
 
 @dataclass
 class Tool:
@@ -79,6 +84,113 @@ class OllamaLLM:
             f"[LLM] Initialized OllamaLLM: model={self.model}, keep_alive={self.keep_alive}, timeout={self.timeout}s"
         )
 
+    def _validate_and_parse_response(
+        self, response: requests.Response, operation: str
+    ) -> Dict[str, Any]:
+        """Validate HTTP response and safely parse JSON.
+
+        Args:
+            response: The requests.Response object to validate
+            operation: Description of operation for error messages (e.g., "chat", "preload")
+
+        Returns:
+            Parsed JSON response as dict
+
+        Raises:
+            ValueError: If response fails validation (size, content-type, JSON parsing)
+        """
+        # Step 1: Validate Content-Type header
+        content_type = response.headers.get("Content-Type", "").lower()
+
+        # Check if content type matches allowed types (handle charset variations)
+        is_valid_content_type = False
+        for allowed_type in ALLOWED_CONTENT_TYPES:
+            if content_type.startswith(allowed_type.lower()):
+                is_valid_content_type = True
+                break
+
+        if not is_valid_content_type:
+            logger.error(
+                f"[LLM] Invalid Content-Type for {operation}: {content_type}. "
+                f"Expected one of {ALLOWED_CONTENT_TYPES}"
+            )
+            raise ValueError(
+                f"Invalid Content-Type '{content_type}' for {operation}. "
+                f"Expected JSON response but got {content_type.split(';')[0]}"
+            )
+
+        # Step 2: Check Content-Length if present
+        content_length = response.headers.get("Content-Length")
+        if content_length:
+            try:
+                size_bytes = int(content_length)
+            except (ValueError, TypeError):
+                logger.warning(f"[LLM] Invalid Content-Length header: {content_length}")
+                size_bytes = None
+
+            if size_bytes is not None:
+                # Reject oversized responses
+                if size_bytes > MAX_RESPONSE_SIZE_BYTES:
+                    logger.error(
+                        f"[LLM] Response size {size_bytes} bytes exceeds maximum "
+                        f"{MAX_RESPONSE_SIZE_BYTES} bytes for {operation}"
+                    )
+                    raise ValueError(
+                        f"Response size {size_bytes / 1024 / 1024:.2f}MB exceeds "
+                        f"maximum {MAX_RESPONSE_SIZE_BYTES / 1024 / 1024:.0f}MB limit"
+                    )
+
+                # Warn about large responses
+                if size_bytes > MAX_RESPONSE_SIZE_WARNING:
+                    logger.warning(
+                        f"[LLM] Large response detected for {operation}: "
+                        f"{size_bytes / 1024 / 1024:.2f}MB"
+                    )
+
+        # Step 3: Read response with size limit
+        # requests.Response.json() reads the entire response into memory
+        # We need to validate size before calling .json()
+        try:
+            # Read response text with size limit
+            response_text = ""
+            bytes_read = 0
+
+            for chunk in response.iter_content(chunk_size=8192, decode_unicode=False):
+                bytes_read += len(chunk)
+
+                if bytes_read > MAX_RESPONSE_SIZE_BYTES:
+                    logger.error(
+                        f"[LLM] Response exceeded size limit while reading for {operation}"
+                    )
+                    raise ValueError(
+                        f"Response size exceeded {MAX_RESPONSE_SIZE_BYTES / 1024 / 1024:.0f}MB "
+                        f"limit while reading"
+                    )
+
+                response_text += chunk.decode("utf-8")
+
+            # Warn if response is large
+            if bytes_read > MAX_RESPONSE_SIZE_WARNING:
+                logger.warning(
+                    f"[LLM] Large response read for {operation}: "
+                    f"{bytes_read / 1024 / 1024:.2f}MB"
+                )
+
+        except Exception as e:
+            logger.error(f"[LLM] Failed to read response for {operation}: {e}")
+            raise ValueError(f"Failed to read response: {str(e)}") from e
+
+        # Step 4: Parse JSON safely
+        try:
+            parsed_json = json.loads(response_text)
+            return parsed_json
+        except json.JSONDecodeError as e:
+            logger.error(
+                f"[LLM] Failed to parse JSON response for {operation}: {e}. "
+                f"Response preview: {response_text[:200]}"
+            )
+            raise ValueError(f"Invalid JSON response for {operation}: {str(e)}") from e
+
     async def health_check(self, timeout: float = 2.0) -> bool:
         """Quick health check to see if Ollama is responsive.
 
@@ -93,10 +205,21 @@ class OllamaLLM:
             response = await asyncio.to_thread(
                 requests.get, f"{self.base_url.replace('/v1', '')}/api/tags", timeout=timeout
             )
-            return response.status_code == 200
+
+            # Validate response before checking status
+            if response.status_code == 200:
+                # Validate and parse response (health check needs JSON response)
+                await asyncio.to_thread(self._validate_and_parse_response, response, "health_check")
+                return True
+            return False
+        except ValueError as e:
+            # Validation error - log but return False (graceful degradation)
+            logger.warning(f"[LLM] Health check validation failed: {e}")
+            return False
         except (requests.exceptions.RequestException, requests.exceptions.Timeout):
             return False
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[LLM] Health check failed with unexpected error: {e}")
             return False
 
     async def preload_model(self) -> bool:
@@ -137,12 +260,20 @@ class OllamaLLM:
             )
 
             if response.status_code == 200:
+                # Validate and parse response to ensure it's valid JSON
+                await asyncio.to_thread(
+                    self._validate_and_parse_response, response, "preload_model"
+                )
                 logger.info(f"[LLM] Model {self.model} preloaded successfully")
                 return True
             else:
                 logger.warning(f"[LLM] Model preload returned status {response.status_code}")
                 return False
 
+        except ValueError as e:
+            # Validation error - log and return False (graceful degradation)
+            logger.error(f"[LLM] Failed to preload model (validation error): {e}")
+            return False
         except Exception as e:
             logger.error(f"[LLM] Failed to preload model: {e}")
             return False
@@ -1126,7 +1257,8 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
 
             response.raise_for_status()
 
-            result = response.json()
+            # Validate and parse response
+            result = self._validate_and_parse_response(response, "chat")
             logger.debug(f"[LLM] Received JSON response, done={result.get('done', False)}")
 
             # Validate response structure (Ollama native format)
@@ -1239,7 +1371,8 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                 logger.debug(f"[LLM] Final response status: {final_response.status_code}")
                 final_response.raise_for_status()
 
-                final_result = final_response.json()
+                # Validate and parse final response
+                final_result = self._validate_and_parse_response(final_response, "chat_final")
 
                 # Ollama native format has message at top level
                 if not final_result.get("message"):
@@ -1275,7 +1408,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             # Check if the error is about tool support
             if e.response is not None and e.response.status_code == 400:
                 try:
-                    error_detail = e.response.json().get("error", "")
+                    # Safely parse error response with validation
+                    error_response = self._validate_and_parse_response(e.response, "chat_error")
+                    error_detail = error_response.get("error", "")
                     if "does not support tools" in error_detail:
                         logger.warning(
                             f"[LLM] Model {self.model} does not support tools. Retrying without tools..."
@@ -1294,7 +1429,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                             url, json=request_data_no_tools, timeout=self.timeout
                         )
                         retry_response.raise_for_status()
-                        result = retry_response.json()
+
+                        # Validate and parse retry response
+                        result = self._validate_and_parse_response(retry_response, "chat_retry")
 
                         if not result.get("message"):
                             logger.error("[LLM] Invalid retry response: no message found")
@@ -1372,7 +1509,12 @@ def start_ollama_chat(api: PRTAPI):
     try:
         test_response = requests.get(f"{llm.base_url}/models", timeout=5)
         if test_response.status_code == 200:
-            console.print("✓ Connected to Ollama", style="green")
+            # Validate response to ensure it's valid JSON (security best practice)
+            try:
+                llm._validate_and_parse_response(test_response, "connection_test")
+                console.print("✓ Connected to Ollama", style="green")
+            except ValueError as e:
+                console.print(f"⚠ Warning: Ollama returned invalid response: {e}", style="yellow")
         else:
             console.print("⚠ Warning: Ollama connection test failed", style="yellow")
     except Exception as e:

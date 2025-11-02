@@ -5,6 +5,7 @@ This module provides a factory pattern for creating LLM instances based on provi
 Supports both Ollama and llama-cpp-python providers.
 """
 
+import threading
 from typing import TYPE_CHECKING
 from typing import Optional
 from typing import Union
@@ -20,19 +21,34 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Global registry instance (cached)
+# Legacy default model alias for backward compatibility
+# This constant represents the historical default model identifier used
+# when no model is specified in configuration or via CLI arguments.
+DEFAULT_LEGACY_MODEL_ALIAS = "llama8"
+
+# Global registry instance (cached) with thread-safe initialization
 _registry: Optional[OllamaModelRegistry] = None
+_registry_lock = threading.Lock()
 
 
 def get_registry() -> OllamaModelRegistry:
     """Get or create the global model registry instance.
 
+    This function implements thread-safe lazy initialization using double-checked
+    locking to ensure only one registry instance is created even when called
+    concurrently from multiple threads.
+
     Returns:
         Shared OllamaModelRegistry instance
     """
     global _registry
+    # First check (no lock) - fast path for already initialized registry
     if _registry is None:
-        _registry = OllamaModelRegistry()
+        # Acquire lock for initialization
+        with _registry_lock:
+            # Second check (with lock) - ensure only one thread creates the registry
+            if _registry is None:
+                _registry = OllamaModelRegistry()
     return _registry
 
 
@@ -42,7 +58,7 @@ def resolve_model_alias(
     """Resolve a model alias to (provider, model_name).
 
     Strategy:
-    1. If no alias provided, use config default_model or llama8
+    1. If no alias provided, use config default_model or legacy default
     2. Check if alias is in Ollama registry
     3. If in registry, prefer 'ollama' provider
     4. If not in registry but ends with .gguf, use 'llamacpp'
@@ -103,9 +119,9 @@ def resolve_model_alias(
         )
         return (provider, model_name)
 
-    # Special case: if we're using the default "llama8" and Ollama is available,
-    # use the registry's default model instead of assuming "llama8" exists
-    if model_alias == "llama8" and ollama_available:
+    # Special case: if we're using the default legacy model and Ollama is available,
+    # use the registry's default model instead of assuming the legacy model exists
+    if model_alias == DEFAULT_LEGACY_MODEL_ALIAS and ollama_available:
         default_model = registry.get_default_model()
         if default_model:
             logger.info(f"[Model Resolution] Using registry default model: {default_model}")

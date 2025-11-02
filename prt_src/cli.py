@@ -2950,7 +2950,7 @@ def list_models():
         if not models:
             console.print("No models found in Ollama", style="yellow")
             console.print("   Install a model: ollama pull llama3", style="dim")
-            raise typer.Exit(0) from None
+            raise typer.Exit(1) from None
 
         # Create table
         table = Table(title="Available Models", show_header=True)
