@@ -11,6 +11,7 @@ from prt_src.tui.screens.help import HelpScreen
 from prt_src.tui.screens.home import HomeScreen
 from prt_src.tui.screens.search import SearchScreen
 from prt_src.tui.screens.settings import SettingsScreen
+from prt_src.tui.screens.setup import SetupScreen
 
 __all__ = [
     "BaseScreen",
@@ -20,4 +21,5 @@ __all__ = [
     "HomeScreen",
     "SearchScreen",
     "SettingsScreen",
+    "SetupScreen",
 ]

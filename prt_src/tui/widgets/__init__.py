@@ -5,6 +5,9 @@ from .base import ModeAwareWidget
 from .bottomnav import BottomNav
 from .dropdown import DropdownMenu
 
+# Setup widgets
+from .file_selection import FileSelectionWidget
+
 # Existing widgets that may be useful
 from .progress_indicator import ChatProgressIndicator
 
@@ -20,6 +23,8 @@ __all__ = [
     "DropdownMenu",
     # Utility
     "ChatProgressIndicator",
+    # Setup
+    "FileSelectionWidget",
 ]
 
 # Old widgets kept for reference during refactoring:

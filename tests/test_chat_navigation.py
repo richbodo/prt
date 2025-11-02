@@ -16,9 +16,10 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-async def chat_app():
+async def chat_app(test_db):
     """Create app and navigate to chat screen."""
-    app = PRTApp()
+    db, fixtures = test_db
+    app = PRTApp(config={"db_path": str(db.path)})
     async with app.run_test() as pilot:
         # Navigate to chat screen from home
         await pilot.press("c")

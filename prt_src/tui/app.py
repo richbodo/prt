@@ -110,12 +110,15 @@ class PRTApp(App):
         Binding("?", "help", "Help"),
     ]
 
-    def __init__(self, config: Optional[dict] = None, debug: bool = False):
+    def __init__(
+        self, config: Optional[dict] = None, debug: bool = False, force_setup: bool = False
+    ):
         """Initialize the PRT application.
 
         Args:
             config: Optional configuration dict. If None, loads from config file.
             debug: If True, shows debug mode indicator in UI.
+            force_setup: If True, force setup screen even if DB has data.
         """
         super().__init__()
         self.title = "Personal Relationship Tracker"
@@ -124,6 +127,7 @@ class PRTApp(App):
         )
         self.dark = True  # Use dark theme by default
         self.debug_mode = debug
+        self._force_setup = force_setup
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
@@ -233,9 +237,30 @@ class PRTApp(App):
 
     def on_mount(self) -> None:
         """Handle application mount event."""
-        # Phase 1: Always go to home screen (no wizard yet)
-        logger.info("Mounting app - pushing home screen")
-        self.push_screen(HomeScreen(prt_app=self, **self.services))
+        from prt_src.tui.screens import SetupScreen
+
+        # Check if we should show setup screen
+        if self._force_setup or self._is_database_empty():
+            logger.info("Mounting app - showing setup screen")
+            self.push_screen(SetupScreen(prt_app=self, **self.services))
+        else:
+            logger.info("Mounting app - pushing home screen")
+            self.push_screen(HomeScreen(prt_app=self, **self.services))
+
+    def _is_database_empty(self) -> bool:
+        """Check if database has any contacts.
+
+        Returns:
+            True if database has no contacts, False otherwise
+        """
+        try:
+            contacts = self.data_service.api.list_all_contacts()
+            has_contacts = len(contacts) > 0
+            logger.info(f"Database check: {len(contacts)} contacts found")
+            return not has_contacts
+        except Exception as e:
+            logger.warning(f"Error checking database: {e}")
+            return True  # Show setup on error
 
     def action_toggle_mode(self) -> None:
         """Toggle between navigation and edit modes."""
