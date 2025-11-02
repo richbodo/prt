@@ -1086,13 +1086,14 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             "keep_alive": self.keep_alive,
         }
 
-        url = f"{self.base_url}/chat/completions"
+        # Use Ollama native API (not OpenAI-compatible /v1 endpoint)
+        url = f"{self.base_url}/api/chat"
         logger.info(f"[LLM] Sending request to {url}, model={self.model}, timeout={self.timeout}s")
         logger.debug(f"[LLM] Message history length: {len(self.conversation_history)}")
 
         try:
             # Send request to Ollama
-            logger.debug("[LLM] Making POST request to Ollama...")
+            logger.debug("[LLM] Making POST request to Ollama native API...")
             response = requests.post(
                 url,
                 json=request_data,
@@ -1102,21 +1103,14 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             response.raise_for_status()
 
             result = response.json()
-            logger.debug(
-                f"[LLM] Received JSON response with {len(result.get('choices', []))} choices"
-            )
+            logger.debug(f"[LLM] Received JSON response, done={result.get('done', False)}")
 
-            # Validate response structure
-            if not result.get("choices") or not result["choices"]:
-                logger.error("[LLM] Invalid response: no choices found")
-                return "Error: Invalid response from Ollama - no choices found"
-
-            choice = result["choices"][0]
-            if not choice.get("message"):
-                logger.error("[LLM] Invalid response: no message in choice")
+            # Validate response structure (Ollama native format)
+            if not result.get("message"):
+                logger.error("[LLM] Invalid response: no message found")
                 return "Error: Invalid response from Ollama - no message found"
 
-            message_obj = choice["message"]
+            message_obj = result["message"]
             logger.debug(f"[LLM] Message object keys: {list(message_obj.keys())}")
 
             # Check if the LLM wants to call a tool
@@ -1214,7 +1208,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                 }
 
                 final_response = requests.post(
-                    f"{self.base_url}/chat/completions",
+                    f"{self.base_url}/api/chat",
                     json=final_request,
                     timeout=self.timeout,
                 )
@@ -1223,11 +1217,12 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
 
                 final_result = final_response.json()
 
-                if not final_result.get("choices") or not final_result["choices"]:
-                    logger.error("[LLM] Invalid final response: no choices")
+                # Ollama native format has message at top level
+                if not final_result.get("message"):
+                    logger.error("[LLM] Invalid final response: no message")
                     return "Error: Invalid final response from Ollama"
 
-                assistant_message = final_result["choices"][0]["message"]["content"]
+                assistant_message = final_result["message"]["content"]
                 logger.debug(f"[LLM] Final assistant_message length: {len(assistant_message)}")
                 logger.info(f"[LLM] Final response received: {assistant_message[:100]}...")
 

@@ -147,7 +147,7 @@ class LLMConfig:
     )
 
     # Ollama-specific settings
-    base_url: str = "http://localhost:11434/v1"
+    base_url: str = "http://localhost:11434"  # Native API (not /v1 OpenAI-compatible)
     keep_alive: str = "30m"
 
     # llama-cpp-python specific settings
@@ -229,7 +229,7 @@ class LLMConfigManager:
             default_model=llm_dict.get("default_model"),
             fallback_models=llm_dict.get("fallback_models"),
             # Ollama-specific
-            base_url=llm_dict.get("base_url", "http://localhost:11434/v1"),
+            base_url=llm_dict.get("base_url", "http://localhost:11434"),
             keep_alive=llm_dict.get("keep_alive", "30m"),
             # llama-cpp-python specific
             model_path=llm_dict.get("model_path"),
