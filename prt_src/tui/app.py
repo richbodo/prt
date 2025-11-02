@@ -111,7 +111,12 @@ class PRTApp(App):
     ]
 
     def __init__(
-        self, config: Optional[dict] = None, debug: bool = False, force_setup: bool = False
+        self,
+        config: Optional[dict] = None,
+        debug: bool = False,
+        force_setup: bool = False,
+        llm_provider: Optional[str] = None,
+        llm_model: Optional[str] = None,
     ):
         """Initialize the PRT application.
 
@@ -119,6 +124,8 @@ class PRTApp(App):
             config: Optional configuration dict. If None, loads from config file.
             debug: If True, shows debug mode indicator in UI.
             force_setup: If True, force setup screen even if DB has data.
+            llm_provider: LLM provider override ('ollama' or 'llamacpp'). If None, uses config.
+            llm_model: Model name/path override. If None, uses config.
         """
         super().__init__()
         self.title = "Personal Relationship Tracker"
@@ -174,7 +181,7 @@ class PRTApp(App):
 
         # Initialize data service
         from prt_src.api import PRTAPI
-        from prt_src.llm_ollama import OllamaLLM
+        from prt_src.llm_factory import create_llm
         from prt_src.tui.services.data import DataService
         from prt_src.tui.services.notification import NotificationService
 
@@ -184,10 +191,13 @@ class PRTApp(App):
         self.data_service = DataService(prt_api)
         self.notification_service = NotificationService(self)
 
-        # Initialize LLM service
+        # Initialize LLM service using factory
         try:
-            self.llm_service = OllamaLLM(prt_api)
-            logger.info("LLM service initialized")
+            self.llm_service = create_llm(provider=llm_provider, api=prt_api, model=llm_model)
+            # Log which provider was selected
+            provider_name = llm_provider or "default (from config)"
+            model_name = llm_model or "default (from config)"
+            logger.info(f"LLM service initialized: provider={provider_name}, model={model_name}")
         except Exception as e:
             logger.error(f"Failed to initialize LLM service: {e}")
             self.llm_service = None

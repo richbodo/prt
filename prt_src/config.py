@@ -130,14 +130,29 @@ def get_database_url(config: Dict[str, Any]) -> str:
 
 @dataclass
 class LLMConfig:
-    """LLM connection and model configuration."""
+    """LLM connection and model configuration.
+
+    Supports multiple providers:
+    - ollama: Uses Ollama API server (requires Ollama running)
+    - llamacpp: Uses llama-cpp-python for local GGUF models
+    """
 
     provider: str = "ollama"
     model: str = "gpt-oss:20b"
+
+    # Ollama-specific settings
     base_url: str = "http://localhost:11434/v1"
+    keep_alive: str = "30m"
+
+    # llama-cpp-python specific settings
+    model_path: Optional[str] = None  # Path to .gguf file (required for llamacpp provider)
+    n_ctx: int = 4096  # Context window size
+    n_gpu_layers: int = 0  # Number of layers to offload to GPU (0 = CPU only)
+    n_threads: Optional[int] = None  # Number of CPU threads (None = auto-detect)
+
+    # Common settings
     timeout: int = 120
     temperature: float = 0.1
-    keep_alive: str = "30m"
 
 
 @dataclass
@@ -204,10 +219,17 @@ class LLMConfigManager:
         return LLMConfig(
             provider=llm_dict.get("provider", "ollama"),
             model=llm_dict.get("model", "gpt-oss:20b"),
+            # Ollama-specific
             base_url=llm_dict.get("base_url", "http://localhost:11434/v1"),
+            keep_alive=llm_dict.get("keep_alive", "30m"),
+            # llama-cpp-python specific
+            model_path=llm_dict.get("model_path"),
+            n_ctx=llm_dict.get("n_ctx", 4096),
+            n_gpu_layers=llm_dict.get("n_gpu_layers", 0),
+            n_threads=llm_dict.get("n_threads"),
+            # Common settings
             timeout=llm_dict.get("timeout", 120),
             temperature=llm_dict.get("temperature", 0.1),
-            keep_alive=llm_dict.get("keep_alive", "30m"),
         )
 
     def _load_permissions_config(self, perm_dict: Dict[str, Any]) -> LLMPermissions:
@@ -289,11 +311,34 @@ class LLMConfigManager:
         logger = _get_logger()
 
         # Validate provider
-        if self.llm.provider != "ollama":
+        if self.llm.provider not in ["ollama", "llamacpp"]:
             logger.warning(
-                f"Unsupported LLM provider '{self.llm.provider}'. Only 'ollama' is currently supported."
+                f"Unsupported LLM provider '{self.llm.provider}'. Supported providers: 'ollama', 'llamacpp'"
             )
             return False
+
+        # Validate llamacpp-specific settings
+        if self.llm.provider == "llamacpp":
+            if not self.llm.model_path:
+                logger.warning(
+                    "llamacpp provider requires model_path to be set. "
+                    "Specify path to .gguf file in config or via --llm-model flag"
+                )
+                return False
+
+            from pathlib import Path
+
+            model_file = Path(self.llm.model_path)
+            if not model_file.exists():
+                logger.warning(f"Model file not found: {self.llm.model_path}")
+                return False
+
+            if self.llm.n_ctx < 512:
+                logger.warning(f"n_ctx ({self.llm.n_ctx}) is too small, minimum recommended: 512")
+
+            if self.llm.n_gpu_layers < 0:
+                logger.warning(f"n_gpu_layers must be >= 0, got: {self.llm.n_gpu_layers}")
+                return False
 
         # Validate timeout
         if self.llm.timeout < 10 or self.llm.timeout > 600:
@@ -333,10 +378,17 @@ class LLMConfigManager:
             "llm": {
                 "provider": self.llm.provider,
                 "model": self.llm.model,
+                # Ollama-specific
                 "base_url": self.llm.base_url,
+                "keep_alive": self.llm.keep_alive,
+                # llama-cpp-python specific
+                "model_path": self.llm.model_path,
+                "n_ctx": self.llm.n_ctx,
+                "n_gpu_layers": self.llm.n_gpu_layers,
+                "n_threads": self.llm.n_threads,
+                # Common settings
                 "timeout": self.llm.timeout,
                 "temperature": self.llm.temperature,
-                "keep_alive": self.llm.keep_alive,
             },
             "llm_permissions": {
                 "allow_create": self.permissions.allow_create,
