@@ -6,6 +6,9 @@ exports/
 # External docs for local llms to read
 EXTERNAL_DOCS/
 
+# Local models that devs are trying
+MODELS/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
