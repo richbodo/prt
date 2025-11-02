@@ -97,9 +97,9 @@ class FixtureService:
                 self.db.session.query(Contact).delete()
                 self.db.session.query(RelationshipType).delete()
                 self.db.session.commit()
-                # Expire all objects to clear identity map
-                self.db.session.expire_all()
-                self.logger.debug("[FIXTURE] All tables cleared and session expired")
+                # Remove all objects from identity map to prevent conflicts on reload
+                self.db.session.expunge_all()
+                self.logger.debug("[FIXTURE] All tables cleared and session identity map flushed")
 
             await loop.run_in_executor(None, _clear)
 
