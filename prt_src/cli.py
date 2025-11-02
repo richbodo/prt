@@ -2688,8 +2688,7 @@ def smart_continue_prompt(operation_type: str):
 def run_interactive_cli(
     debug: bool = False,
     regenerate_fixtures: bool = False,
-    llm_provider: Optional[str] = None,
-    llm_model: Optional[str] = None,
+    model: Optional[str] = None,
 ):
     """Run the main interactive CLI."""
     if debug:
@@ -2803,8 +2802,7 @@ def _launch_tui_with_fallback(
     debug: bool = False,
     regenerate_fixtures: bool = False,
     force_setup: bool = False,
-    llm_provider: Optional[str] = None,
-    llm_model: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
@@ -2819,11 +2817,10 @@ def _launch_tui_with_fallback(
                 config=config,
                 debug=True,
                 force_setup=force_setup,
-                llm_provider=llm_provider,
-                llm_model=llm_model,
+                model=model,
             )
         else:
-            app = PRTApp(force_setup=force_setup, llm_provider=llm_provider, llm_model=llm_model)
+            app = PRTApp(force_setup=force_setup, model=model)
 
         app.run()
     except Exception as e:
@@ -2832,8 +2829,7 @@ def _launch_tui_with_fallback(
         run_interactive_cli(
             debug=debug,
             regenerate_fixtures=regenerate_fixtures,
-            llm_provider=llm_provider,
-            llm_model=llm_model,
+            model=model,
         )
 
 
@@ -2851,31 +2847,25 @@ def main(
     ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
-    llm_provider: Optional[str] = typer.Option(
+    model: Optional[str] = typer.Option(
         None,
-        "--llm-provider",
-        help="LLM provider: 'ollama' (default) or 'llamacpp'",
-    ),
-    llm_model: Optional[str] = typer.Option(
-        None,
-        "--llm-model",
-        help="Model name (ollama) or path to .gguf file (llamacpp)",
+        "--model",
+        "-m",
+        help="Model alias (e.g., 'llama8', 'gpt-oss-20b'). Auto-detects provider.",
     ),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
     # Store LLM settings in context for subcommands
     if ctx.obj is None:
         ctx.obj = {}
-    ctx.obj["llm_provider"] = llm_provider
-    ctx.obj["llm_model"] = llm_model
+    ctx.obj["model"] = model
 
     if ctx.invoked_subcommand is None:
         if classic:
             run_interactive_cli(
                 debug=debug,
                 regenerate_fixtures=regenerate_fixtures,
-                llm_provider=llm_provider,
-                llm_model=llm_model,
+                model=model,
             )
         else:
             # Launch TUI by default or when explicitly requested
@@ -2883,8 +2873,7 @@ def main(
                 debug=debug,
                 regenerate_fixtures=regenerate_fixtures,
                 force_setup=setup,
-                llm_provider=llm_provider,
-                llm_model=llm_model,
+                model=model,
             )
 
 
@@ -2940,6 +2929,68 @@ def test():
 
 
 @app.command()
+def list_models():
+    """List available LLM models discovered via Ollama."""
+    try:
+        from prt_src.llm_factory import get_registry
+
+        console.print("🔍 Discovering available models...\n", style="bold blue")
+
+        registry = get_registry()
+
+        # Check if Ollama is available
+        if not registry.is_available():
+            console.print("⚠️  Ollama is not running or not accessible", style="yellow")
+            console.print("   Make sure Ollama is running: brew services start ollama", style="dim")
+            raise typer.Exit(1) from None
+
+        # List all models
+        models = registry.list_models(force_refresh=True)
+
+        if not models:
+            console.print("No models found in Ollama", style="yellow")
+            console.print("   Install a model: ollama pull llama3", style="dim")
+            raise typer.Exit(0) from None
+
+        # Create table
+        table = Table(title="Available Models", show_header=True)
+        table.add_column("Alias", style="cyan", no_wrap=True)
+        table.add_column("Full Name", style="white")
+        table.add_column("Size", style="green", justify="right")
+        table.add_column("Type", style="magenta")
+
+        # Get default model
+        default_model = registry.get_default_model()
+
+        # Add rows
+        for model in models:
+            # Determine model type
+            model_type = "Local GGUF" if model.is_local_gguf() else "Ollama"
+
+            # Add star to default model
+            alias = model.friendly_name
+            if model.name == default_model:
+                alias = f"⭐ {alias}"
+
+            table.add_row(alias, model.name, model.size_human, model_type)
+
+        console.print(table)
+        console.print()
+
+        # Show usage instructions
+        console.print("💡 Usage:", style="bold blue")
+        console.print("   Use an alias with --model flag:", style="white")
+        console.print(f"   python -m prt_src.cli --model {models[0].friendly_name}", style="cyan")
+        console.print(f"   python -m prt_src.tui --model {models[0].friendly_name}", style="cyan")
+        console.print()
+        console.print("   ⭐ = Default model (used when --model not specified)", style="dim")
+
+    except Exception as e:
+        console.print(f"✗ Failed to list models: {e}", style="red")
+        raise typer.Exit(1) from None
+
+
+@app.command()
 def chat(
     ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
@@ -2951,8 +3002,7 @@ def chat(
 ):
     """Start LLM chat mode directly."""
     # Get LLM settings from context (set in main callback)
-    llm_provider = ctx.obj.get("llm_provider") if ctx.obj else None
-    llm_model = ctx.obj.get("llm_model") if ctx.obj else None
+    model = ctx.obj.get("model") if ctx.obj else None
 
     # Handle debug mode
     if debug:
@@ -2985,13 +3035,13 @@ def chat(
     try:
         from prt_src.llm_factory import create_llm
 
-        llm = create_llm(provider=llm_provider, api=api, model=llm_model)
+        llm = create_llm(api=api, model=model)
 
-        # Display provider info
-        if llm_provider:
-            console.print(f"Using LLM provider: {llm_provider}", style="cyan")
-        if llm_model:
-            console.print(f"Using model: {llm_model}", style="cyan")
+        # Display model info
+        if model:
+            console.print(f"Using model: {model}", style="cyan")
+        else:
+            console.print("Using default model from config", style="cyan")
 
         # Start interactive chat
         start_llm_chat(llm, api)
@@ -2999,7 +3049,7 @@ def chat(
         console.print(f"Error starting chat mode: {e}", style="red")
         console.print(
             "Make sure your LLM provider is configured correctly. "
-            "Use --llm-provider and --llm-model to specify provider.",
+            "Use --model to specify a model alias (e.g., 'llama8', 'gpt-oss-20b').",
             style="yellow",
         )
         raise typer.Exit(1) from None
