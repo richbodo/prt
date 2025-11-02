@@ -10,6 +10,7 @@ from textual.widgets import Static
 from prt_src.api import PRTAPI
 from prt_src.logging_config import get_logger
 from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.home import HomeScreen
 from prt_src.tui.services.fixture import FixtureService
 from prt_src.tui.services.google_takeout import GoogleTakeoutService
 from prt_src.tui.widgets.file_selection import FileSelectionWidget
@@ -180,6 +181,7 @@ class SetupScreen(BaseScreen):
 
     async def _handle_import_takeout(self) -> None:
         """Handle Google Takeout import workflow."""
+        files = []  # Initialize to prevent NameError in exception handler
         try:
             self._show_status("🔍 Searching for takeout files...")
             logger.info("[SETUP] Searching for takeout files")
@@ -504,10 +506,8 @@ class SetupScreen(BaseScreen):
             ]
         )
 
-        # Add retry instruction
-        lines.extend(
-            ["", "Press 1 to retry import  |  Press 2 to try fixtures  |  Press q to quit"]
-        )
+        # Add navigation options
+        lines.extend(["", "Press 2 to load demo data  |  Press q to quit"])
 
         return "\n".join(lines)
 
@@ -556,10 +556,8 @@ class SetupScreen(BaseScreen):
 
     def _navigate_to_home(self) -> None:
         """Navigate to home screen."""
-        from prt_src.tui.screens import HomeScreen
-
         logger.info("[SETUP] Navigating to home screen")
-        self.app.switch_screen(HomeScreen())
+        self.app.push_screen(HomeScreen())
 
     def _show_status(self, message: str) -> None:
         """Show status message."""
