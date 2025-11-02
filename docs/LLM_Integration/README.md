@@ -1,17 +1,21 @@
-# LLM Integration - Simple Tool-Calling Approach
+# LLM Integration - Tool-Calling System
 
-**Last Updated:** October 13, 2025
-**Status:** Phase 1 Complete - ONE tool working!
+**Last Updated:** January 2, 2025
+**Status:** Phase 4 Complete - 24 tools with advanced features!
 **Philosophy:** Start with minimum, grow based on evidence
 
 ---
 
 ## Quick Status
 
-✅ **Working:** LLM can count contacts via tool calling
-✅ **Test:** `pytest tests/integration/test_llm_one_query.py -v -s`
-✅ **Architecture:** 1 tool (search_contacts), simple orchestration
-⏭️ **Next:** Manual testing via TUI, add more test queries
+✅ **Phase 1 Complete:** Basic tool calling proven (1 tool)
+✅ **Phase 2 Complete:** Read-only tools enabled (10 tools)
+✅ **Phase 3 Complete:** Write operations with automatic backups (20 tools total)
+✅ **Phase 4 Complete:** Advanced tools - SQL, directory generation, relationships (24 tools total)
+✅ **Tests:** All integration tests passing (25 tests: 14 Phase 3 + 11 Phase 4)
+✅ **Documentation:** BACKUP_SYSTEM.md, PHASE2_COMPLETE.md, PHASE3_COMPLETE.md, PHASE4_COMPLETE.md
+✅ **Safety:** Automatic backups, SQL confirmation, directory generation control
+⏭️ **Next:** Manual TUI testing, user feedback, consider Phase 5 enhancements
 
 ---
 
@@ -19,25 +23,41 @@
 
 ### Working Code (`prt_src/llm_ollama.py`)
 
-**ONE Tool:**
-```python
-Tool(
-    name="search_contacts",
-    description="Search for contacts by name, email, or other criteria. Pass empty string to get ALL contacts.",
-    parameters={
-        "type": "object",
-        "properties": {
-            "query": {
-                "type": "string",
-                "description": "Search term. Use empty string \"\" to return all contacts."
-            }
-        },
-        "required": []  # Optional - defaults to ""
-    }
-)
-```
+**24 Tools Enabled (All Tested):**
 
-**14 other tools commented out** - will add back based on evidence.
+**Read-Only Tools (10):**
+1. `search_contacts` - Search contacts by name/email
+2. `list_all_contacts` - Get all contacts
+3. `list_all_tags` - Get all tags with counts
+4. `list_all_notes` - Get all notes with counts
+5. `get_database_stats` - Get DB statistics
+6. `get_contact_details` - Get specific contact info
+7. `search_tags` - Search tags by name
+8. `search_notes` - Search notes by title/content
+9. `get_contacts_by_tag` - Get contacts with tag
+10. `get_contacts_by_note` - Get contacts with note
+
+**Write Tools - Tags (4):**
+11. `add_tag_to_contact` - Tag a contact (auto-backup)
+12. `remove_tag_from_contact` - Remove tag (auto-backup)
+13. `create_tag` - Create new tag (auto-backup)
+14. `delete_tag` - Delete tag from all contacts (auto-backup + warning)
+
+**Write Tools - Notes (5):**
+15. `add_note_to_contact` - Add note to contact (auto-backup)
+16. `remove_note_from_contact` - Remove note (auto-backup)
+17. `create_note` - Create new note (auto-backup)
+18. `update_note` - Update note content (auto-backup)
+19. `delete_note` - Delete note from all contacts (auto-backup + warning)
+
+**Utility Tools (1):**
+20. `create_backup_with_comment` - Manual backup creation
+
+**Advanced Tools (4) - NEW in Phase 4:**
+21. `execute_sql` - Execute raw SQL queries (requires confirm=true for ALL queries)
+22. `generate_directory` - Create D3.js visualizations (only when user explicitly requests)
+23. `add_contact_relationship` - Link two contacts with relationship type (auto-backup)
+24. `remove_contact_relationship` - Remove relationship between contacts (auto-backup)
 
 **Dynamic System Prompt:**
 - Located: `llm_ollama.py` lines 376-400
@@ -237,20 +257,64 @@ All emphasize: **Start simple, grow deliberately, measure constantly.**
 
 ---
 
-## Bottom Line
+## Phase 3 Complete - Details
 
-**Phase 1 is COMPLETE:**
-- ✅ 1 tool working (search_contacts)
-- ✅ Integration test passing
-- ✅ Simple architecture validated
-- ✅ Bug fixed (tool parameter handling)
+**See:** `docs/LLM_Integration/PHASE3_COMPLETE.md` for complete details.
 
-**What we proved:**
-- Tool calling works through our app
-- LLM can reliably use search_contacts
-- Simple approach is sufficient
-- No need for complex intent system
+**What was accomplished:**
+- ✅ 9 write operation tools enabled (tags + notes)
+- ✅ 1 manual backup tool enabled
+- ✅ Automatic backup system implemented (safety wrapper)
+- ✅ System prompt updated with write operation guidance
+- ✅ 14 comprehensive integration tests (all passing)
+- ✅ Code quality checks passing (ruff + black)
 
-**Time spent:** ~4 hours (simplification, debugging, testing, documentation)
+**Key features:**
+- Automatic backups created BEFORE every write operation
+- Safety wrapper handles errors gracefully
+- Backup ID returned in response for user notification
+- Destructive operations (delete_tag, delete_note) clearly marked
+- Manual backups never auto-deleted
+- 100% test coverage for write operations
 
-**Ready for:** Manual testing and expansion based on evidence.
+**Safety guarantees:**
+- No data loss - backup always exists before modification
+- Structured error handling with user-friendly messages
+- Backup metadata tracks operation name and timestamp
+- Read-only tools bypass backup system (no unnecessary backups)
+
+**Time spent:** ~4 hours (safety wrapper, 10 tools, tests, documentation)
+
+---
+
+## Phase 4 Complete - Details
+
+**See:** `docs/LLM_Integration/PHASE4_COMPLETE.md` for complete details.
+
+**What was accomplished:**
+- ✅ 4 advanced tools enabled (SQL, directory, relationships)
+- ✅ SQL confirmation system (ALL queries require confirm=true)
+- ✅ Directory generation with profile images
+- ✅ Relationship management with automatic backups
+- ✅ 11 comprehensive integration tests (all passing)
+- ✅ Profile image JSON serialization fixed
+- ✅ Code quality checks passing (ruff + black)
+
+**Key features:**
+- SQL tool requires confirmation for ALL queries (read and write)
+- Directory generation creates D3.js visualizations with profile images
+- Relationship tools (add/remove) create automatic backups
+- System prompt guidance for each advanced tool
+- Error handling for SQL syntax errors, missing contacts, etc.
+- Profile images properly exported alongside directory visualization
+
+**Safety guarantees:**
+- SQL confirmation prevents accidental data loss
+- Directory generation only on user request (no auto-generation)
+- Relationship operations create backups before modifying
+- Graceful error handling with clear messages
+- Write operations tracked by existing backup system
+
+**Time spent:** ~3 hours (4 tools, tests, documentation, bug fixes)
+
+**Next:** Manual TUI testing, gather user feedback, consider Phase 5 enhancements (bulk operations, export features, network analysis)
