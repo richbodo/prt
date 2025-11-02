@@ -73,8 +73,9 @@ def resolve_model_alias(
 
     # Try Ollama registry first
     registry = get_registry()
+    ollama_available = registry.is_available()
 
-    if registry.is_available():
+    if ollama_available:
         # Check if it's a known alias
         resolved_name = registry.resolve_alias(model_alias)
 
@@ -91,9 +92,9 @@ def resolve_model_alias(
         logger.warning("[Model Resolution] Ollama not available, checking config fallback")
 
     # Ollama offline or model not found - check config fallback
-    fallback_models = getattr(config_manager.llm, "fallback_models", {})
+    fallback_models = getattr(config_manager.llm, "fallback_models", {}) or {}
 
-    if model_alias in fallback_models:
+    if fallback_models and model_alias in fallback_models:
         fallback = fallback_models[model_alias]
         provider = fallback.get("provider", "ollama")
         model_name = fallback.get("model_name", model_alias)
@@ -101,6 +102,14 @@ def resolve_model_alias(
             f"[Model Resolution] Using config fallback: {model_alias} -> {provider}/{model_name}"
         )
         return (provider, model_name)
+
+    # Special case: if we're using the default "llama8" and Ollama is available,
+    # use the registry's default model instead of assuming "llama8" exists
+    if model_alias == "llama8" and ollama_available:
+        default_model = registry.get_default_model()
+        if default_model:
+            logger.info(f"[Model Resolution] Using registry default model: {default_model}")
+            return ("ollama", default_model)
 
     # Check if it looks like a .gguf path
     if model_alias.endswith(".gguf"):
