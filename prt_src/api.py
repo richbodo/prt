@@ -749,50 +749,134 @@ class PRTAPI:
         type_key: str,
         start_date=None,
         end_date=None,
-    ) -> bool:
-        """Add a relationship between two contacts by name."""
+    ):
+        """Add a relationship between two contacts by name.
+
+        Returns:
+            Dict with success status, message, and relationship details
+        """
         try:
             # Find contacts by name
             from_contacts = self.search_contacts(from_contact_name)
             to_contacts = self.search_contacts(to_contact_name)
 
+            # Handle not found
             if not from_contacts:
-                print(f"Contact '{from_contact_name}' not found")
-                return False
+                return {
+                    "success": False,
+                    "error": f"Contact '{from_contact_name}' not found",
+                    "message": f"No contacts match '{from_contact_name}'. Please check the name and try again.",
+                }
             if not to_contacts:
-                print(f"Contact '{to_contact_name}' not found")
-                return False
+                return {
+                    "success": False,
+                    "error": f"Contact '{to_contact_name}' not found",
+                    "message": f"No contacts match '{to_contact_name}'. Please check the name and try again.",
+                }
 
-            # Use the first match for each
+            # Handle ambiguous matches
+            if len(from_contacts) > 1:
+                names = [c["name"] for c in from_contacts[:5]]
+                return {
+                    "success": False,
+                    "error": "Multiple contacts found",
+                    "message": f"Multiple contacts match '{from_contact_name}': {', '.join(names)}. Please be more specific.",
+                }
+            if len(to_contacts) > 1:
+                names = [c["name"] for c in to_contacts[:5]]
+                return {
+                    "success": False,
+                    "error": "Multiple contacts found",
+                    "message": f"Multiple contacts match '{to_contact_name}': {', '.join(names)}. Please be more specific.",
+                }
+
+            # Use the first (and only) match for each
             from_id = from_contacts[0]["id"]
             to_id = to_contacts[0]["id"]
+            from_name = from_contacts[0]["name"]
+            to_name = to_contacts[0]["name"]
 
             self.db.create_contact_relationship(from_id, to_id, type_key, start_date, end_date)
-            return True
+
+            return {
+                "success": True,
+                "from_contact": from_name,
+                "to_contact": to_name,
+                "relationship_type": type_key,
+                "message": f"Added '{type_key}' relationship from {from_name} to {to_name}",
+            }
         except Exception as e:
             self.logger.error(f"Error adding relationship: {e}", exc_info=True)
-            return False
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to add relationship: {str(e)}",
+            }
 
     def remove_contact_relationship(
         self, from_contact_name: str, to_contact_name: str, type_key: str
-    ) -> bool:
-        """Remove a relationship between two contacts."""
+    ):
+        """Remove a relationship between two contacts.
+
+        Returns:
+            Dict with success status, message, and relationship details
+        """
         try:
             # Find contacts by name
             from_contacts = self.search_contacts(from_contact_name)
             to_contacts = self.search_contacts(to_contact_name)
 
-            if not from_contacts or not to_contacts:
-                return False
+            # Handle not found
+            if not from_contacts:
+                return {
+                    "success": False,
+                    "error": f"Contact '{from_contact_name}' not found",
+                    "message": f"No contacts match '{from_contact_name}'. Please check the name and try again.",
+                }
+            if not to_contacts:
+                return {
+                    "success": False,
+                    "error": f"Contact '{to_contact_name}' not found",
+                    "message": f"No contacts match '{to_contact_name}'. Please check the name and try again.",
+                }
+
+            # Handle ambiguous matches
+            if len(from_contacts) > 1:
+                names = [c["name"] for c in from_contacts[:5]]
+                return {
+                    "success": False,
+                    "error": "Multiple contacts found",
+                    "message": f"Multiple contacts match '{from_contact_name}': {', '.join(names)}. Please be more specific.",
+                }
+            if len(to_contacts) > 1:
+                names = [c["name"] for c in to_contacts[:5]]
+                return {
+                    "success": False,
+                    "error": "Multiple contacts found",
+                    "message": f"Multiple contacts match '{to_contact_name}': {', '.join(names)}. Please be more specific.",
+                }
 
             from_id = from_contacts[0]["id"]
             to_id = to_contacts[0]["id"]
+            from_name = from_contacts[0]["name"]
+            to_name = to_contacts[0]["name"]
 
             self.db.delete_contact_relationship(from_id, to_id, type_key)
-            return True
+
+            return {
+                "success": True,
+                "from_contact": from_name,
+                "to_contact": to_name,
+                "relationship_type": type_key,
+                "message": f"Removed '{type_key}' relationship from {from_name} to {to_name}",
+            }
         except Exception as e:
             self.logger.error(f"Error removing relationship: {e}", exc_info=True)
-            return False
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to remove relationship: {str(e)}",
+            }
 
     def get_contact_relationships(
         self, contact_name: str, type_filter: Optional[str] = None
