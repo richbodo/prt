@@ -736,30 +736,94 @@ class PRTAPI:
         This is specifically designed for the LLM use case:
         'create a directory of all contacts with images'
         """
+        import time
         from .models import Contact
 
-        # Use the performance index: idx_contacts_profile_image_not_null
-        # This query leverages the WHERE profile_image IS NOT NULL index
-        contacts = (
-            self.db.session.query(Contact)
-            .filter(Contact.profile_image.is_not(None))
-            .order_by(Contact.name)
-            .all()
-        )
+        self.logger.info(f"[API_QUERY_START] get_contacts_with_images() called")
 
-        return [
-            {
-                "id": c.id,
-                "name": c.name,
-                "email": c.email,
-                "phone": c.phone,
-                "profile_image": c.profile_image,
-                "profile_image_filename": c.profile_image_filename,
-                "profile_image_mime_type": c.profile_image_mime_type,
-                "relationship_info": self.get_relationship_info(c.id),
-            }
-            for c in contacts
-        ]
+        try:
+            # SQL logging
+            self.logger.debug(f"[SQL_QUERY] Executing optimized contacts with images query")
+            self.logger.debug(f"[SQL_DETAIL] WHERE profile_image IS NOT NULL ORDER BY name")
+
+            # Check index usage (if possible)
+            self.logger.debug(f"[INDEX_CHECK] Assuming idx_contacts_profile_image_not_null exists")
+
+            start_time = time.time()
+
+            contacts = (
+                self.db.session.query(Contact)
+                .filter(Contact.profile_image.isnot(None))
+                .order_by(Contact.name)
+                .all()
+            )
+
+            query_time = time.time() - start_time
+
+            # Convert to dict format and analyze
+            result = []
+            total_size = 0
+            corrupted_count = 0
+
+            for contact in contacts:
+                contact_dict = {
+                    "id": contact.id,
+                    "name": contact.name,
+                    "email": contact.email,
+                    "phone": contact.phone,
+                    "profile_image": contact.profile_image,
+                    "profile_image_filename": contact.profile_image_filename,
+                    "profile_image_mime_type": contact.profile_image_mime_type,
+                    "relationship_info": self.get_relationship_info(contact.id),
+                }
+
+                # Image validation
+                if contact.profile_image:
+                    image_size = len(contact.profile_image)
+                    total_size += image_size
+
+                    # Check for suspicious data
+                    if image_size < 100:  # Suspiciously small
+                        self.logger.warning(
+                            f"[IMAGE_SUSPICIOUS] Contact {contact.id} has tiny image: {image_size} bytes"
+                        )
+                        corrupted_count += 1
+                    elif image_size > 5 * 1024 * 1024:  # Suspiciously large (>5MB)
+                        self.logger.warning(
+                            f"[IMAGE_LARGE] Contact {contact.id} has huge image: {image_size/1024/1024:.1f}MB"
+                        )
+
+                    # Basic format validation
+                    if (
+                        contact.profile_image_mime_type
+                        and not contact.profile_image_mime_type.startswith("image/")
+                    ):
+                        self.logger.warning(
+                            f"[IMAGE_FORMAT] Contact {contact.id} has non-image MIME type: {contact.profile_image_mime_type}"
+                        )
+                        corrupted_count += 1
+
+                result.append(contact_dict)
+
+            self.logger.info(
+                f"[API_QUERY_SUCCESS] Retrieved {len(result)} contacts in {query_time:.3f}s"
+            )
+            self.logger.info(
+                f"[API_DATA_ANALYSIS] Total image data: {total_size/1024/1024:.1f}MB, corrupted: {corrupted_count}"
+            )
+
+            if corrupted_count > 0:
+                self.logger.warning(
+                    f"[API_DATA_QUALITY] Found {corrupted_count} potentially corrupted images"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"[API_QUERY_ERROR] Exception in get_contacts_with_images: {e}", exc_info=True
+            )
+            raise
 
     def import_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
         """Import contacts from parsed CSV data."""

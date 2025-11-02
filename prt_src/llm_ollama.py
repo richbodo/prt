@@ -153,8 +153,8 @@ class OllamaLLM:
         # requests.Response.json() reads the entire response into memory
         # We need to validate size before calling .json()
         try:
-            # Read response text with size limit
-            response_text = ""
+            # Accumulate bytes then decode once to avoid UTF-8 splitting issues
+            response_bytes = b""
             bytes_read = 0
 
             for chunk in response.iter_content(chunk_size=8192, decode_unicode=False):
@@ -169,7 +169,10 @@ class OllamaLLM:
                         f"limit while reading"
                     )
 
-                response_text += chunk.decode("utf-8")
+                response_bytes += chunk
+
+            # Decode complete response safely
+            response_text = response_bytes.decode("utf-8")
 
             # Warn if response is large
             if bytes_read > MAX_RESPONSE_SIZE_WARNING:
@@ -887,26 +890,35 @@ class OllamaLLM:
         Returns:
             Dict with success status and memory ID for chaining
         """
+        import time
+        import copy
+
+        desc = description or "contacts with images"
+        logger.info(f"[TOOL_START] save_contacts_with_images(description='{desc}')")
+        logger.debug(f"[TOOL_CONTEXT] API available: {self.api is not None}")
+
+        start_time = time.time()
+
         try:
-            # Get contacts with images using optimized query
-            logger.info("[LLM] Getting contacts with images to save to memory")
-            contacts_result = self._get_contacts_with_images()
+            # Query execution
+            logger.debug(f"[QUERY_START] Calling api.get_contacts_with_images()")
+            contacts = self.api.get_contacts_with_images()
+            query_time = time.time() - start_time
 
-            if not contacts_result["success"]:
-                return contacts_result
+            logger.info(f"[QUERY_RESULT] Found {len(contacts)} contacts in {query_time:.3f}s")
 
-            contacts = contacts_result["contacts"]
+            if len(contacts) == 0:
+                logger.warning(f"[QUERY_EMPTY] No contacts with images found")
+                return {"success": False, "error": "No contacts with images found", "count": 0}
 
-            if not contacts:
-                return {
-                    "success": False,
-                    "error": "No contacts with images found to save",
-                    "count": 0,
-                }
+            # Data analysis
+            total_image_size = sum(len(c.get("profile_image", b"")) for c in contacts)
+            avg_image_size = total_image_size / len(contacts) if contacts else 0
+            logger.debug(
+                f"[DATA_ANALYSIS] Total image data: {total_image_size/1024/1024:.1f}MB, avg: {avg_image_size/1024:.1f}KB"
+            )
 
             # Clean contacts for JSON serialization (remove binary data)
-            import copy
-
             clean_contacts = copy.deepcopy(contacts)
 
             for contact in clean_contacts:
@@ -918,26 +930,46 @@ class OllamaLLM:
                 else:
                     contact["has_profile_image"] = False
 
-            # Save to memory with descriptive ID
-            desc = description or f"contacts with images ({len(clean_contacts)} contacts)"
-            memory_id = llm_memory.save_result(
-                data=clean_contacts, result_type="contacts", description=desc
+            # Memory save
+            logger.debug(f"[MEMORY_SAVE_START] Saving {len(clean_contacts)} contacts to memory")
+            memory_save_start = time.time()
+
+            memory_id = llm_memory.save_result(clean_contacts, "contacts", desc)
+            memory_save_time = time.time() - memory_save_start
+
+            logger.info(f"[MEMORY_SAVE_SUCCESS] Saved to {memory_id} in {memory_save_time:.3f}s")
+
+            # Verify memory save
+            logger.debug(f"[MEMORY_VERIFY] Attempting to load {memory_id}")
+            verification = llm_memory.load_result(memory_id)
+            if verification is None:
+                logger.error(f"[MEMORY_VERIFY_FAIL] Cannot load {memory_id} immediately after save")
+                return {"success": False, "error": "Memory save verification failed"}
+
+            logger.debug(
+                f"[MEMORY_VERIFY_SUCCESS] Loaded {len(verification.get('data', []))} contacts"
             )
 
-            return {
+            # Tool response
+            response = {
                 "success": True,
                 "memory_id": memory_id,
                 "count": len(clean_contacts),
+                "description": desc,
                 "message": f"Saved {len(clean_contacts)} contacts with images to memory",
-                "usage": f"Use memory ID '{memory_id}' with generate_directory or other tools",
+                "usage": {
+                    "query_time_ms": query_time * 1000,
+                    "memory_save_time_ms": memory_save_time * 1000,
+                    "total_image_size_mb": total_image_size / 1024 / 1024,
+                },
             }
 
+            logger.info(f"[TOOL_RESPONSE] Returning success response: {response}")
+            return response
+
         except Exception as e:
-            logger.error(f"[LLM] Error saving contacts with images to memory: {e}", exc_info=True)
-            return {
-                "success": False,
-                "error": str(e),
-            }
+            logger.error(f"[TOOL_ERROR] Exception in save_contacts_with_images: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
 
     def _list_memory(self, result_type: str = None) -> Dict[str, Any]:
         """List saved results in memory.
@@ -1648,16 +1680,22 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
 
     def chat(self, message: str) -> str:
         """Send a message to the LLM and get a response."""
-        logger.info(f"[LLM] Starting chat with message: {message[:100]}...")
+        logger.info(f"[CHAT_START] User message: {message[:100]}...")
+        logger.debug(
+            f"[CHAT_CONTEXT] Total messages: {len(self.conversation_history)}, context size: {len(str(self.conversation_history))}"
+        )
 
         # Add user message to conversation history
         self.conversation_history.append({"role": "user", "content": message})
 
+        # Log system prompt size
+        system_prompt = self._create_system_prompt()
+        logger.debug(f"[SYSTEM_PROMPT] Size: {len(system_prompt)} chars")
+
         # Prepare the request for Ollama
         request_data = {
             "model": self.model,
-            "messages": [{"role": "system", "content": self._create_system_prompt()}]
-            + self.conversation_history,
+            "messages": [{"role": "system", "content": system_prompt}] + self.conversation_history,
             "tools": self._format_tool_calls(),
             "stream": False,
             "keep_alive": self.keep_alive,
@@ -1700,7 +1738,14 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             # Check if the LLM wants to call a tool
             if "tool_calls" in message_obj and message_obj["tool_calls"]:
                 tool_calls = message_obj["tool_calls"]
-                logger.info(f"[LLM] LLM requested {len(tool_calls)} tool calls")
+                logger.info(f"[TOOL_CALLS] Found {len(tool_calls)} tool calls")
+
+                # Log each tool call
+                for i, tool_call in enumerate(tool_calls):
+                    function_name = tool_call.get("function", {}).get("name", "unknown")
+                    function_args = tool_call.get("function", {}).get("arguments", "{}")
+                    logger.info(f"[TOOL_CALL_{i}] {function_name}({function_args[:200]}...)")
+
                 tool_results = []
 
                 # Limit to prevent infinite loops
@@ -1815,8 +1860,19 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                     return "Error: Invalid final response from Ollama"
 
                 assistant_message = final_result["message"]["content"]
-                logger.debug(f"[LLM] Final assistant_message length: {len(assistant_message)}")
-                logger.info(f"[LLM] Final response received: {assistant_message[:100]}...")
+                logger.info(
+                    f"[CHAT_RESPONSE] Length: {len(assistant_message)}, preview: {assistant_message[:100]}..."
+                )
+
+                # Zero-length response detection
+                if len(assistant_message) == 0:
+                    logger.error(
+                        f"[ZERO_LENGTH_RESPONSE] Empty response detected! Tool calls: {len(tool_calls)}"
+                    )
+                    logger.error(f"[ZERO_LENGTH_RESPONSE] Full response object: {final_result}")
+                    logger.error(
+                        f"[ZERO_LENGTH_RESPONSE] Tool results collected: {len(tool_results)}"
+                    )
 
                 # Add final assistant message to history
                 self.conversation_history.append(

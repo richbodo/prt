@@ -17,8 +17,8 @@ class TestLLMFactoryThreadSafety:
 
     def setup_method(self):
         """Reset global registry before each test."""
-        global _registry
-        _registry = None
+        import prt_src.llm_factory as factory_module
+        factory_module._registry = None
 
     def test_get_registry_singleton(self):
         """Test that get_registry returns the same instance."""
