@@ -239,6 +239,129 @@ def add_contact_relationship(self, from_contact_name, to_contact_name, type_key)
 
 ---
 
+### 5. Network Request Validation
+
+**Attack Vector:**
+- Malicious or misconfigured Ollama server returning oversized responses (memory exhaustion)
+- Network errors or proxies injecting HTML error pages instead of JSON
+- Malformed JSON responses causing parsing crashes
+- Wrong content types leading to unexpected behavior
+
+**Defense Mechanisms:**
+
+#### Response Validation (`_validate_and_parse_response`)
+```python
+# Located in: prt_src/llm_ollama.py:87-194
+
+def _validate_and_parse_response(
+    self, response: requests.Response, operation: str
+) -> Dict[str, Any]:
+    """Validate HTTP response and safely parse JSON.
+
+    Validation steps:
+    1. Content-Type validation
+    2. Content-Length pre-check
+    3. Size-limited reading
+    4. Safe JSON parsing
+    """
+
+    # Step 1: Validate Content-Type
+    content_type = response.headers.get("Content-Type", "").lower()
+    if not content_type.startswith("application/json"):
+        raise ValueError(f"Invalid Content-Type '{content_type}'")
+
+    # Step 2: Check Content-Length if present
+    content_length = response.headers.get("Content-Length")
+    if content_length:
+        size_bytes = int(content_length)
+        if size_bytes > MAX_RESPONSE_SIZE_BYTES:  # 10MB
+            raise ValueError("Response size exceeds maximum limit")
+
+    # Step 3: Read with size limit
+    response_text = ""
+    bytes_read = 0
+    for chunk in response.iter_content(chunk_size=8192):
+        bytes_read += len(chunk)
+        if bytes_read > MAX_RESPONSE_SIZE_BYTES:
+            raise ValueError("Response size exceeded limit while reading")
+        response_text += chunk.decode('utf-8')
+
+    # Step 4: Parse JSON safely
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON response: {str(e)}")
+```
+
+**Size Limits:**
+- **MAX_RESPONSE_SIZE_BYTES:** 10MB (hard limit)
+  - Rationale: LLM responses typically <100KB, 10MB provides 100x safety margin
+  - Prevents memory exhaustion attacks
+  - Configurable at module level for future customization
+
+- **MAX_RESPONSE_SIZE_WARNING:** 5MB (warning threshold)
+  - Logs warnings for responses >5MB to detect anomalies
+  - Helps identify potential issues before hitting hard limit
+  - Does not block response, only alerts
+
+**Content-Type Validation:**
+- **Allowed types:** `application/json`, `application/json; charset=utf-8`
+- **Rejected types:** `text/html`, `text/plain`, binary data, missing header
+- **Protection:** Prevents parsing HTML error pages or unexpected data
+
+**Applied to All HTTP Requests:**
+1. `health_check()` - Connection testing (graceful degradation on failure)
+2. `preload_model()` - Model loading (graceful degradation on failure)
+3. `chat()` - Main request (error message returned to user)
+4. `chat()` - Final response after tool calls (error message returned)
+5. `chat()` - Error response parsing (safe error handling)
+6. `chat()` - Retry without tools (error message returned)
+7. `start_ollama_chat()` - Connection test (warning displayed)
+
+**Security Benefits:**
+1. **Memory exhaustion prevention** - No response >10MB can be loaded into memory
+2. **Crash prevention** - Malformed JSON caught and reported gracefully
+3. **Type safety** - Only JSON responses accepted, preventing confusion attacks
+4. **Attack detection** - Large responses logged for security monitoring
+5. **Graceful degradation** - Non-critical operations (health check) return False instead of crashing
+
+**Testing:**
+- `test_valid_json_response` - Normal responses parse correctly
+- `test_invalid_content_type_html` - HTML responses rejected
+- `test_oversized_response_content_length` - Size limit enforced via header
+- `test_oversized_response_while_reading` - Size limit enforced during read
+- `test_large_response_warning` - Warnings logged for large responses
+- `test_malformed_json` - JSON parsing errors handled gracefully
+- `test_chat_validates_response` - Integration with chat() method
+- `test_health_check_validates_response` - Integration with health check
+
+**Residual Risk:** LOW
+- Multiple validation layers (Content-Type, size, JSON parsing)
+- Applied to all network requests without exception
+- Graceful degradation for non-critical operations
+- Comprehensive test coverage of attack vectors
+- Logs security events for monitoring
+
+**Attack Scenarios Prevented:**
+
+1. **Memory Exhaustion DoS:**
+   - Before fix: Malicious server returns 100MB response → Application crash
+   - After fix: Response rejected at 10MB limit → Error message, operation continues
+
+2. **HTML Error Page Injection:**
+   - Before fix: Proxy returns HTML error → JSONDecodeError crash
+   - After fix: Content-Type validation catches HTML → Clear error message
+
+3. **Truncated Response Attack:**
+   - Before fix: Network error causes truncated JSON → Parsing crash
+   - After fix: JSON validation catches error → Graceful error message
+
+4. **Binary Data Confusion:**
+   - Before fix: Malicious response with binary data → Unpredictable behavior
+   - After fix: Content-Type validation rejects → Operation fails safely
+
+---
+
 ## Security Test Coverage
 
 ### SQL Injection Tests (9 tests)
@@ -264,7 +387,24 @@ def add_contact_relationship(self, from_contact_name, to_contact_name, type_key)
 - Backup metadata validated ✅
 - Error handling verified ✅
 
-**Total Security Tests:** 28+ tests covering all attack vectors
+### Network Request Validation Tests (15 tests)
+- `test_valid_json_response` ✅
+- `test_valid_json_with_charset` ✅
+- `test_invalid_content_type_html` ✅
+- `test_invalid_content_type_plain_text` ✅
+- `test_missing_content_type` ✅
+- `test_oversized_response_content_length` ✅
+- `test_oversized_response_while_reading` ✅
+- `test_large_response_warning` ✅
+- `test_malformed_json` ✅
+- `test_truncated_json` ✅
+- `test_empty_response` ✅
+- `test_chat_validates_response` ✅
+- `test_chat_handles_oversized_response` ✅
+- `test_health_check_validates_response` ✅
+- `test_preload_validates_response` ✅
+
+**Total Security Tests:** 43+ tests covering all attack vectors
 
 ---
 
