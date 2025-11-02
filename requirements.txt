@@ -29,7 +29,8 @@ requests>=2.31.0                 # HTTP requests
 pillow>=10.0.0                   # Image processing
 jinja2>=3.0.0                    # Template engine
 
-# AI/LLM Integration - we are using ollama at this point
+# AI/LLM Integration - supports both Ollama and local GGUF models
+llama-cpp-python>=0.2.0          # Local GGUF model inference (llama.cpp Python bindings)
 transformers>=4.30.0             # Hugging Face transformers
 accelerate>=0.20.0               # Model acceleration
 torch>=2.0.0                     # PyTorch backend

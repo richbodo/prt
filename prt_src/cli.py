@@ -7,6 +7,7 @@ and provides a unified interface for all operations.
 
 from datetime import date
 from pathlib import Path
+from typing import Optional
 
 import typer
 from rich.console import Console
@@ -36,6 +37,62 @@ console = Console()
 
 # Required configuration fields
 REQUIRED_FIELDS = ["db_username", "db_password", "db_path"]
+
+
+def start_llm_chat(llm, api: PRTAPI):
+    """Start an interactive chat session with any LLM provider.
+
+    This is a generic chat function that works with both OllamaLLM and LlamaCppLLM.
+
+    Args:
+        llm: LLM instance (OllamaLLM or LlamaCppLLM)
+        api: PRTAPI instance
+    """
+    console.print("🤖 LLM Chat Mode", style="bold blue")
+    console.print(
+        "Type 'quit' to exit, 'clear' to clear history, 'help' for assistance", style="cyan"
+    )
+    console.print("=" * 50, style="blue")
+
+    while True:
+        try:
+            user_input = Prompt.ask("\n[bold green]You[/bold green]")
+
+            if user_input.lower() in ["quit", "exit", "q"]:
+                console.print("Goodbye!", style="green")
+                break
+            elif user_input.lower() == "clear":
+                llm.clear_history()
+                console.print("Chat history cleared.", style="yellow")
+                continue
+            elif user_input.lower() == "help":
+                console.print("\n[bold blue]Available Commands:[/bold blue]")
+                console.print("- Type your questions about contacts, tags, or notes", style="white")
+                console.print("- 'clear': Clear chat history", style="white")
+                console.print("- 'quit' or 'exit': Exit chat mode", style="white")
+                console.print("\n[bold blue]Example Questions:[/bold blue]")
+                console.print("- 'Show me all contacts'", style="white")
+                console.print("- 'Find contacts named John'", style="white")
+                console.print("- 'What tags do I have?'", style="white")
+                console.print("- 'How many contacts do I have?'", style="white")
+                continue
+            elif not user_input.strip():
+                continue
+
+            console.print("\n[bold blue]Assistant[/bold blue]")
+            console.print("Thinking...", style="dim")
+            response = llm.chat(user_input)
+            console.print(response, style="white")
+
+        except (KeyboardInterrupt, EOFError):
+            console.print("\nGoodbye!", style="green")
+            break
+        except Exception as e:
+            console.print(f"Error: {e}", style="red")
+            console.print(
+                "Try asking a simpler question or type 'help' for assistance.", style="yellow"
+            )
+
 
 # Configuration constants for relationship management
 DEFAULT_PAGE_SIZE = 20  # Default number of items per page
@@ -2628,7 +2685,12 @@ def smart_continue_prompt(operation_type: str):
 # Encryption handler functions removed as part of Issue #41
 
 
-def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
+def run_interactive_cli(
+    debug: bool = False,
+    regenerate_fixtures: bool = False,
+    llm_provider: Optional[str] = None,
+    llm_model: Optional[str] = None,
+):
     """Run the main interactive CLI."""
     if debug:
         console.print(
@@ -2738,7 +2800,11 @@ def run_interactive_cli(debug: bool = False, regenerate_fixtures: bool = False):
 
 
 def _launch_tui_with_fallback(
-    debug: bool = False, regenerate_fixtures: bool = False, force_setup: bool = False
+    debug: bool = False,
+    regenerate_fixtures: bool = False,
+    force_setup: bool = False,
+    llm_provider: Optional[str] = None,
+    llm_model: Optional[str] = None,
 ) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
@@ -2749,15 +2815,26 @@ def _launch_tui_with_fallback(
                 "🐛 [bold cyan]DEBUG MODE ENABLED[/bold cyan] - Using fixture data", style="cyan"
             )
             config = setup_debug_mode(regenerate=regenerate_fixtures)
-            app = PRTApp(config=config, debug=True, force_setup=force_setup)
+            app = PRTApp(
+                config=config,
+                debug=True,
+                force_setup=force_setup,
+                llm_provider=llm_provider,
+                llm_model=llm_model,
+            )
         else:
-            app = PRTApp(force_setup=force_setup)
+            app = PRTApp(force_setup=force_setup, llm_provider=llm_provider, llm_model=llm_model)
 
         app.run()
     except Exception as e:
         console.print(f"Failed to launch TUI: {e}", style="red")
         console.print("Falling back to classic CLI...", style="yellow")
-        run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
+        run_interactive_cli(
+            debug=debug,
+            regenerate_fixtures=regenerate_fixtures,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+        )
 
 
 @app.callback(invoke_without_command=True)
@@ -2774,15 +2851,40 @@ def main(
     ),
     classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
+    llm_provider: Optional[str] = typer.Option(
+        None,
+        "--llm-provider",
+        help="LLM provider: 'ollama' (default) or 'llamacpp'",
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm-model",
+        help="Model name (ollama) or path to .gguf file (llamacpp)",
+    ),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
+    # Store LLM settings in context for subcommands
+    if ctx.obj is None:
+        ctx.obj = {}
+    ctx.obj["llm_provider"] = llm_provider
+    ctx.obj["llm_model"] = llm_model
+
     if ctx.invoked_subcommand is None:
         if classic:
-            run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
+            run_interactive_cli(
+                debug=debug,
+                regenerate_fixtures=regenerate_fixtures,
+                llm_provider=llm_provider,
+                llm_model=llm_model,
+            )
         else:
             # Launch TUI by default or when explicitly requested
             _launch_tui_with_fallback(
-                debug=debug, regenerate_fixtures=regenerate_fixtures, force_setup=setup
+                debug=debug,
+                regenerate_fixtures=regenerate_fixtures,
+                force_setup=setup,
+                llm_provider=llm_provider,
+                llm_model=llm_model,
             )
 
 
@@ -2839,6 +2941,7 @@ def test():
 
 @app.command()
 def chat(
+    ctx: typer.Context,
     debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
     regenerate_fixtures: bool = typer.Option(
         False,
@@ -2847,6 +2950,10 @@ def chat(
     ),
 ):
     """Start LLM chat mode directly."""
+    # Get LLM settings from context (set in main callback)
+    llm_provider = ctx.obj.get("llm_provider") if ctx.obj else None
+    llm_model = ctx.obj.get("llm_model") if ctx.obj else None
+
     # Handle debug mode
     if debug:
         config = setup_debug_mode(regenerate=regenerate_fixtures)
@@ -2873,14 +2980,27 @@ def chat(
         console.print(f"Failed to initialize API: {e}", style="bold red")
         raise typer.Exit(1) from None
 
-    # Start chat mode directly
+    # Create LLM instance using factory
     console.print("Starting LLM chat mode...", style="blue")
     try:
-        start_ollama_chat(api)
+        from prt_src.llm_factory import create_llm
+
+        llm = create_llm(provider=llm_provider, api=api, model=llm_model)
+
+        # Display provider info
+        if llm_provider:
+            console.print(f"Using LLM provider: {llm_provider}", style="cyan")
+        if llm_model:
+            console.print(f"Using model: {llm_model}", style="cyan")
+
+        # Start interactive chat
+        start_llm_chat(llm, api)
     except Exception as e:
         console.print(f"Error starting chat mode: {e}", style="red")
         console.print(
-            "Make sure Ollama is running and gpt-oss:20b model is available.", style="yellow"
+            "Make sure your LLM provider is configured correctly. "
+            "Use --llm-provider and --llm-model to specify provider.",
+            style="yellow",
         )
         raise typer.Exit(1) from None
 
