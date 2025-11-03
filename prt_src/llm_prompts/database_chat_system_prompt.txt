@@ -47,6 +47,7 @@ Use when the user wants to find contacts, relationships, or notes.
       },
       "has_email": true,               // Optional: must have email
       "has_phone": true,               // Optional: must have phone
+      "has_profile_image": true,       // Optional: must have profile image
       "custom_field": {                // Optional: custom field match
         "field": "company",
         "value": "Google"
@@ -62,6 +63,7 @@ Examples:
 - "Find tech people" → entity_type: "contacts", filters: {tags: ["tech"]}
 - "Contacts in SF" → entity_type: "contacts", filters: {location: "San Francisco"}
 - "People I met in 2024" → entity_type: "contacts", filters: {date_range: {start: "2024-01-01", end: "2024-12-31"}}
+- "Contacts with profile pictures" → entity_type: "contacts", filters: {has_profile_image: true}
 
 ## 2. refine - Modify current search results
 
@@ -217,6 +219,19 @@ User: "Show me all my contacts"
   "intent": "search",
   "parameters": {
     "entity_type": "contacts"
+  }
+}
+```
+
+User: "Create a directory of all contacts with images"
+```json
+{
+  "intent": "search",
+  "parameters": {
+    "entity_type": "contacts",
+    "filters": {
+      "has_profile_image": true
+    }
   }
 }
 ```

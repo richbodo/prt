@@ -20,6 +20,8 @@ from .config import data_dir
 from .config import load_config
 from .db import Database
 from .logging_config import get_logger
+from .schema_info import get_schema_for_llm
+from .schema_info import validate_sql_schema
 from .schema_manager import SchemaManager
 
 
@@ -199,10 +201,98 @@ class PRTAPI:
                 self.db.session.commit()
         except SQLAlchemyError as e:
             self.db.session.rollback()
-            result["error"] = str(e)
+
+            # Enhanced error handling with schema information
+            error_msg = str(e)
+            enhanced_error = self._enhance_sql_error(sql, error_msg)
+            result["error"] = enhanced_error
             self.logger.error(f"Error executing SQL: {e}", exc_info=True)
 
         return result
+
+    def _enhance_sql_error(self, sql: str, error_msg: str) -> str:
+        """Enhance SQL error messages with schema information and suggestions.
+
+        Args:
+            sql: The SQL query that failed
+            error_msg: The original error message
+
+        Returns:
+            Enhanced error message with schema guidance
+        """
+        enhanced_msg = error_msg
+
+        # Check for common schema-related errors
+        if "no such column" in error_msg.lower():
+            # Extract column name from error
+            import re
+
+            match = re.search(r"no such column:\s*(\w+)", error_msg, re.IGNORECASE)
+            if match:
+                missing_column = match.group(1)
+                enhanced_msg += "\n\n📋 SCHEMA HELP:\n"
+                enhanced_msg += f"Column '{missing_column}' does not exist in the database.\n"
+
+                # Validate SQL to get suggestions
+                validation = validate_sql_schema(sql)
+                if validation.get("suggestions"):
+                    enhanced_msg += "\n💡 SUGGESTIONS:\n"
+                    for suggestion in validation["suggestions"]:
+                        enhanced_msg += f"• {suggestion}\n"
+
+        elif "no such table" in error_msg.lower():
+            # Extract table name from error
+            import re
+
+            match = re.search(r"no such table:\s*(\w+)", error_msg, re.IGNORECASE)
+            if match:
+                missing_table = match.group(1)
+                enhanced_msg += "\n\n📋 SCHEMA HELP:\n"
+                enhanced_msg += f"Table '{missing_table}' does not exist in the database.\n"
+
+                from .schema_info import schema_generator
+
+                valid_tables = schema_generator.get_table_names()
+                enhanced_msg += "\n💡 AVAILABLE TABLES:\n"
+                for table in valid_tables:
+                    enhanced_msg += f"• {table}\n"
+
+        # Always add a reference to schema information
+        enhanced_msg += "\n\n📖 For complete schema information, ask: 'Show me the database schema'"
+
+        return enhanced_msg
+
+    def get_database_schema(self) -> str:
+        """Get formatted database schema information for display.
+
+        Returns:
+            Formatted schema information
+        """
+        try:
+            return get_schema_for_llm()
+        except Exception as e:
+            self.logger.error(f"Error getting schema info: {e}")
+            return f"Error retrieving schema information: {str(e)}"
+
+    def validate_sql_query(self, sql: str) -> Dict[str, Any]:
+        """Validate SQL query against database schema.
+
+        Args:
+            sql: SQL query to validate
+
+        Returns:
+            Dictionary with validation results
+        """
+        try:
+            return validate_sql_schema(sql)
+        except Exception as e:
+            self.logger.error(f"Error validating SQL: {e}")
+            return {
+                "valid": False,
+                "errors": [f"Validation error: {str(e)}"],
+                "warnings": [],
+                "suggestions": [],
+            }
 
     # Search operations
     def search_contacts(self, query: str) -> List[Dict[str, Any]]:
@@ -638,6 +728,103 @@ class PRTAPI:
             }
             for c in contacts
         ]
+
+    def get_contacts_with_images(self) -> List[Dict[str, Any]]:
+        """Get all contacts that have profile images.
+
+        Optimized query using database index on profile_image IS NOT NULL.
+        This is specifically designed for the LLM use case:
+        'create a directory of all contacts with images'
+        """
+        import time
+
+        from .models import Contact
+
+        self.logger.info("[API_QUERY_START] get_contacts_with_images() called")
+
+        try:
+            # SQL logging
+            self.logger.debug("[SQL_QUERY] Executing optimized contacts with images query")
+            self.logger.debug("[SQL_DETAIL] WHERE profile_image IS NOT NULL ORDER BY name")
+
+            # Check index usage (if possible)
+            self.logger.debug("[INDEX_CHECK] Assuming idx_contacts_profile_image_not_null exists")
+
+            start_time = time.time()
+
+            contacts = (
+                self.db.session.query(Contact)
+                .filter(Contact.profile_image.isnot(None))
+                .order_by(Contact.name)
+                .all()
+            )
+
+            query_time = time.time() - start_time
+
+            # Convert to dict format and analyze
+            result = []
+            total_size = 0
+            corrupted_count = 0
+
+            for contact in contacts:
+                contact_dict = {
+                    "id": contact.id,
+                    "name": contact.name,
+                    "email": contact.email,
+                    "phone": contact.phone,
+                    "profile_image": contact.profile_image,
+                    "profile_image_filename": contact.profile_image_filename,
+                    "profile_image_mime_type": contact.profile_image_mime_type,
+                    "relationship_info": self.get_relationship_info(contact.id),
+                }
+
+                # Image validation
+                if contact.profile_image:
+                    image_size = len(contact.profile_image)
+                    total_size += image_size
+
+                    # Check for suspicious data
+                    if image_size < 100:  # Suspiciously small
+                        self.logger.warning(
+                            f"[IMAGE_SUSPICIOUS] Contact {contact.id} has tiny image: {image_size} bytes"
+                        )
+                        corrupted_count += 1
+                    elif image_size > 5 * 1024 * 1024:  # Suspiciously large (>5MB)
+                        self.logger.warning(
+                            f"[IMAGE_LARGE] Contact {contact.id} has huge image: {image_size/1024/1024:.1f}MB"
+                        )
+
+                    # Basic format validation
+                    if (
+                        contact.profile_image_mime_type
+                        and not contact.profile_image_mime_type.startswith("image/")
+                    ):
+                        self.logger.warning(
+                            f"[IMAGE_FORMAT] Contact {contact.id} has non-image MIME type: {contact.profile_image_mime_type}"
+                        )
+                        corrupted_count += 1
+
+                result.append(contact_dict)
+
+            self.logger.info(
+                f"[API_QUERY_SUCCESS] Retrieved {len(result)} contacts in {query_time:.3f}s"
+            )
+            self.logger.info(
+                f"[API_DATA_ANALYSIS] Total image data: {total_size/1024/1024:.1f}MB, corrupted: {corrupted_count}"
+            )
+
+            if corrupted_count > 0:
+                self.logger.warning(
+                    f"[API_DATA_QUALITY] Found {corrupted_count} potentially corrupted images"
+                )
+
+            return result
+
+        except Exception as e:
+            self.logger.error(
+                f"[API_QUERY_ERROR] Exception in get_contacts_with_images: {e}", exc_info=True
+            )
+            raise
 
     def import_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
         """Import contacts from parsed CSV data."""

@@ -5,6 +5,7 @@ This module provides a straightforward approach to database schema management
 with automatic backups and clear recovery instructions for users.
 """
 
+import contextlib
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -151,7 +152,7 @@ class SchemaManager:
 
         except Exception as e:
             self.db.session.rollback()
-            raise RuntimeError(f"Failed to add profile image columns: {e}")
+            raise RuntimeError(f"Failed to add profile image columns: {e}") from e
 
     def apply_migration_v2_to_v3(self):
         """Add relationship types and rename relationships table to contact_metadata."""
@@ -349,7 +350,7 @@ class SchemaManager:
 
         except Exception as e:
             self.db.session.rollback()
-            raise RuntimeError(f"Failed to add relationship types: {e}")
+            raise RuntimeError(f"Failed to add relationship types: {e}") from e
 
     def apply_migration_v3_to_v4(self):
         """Add backup metadata tracking table."""
@@ -387,20 +388,18 @@ class SchemaManager:
             console.print("  ✓ Added index for backup queries", style="green")
 
             # Update schema version if table exists
-            try:
+            with contextlib.suppress(Exception):
+                # Schema version table might not exist in test databases
                 self.db.session.execute(
                     text("UPDATE schema_version SET version = 4, updated_at = CURRENT_TIMESTAMP")
                 )
-            except Exception:
-                # Schema version table might not exist in test databases
-                pass
 
             self.db.session.commit()
             console.print("✅ Backup metadata tracking added successfully!", style="green bold")
 
         except Exception as e:
             self.db.session.rollback()
-            raise RuntimeError(f"Failed to add backup metadata tracking: {e}")
+            raise RuntimeError(f"Failed to add backup metadata tracking: {e}") from e
 
     def apply_migration_v4_to_v5(self):
         """Add FTS5 full-text search support."""
@@ -425,7 +424,9 @@ class SchemaManager:
             # IMPORTANT: Append schema version update to the SQL for atomicity
             # executescript() auto-commits, so we need everything in one script
             sql_content += "\n-- Update schema version (part of atomic FTS5 migration)\n"
-            sql_content += "UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP;\n"
+            sql_content += (
+                "UPDATE schema_version SET version = 5, updated_at = CURRENT_TIMESTAMP;\n"
+            )
 
             try:
                 # Get the raw connection from SQLAlchemy
@@ -454,7 +455,7 @@ class SchemaManager:
 
         except Exception as e:
             self.db.session.rollback()
-            raise RuntimeError(f"Failed to add FTS5 support: {e}")
+            raise RuntimeError(f"Failed to add FTS5 support: {e}") from e
 
     def apply_migration_v5_to_v6(self):
         """Add is_you, first_name, and last_name columns to contacts table."""
@@ -477,14 +478,18 @@ class SchemaManager:
 
             # Add first_name column if it doesn't exist
             if "first_name" not in existing_columns:
-                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)"))
+                self.db.session.execute(
+                    text("ALTER TABLE contacts ADD COLUMN first_name VARCHAR(100)")
+                )
                 console.print("  ✓ Added first_name column", style="green")
             else:
                 console.print("  ✓ first_name column already exists", style="dim")
 
             # Add last_name column if it doesn't exist
             if "last_name" not in existing_columns:
-                self.db.session.execute(text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)"))
+                self.db.session.execute(
+                    text("ALTER TABLE contacts ADD COLUMN last_name VARCHAR(100)")
+                )
                 console.print("  ✓ Added last_name column", style="green")
             else:
                 console.print("  ✓ last_name column already exists", style="dim")
@@ -520,7 +525,9 @@ class SchemaManager:
                     """
                     )
                 )
-                console.print("  ✓ Populated first_name and last_name from name field", style="green")
+                console.print(
+                    "  ✓ Populated first_name and last_name from name field", style="green"
+                )
             else:
                 console.print("  ✓ first_name and last_name already populated", style="dim")
 
@@ -534,7 +541,7 @@ class SchemaManager:
 
         except Exception as e:
             self.db.session.rollback()
-            raise RuntimeError(f"Failed to add TUI contact columns: {e}")
+            raise RuntimeError(f"Failed to add TUI contact columns: {e}") from e
 
     def migrate_to_version(self, target_version: int, current_version: int):
         """Apply migrations to reach target version."""

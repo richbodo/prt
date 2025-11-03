@@ -14,6 +14,7 @@ from typing import List
 from typing import Optional
 
 import requests
+from lru import LRU
 
 from .logging_config import get_logger
 
@@ -93,17 +94,33 @@ class ModelInfo:
 class OllamaModelRegistry:
     """Discovers and manages Ollama models via REST API."""
 
-    def __init__(self, base_url: str = "http://localhost:11434", cache_ttl: int = 300):
+    def __init__(
+        self,
+        base_url: str = "http://localhost:11434",
+        cache_ttl: int = 300,
+        max_cache_size: int = 100,
+    ):
         """Initialize the model registry.
 
         Args:
             base_url: Ollama API base URL
             cache_ttl: Cache time-to-live in seconds (default: 5 minutes)
+            max_cache_size: Maximum number of models to cache (default: 100)
         """
         self.base_url = base_url.rstrip("/")
         self.cache_ttl = cache_ttl
-        self._model_cache: Dict[str, ModelInfo] = {}
+        self.max_cache_size = max_cache_size
+        self._model_cache = LRU(max_cache_size)
         self._cache_timestamp: Optional[datetime] = None
+
+        # Cache statistics
+        self._stats = {
+            "hits": 0,
+            "misses": 0,
+            "evictions": 0,
+            "refreshes": 0,
+        }
+        self._operation_count = 0
 
     def is_available(self) -> bool:
         """Check if Ollama is running and accessible.
@@ -141,9 +158,11 @@ class OllamaModelRegistry:
         """
         # Return cached results if valid
         if not force_refresh and self._is_cache_valid():
+            self._stats["hits"] += 1
             logger.debug(f"Returning {len(self._model_cache)} models from cache")
             return list(self._model_cache.values())
 
+        self._stats["refreshes"] += 1
         logger.info("Fetching model list from Ollama API...")
 
         try:
@@ -163,6 +182,13 @@ class OllamaModelRegistry:
 
             self._cache_timestamp = datetime.now()
             logger.info(f"Discovered {len(self._model_cache)} models from Ollama")
+
+            # Log statistics periodically
+            self._operation_count += 1
+            if self._operation_count % 100 == 0:
+                logger.debug(
+                    f"Cache stats: {self._stats}, current size: {len(self._model_cache)}/{self.max_cache_size}"
+                )
 
             return list(self._model_cache.values())
 
@@ -191,9 +217,11 @@ class OllamaModelRegistry:
             cached = self._model_cache[model_name]
             # If we already have extended info, return it
             if cached.modelfile:
+                self._stats["hits"] += 1
                 logger.debug(f"Returning cached extended info for {model_name}")
                 return cached
 
+        self._stats["misses"] += 1
         logger.debug(f"Fetching extended info for model: {model_name}")
 
         try:
@@ -205,6 +233,9 @@ class OllamaModelRegistry:
             response.raise_for_status()
 
             data = response.json()
+
+            # Track cache size before insertion to detect evictions
+            cache_size_before = len(self._model_cache)
 
             # Merge with existing cache entry if present
             if model_name in self._model_cache:
@@ -221,7 +252,26 @@ class OllamaModelRegistry:
                 model_info.name = model_name
                 self._model_cache[model_name] = model_info
 
+                # Check if an eviction occurred
+                cache_size_after = len(self._model_cache)
+                if (
+                    cache_size_before >= self.max_cache_size
+                    and cache_size_after == self.max_cache_size
+                ):
+                    self._stats["evictions"] += 1
+                    logger.debug(
+                        f"Cache at max size ({self.max_cache_size}), LRU eviction occurred"
+                    )
+
             logger.debug(f"Retrieved extended info for {model_name}")
+
+            # Log statistics periodically
+            self._operation_count += 1
+            if self._operation_count % 100 == 0:
+                logger.debug(
+                    f"Cache stats: {self._stats}, current size: {len(self._model_cache)}/{self.max_cache_size}"
+                )
+
             return model_info
 
         except requests.exceptions.HTTPError as e:

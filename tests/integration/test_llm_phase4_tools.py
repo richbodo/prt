@@ -323,3 +323,40 @@ class TestLLMPhase4Tools:
         if not result["success"]:
             assert "error" in result
             assert "message" in result
+
+    def test_execute_sql_with_profile_images_no_json_error(self, test_db):
+        """Test that execute_sql with profile images doesn't cause JSON serialization errors."""
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
+        llm = OllamaLLM(api=api)
+
+        # Execute SQL query that returns profile images (binary data)
+        # This simulates the exact scenario from the bug report
+        result = llm._call_tool(
+            "execute_sql",
+            {
+                "sql": "SELECT id, name, profile_image FROM contacts WHERE profile_image IS NOT NULL LIMIT 2",
+                "confirm": True,
+                "reason": "Testing profile image query without JSON errors",
+            },
+        )
+
+        # Verify the tool executes successfully without JSON serialization errors
+        assert isinstance(result, dict)
+        assert result["success"] is True
+        assert "rows" in result
+        assert "rowcount" in result
+        assert result["rowcount"] > 0  # Should have contacts with profile images
+
+        # Verify that rows contain profile image data as bytes
+        for row in result["rows"]:
+            assert "id" in row
+            assert "name" in row
+            assert "profile_image" in row
+            # Profile image should be binary data
+            assert isinstance(row["profile_image"], bytes)
+            assert len(row["profile_image"]) > 0
+
+        # Most importantly: this test passing means no JSON serialization error occurred
+        # The enhanced logging should handle bytes data properly with the custom serializer

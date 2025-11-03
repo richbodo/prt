@@ -20,6 +20,7 @@ Create a new plan in specs/*.md to implement the `Feature` using the exact speci
 
 Focus on the following files:
 - `README.md` - Contains the project overview and instructions.
+- `docs/` - Contains project documentation
 - `app/server/**` - Contains the codebase server.
 - `app/client/**` - Contains the codebase client.
 - `scripts/**` - Contains the scripts to start and stop the server + client.

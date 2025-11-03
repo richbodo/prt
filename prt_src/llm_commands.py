@@ -54,6 +54,15 @@ class PRTLLMCommands:
         contacts = self.api.list_all_contacts()
         return json.dumps(contacts, indent=2)
 
+    def get_contacts_with_images(self) -> str:
+        """Get all contacts that have profile images and return JSON result.
+
+        Optimized for the LLM use case: 'create a directory of all contacts with images'
+        Uses database index for fast performance with large contact databases.
+        """
+        contacts = self.api.get_contacts_with_images()
+        return json.dumps(contacts, indent=2)
+
     def list_all_tags(self) -> str:
         """List all tags and return JSON result."""
         tags = self.api.list_all_tags()
@@ -123,6 +132,7 @@ SEARCH COMMANDS:
 
 LIST COMMANDS:
 - list_all_contacts() - List all contacts
+- get_contacts_with_images() - Get all contacts that have profile images (optimized)
 - list_all_tags() - List all tags
 - list_all_notes() - List all notes
 - get_contact_details(contact_id: int) - Get detailed info about a contact
@@ -191,6 +201,8 @@ def main():
             print(commands.get_contact_details(int(args[0])))
         elif command == "list_all_contacts":
             print(commands.list_all_contacts())
+        elif command == "get_contacts_with_images":
+            print(commands.get_contacts_with_images())
         elif command == "list_all_tags":
             print(commands.list_all_tags())
         elif command == "list_all_notes":

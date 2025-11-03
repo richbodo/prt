@@ -4,7 +4,7 @@ Test suite for the make_directory.py tool.
 
 Tests all features of the directory export tool including:
 - JSON parsing and validation
-- Profile image handling  
+- Profile image handling
 - HTML/JS generation
 - D3.js data formatting
 - Error handling

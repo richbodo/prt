@@ -7,6 +7,7 @@ import pytest
 
 from prt_src.api import PRTAPI
 from prt_src.config import LLMConfigManager
+from prt_src.llm_factory import DEFAULT_LEGACY_MODEL_ALIAS
 from prt_src.llm_factory import create_llm
 from prt_src.llm_factory import resolve_model_alias
 
@@ -130,3 +131,17 @@ class TestLLMModelLoading:
         except Exception as e:
             # Should not raise exceptions, should fallback gracefully
             pytest.fail(f"Model resolution should not crash when Ollama offline: {e}")
+
+    def test_default_legacy_model_constant_defined(self):
+        """Test that DEFAULT_LEGACY_MODEL_ALIAS constant is defined and usable."""
+        # Verify constant exists and has expected value
+        assert DEFAULT_LEGACY_MODEL_ALIAS == "llama8"
+
+        # Verify it can be used with resolve_model_alias
+        config = LLMConfigManager()
+        provider, model = resolve_model_alias(DEFAULT_LEGACY_MODEL_ALIAS, config)
+
+        # Should resolve successfully (exact model depends on Ollama availability)
+        assert provider in ["ollama", "llamacpp"]
+        assert model is not None
+        assert len(model) > 0
