@@ -108,3 +108,31 @@ def log_debug(message: str, module: str = "general") -> None:
     """Log a debug message."""
     logger = get_logger(module)
     logger.debug(message)
+
+
+def configure_debug_logging() -> None:
+    """Enable comprehensive debug logging for troubleshooting."""
+
+    # Set all PRT loggers to DEBUG level
+    prt_loggers = ["prt_src.llm_ollama", "prt_src.api", "prt_src.llm_memory", "prt_src.db"]
+
+    for logger_name in prt_loggers:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+
+    # Create debug-specific log file
+    debug_file = Path(data_dir()) / "debug_llm_chaining.log"
+    debug_file.parent.mkdir(exist_ok=True)
+
+    debug_handler = logging.FileHandler(debug_file)
+    debug_handler.setLevel(logging.DEBUG)
+
+    debug_formatter = logging.Formatter(
+        "[%(asctime)s] [%(name)s] [%(levelname)s] [%(funcName)s:%(lineno)d] %(message)s"
+    )
+    debug_handler.setFormatter(debug_formatter)
+
+    # Add to all loggers
+    for logger_name in prt_loggers:
+        logger = logging.getLogger(logger_name)
+        logger.addHandler(debug_handler)

@@ -211,7 +211,7 @@ class LLMConfig:
     n_threads: Optional[int] = None  # Number of CPU threads (None = auto-detect)
 
     # Common settings
-    timeout: int = 120
+    timeout: int = 300  # Increased from 120s to handle large datasets (1800+ contacts)
     temperature: float = 0.1
 
 
@@ -291,7 +291,9 @@ class LLMConfigManager:
             n_gpu_layers=llm_dict.get("n_gpu_layers", 0),
             n_threads=llm_dict.get("n_threads"),
             # Common settings
-            timeout=llm_dict.get("timeout", 120),
+            timeout=llm_dict.get(
+                "timeout", 300
+            ),  # Increased from 120s to handle large datasets (1800+ contacts)
             temperature=llm_dict.get("temperature", 0.1),
         )
 
