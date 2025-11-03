@@ -17,7 +17,7 @@ source ./uninit.sh
 
 The basic workflow is below.  If you need a deeper walkthrough, Git reminders, or LLM-friendly tips? Head over to **[Developer Environment & Workflow Guide](docs/DEV_SETUP.md)**.
 
-Note that this project uses a couple different llm models that we are developing with for the chat features.  The first one we tried is gpt-oss:20B, which was super slow on consumer hardware, so now we are using Meta-Llama-3-8B-Instruct-Q4_K_M.gguf, which is faster.  You'll need to download those and get them working with the ollama app to prove them out, and then they should be available to the app.
+Note that this project uses a couple different llm models that we are developing with for the chat features.  You can find out which models are available by typing python -m prt_src --models.  You'll need to download those and get them working with the ollama app to prove them out, and then they should be available to the app.  Basically the only model that works with tool calling that we've tried is gpt-oss:20b - download details in the dev docs.
 
 Note that this project is LICENSE.md GPLv3, and has the most basic CONTRIBUTING.md and pull request template I could find that just avoids patent and copyright violations.  There is also a CODE_OF_CONDUCT.md which is just the basic mozilla one.
 
@@ -70,6 +70,8 @@ I am solving a few personal pain points with this project:
 
 Status: None of the three interfaces are working fully, but all are useful and do something.
 
+The default UI is the TUI.  Run python -m prt_src and the tui opens up.
+
 PRT provides a CLI interface that automatically handles setup and operations. The main entry point is:
 
 ```bash
@@ -102,7 +104,9 @@ python -m prt_src.cli test            # Test database connection
 
 ### Interactive Menu
 
-The main menu:
+The TUI menu is pretty self explanatory.
+
+The main CLI menu:
 
 - ** Start Chat** - AI-powered chat mode that does anything the cli and tools can do
 - ** View Contacts** - Browse contact information
