@@ -55,32 +55,84 @@ class LLMMemory:
         Returns:
             String ID that can be used to retrieve the result
         """
-        # Generate a human-readable ID
+        import time
+
+        logger.info(f"[MEMORY_SAVE_START] Type: {result_type}, description: '{description}'")
+
+        # Data analysis
+        data_count = 0
+
+        if isinstance(data, list):
+            data_count = len(data)
+            # Estimate size for contacts with images
+            if data and isinstance(data[0], dict) and "profile_image" in data[0]:
+                total_image_size = sum(len(item.get("profile_image", b"")) for item in data)
+                logger.debug(
+                    f"[MEMORY_DATA_ANALYSIS] {data_count} contacts, {total_image_size/1024/1024:.1f}MB images"
+                )
+
+            # Check for binary data issues
+            binary_items = 0
+            for item in data[:10]:  # Sample first 10
+                if isinstance(item, dict) and "profile_image" in item:
+                    if not isinstance(item["profile_image"], bytes):
+                        logger.warning(
+                            f"[MEMORY_DATA_TYPE] profile_image is not bytes: {type(item['profile_image'])}"
+                        )
+                    else:
+                        binary_items += 1
+
+            logger.debug(
+                f"[MEMORY_BINARY_CHECK] {binary_items}/{min(10, len(data))} items have bytes profile_image"
+            )
+
+        # Generate ID
         timestamp = datetime.now().strftime("%H%M%S")
         short_uuid = str(uuid.uuid4())[:8]
         result_id = f"{result_type}_{timestamp}_{short_uuid}"
 
-        # Prepare metadata
-        metadata = {
-            "id": result_id,
-            "type": result_type,
-            "description": description or f"{result_type} result",
-            "created_at": datetime.now().isoformat(),
-            "data_count": len(data) if isinstance(data, (list, dict)) else 1,
-            "data": data,
-        }
+        logger.debug(f"[MEMORY_ID_GENERATED] {result_id}")
 
-        # Save to file
-        result_file = self.base_dir / f"{result_id}.json"
         try:
+            # Prepare metadata
+            metadata = {
+                "id": result_id,
+                "type": result_type,
+                "description": description or f"{result_type} result",
+                "created_at": datetime.now().isoformat(),
+                "data_count": data_count,
+                "data": data,
+            }
+
+            # JSON serialization attempt
+            logger.debug("[MEMORY_JSON_START] Attempting JSON serialization")
+            json_start = time.time()
+
+            result_file = self.base_dir / f"{result_id}.json"
             with open(result_file, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2, default=str)
 
-            logger.info(f"[LLM_MEMORY] Saved {result_type} result: {result_id}")
+            json_time = time.time() - json_start
+            file_size = result_file.stat().st_size
+
+            logger.info(
+                f"[MEMORY_SAVE_SUCCESS] {result_id} saved in {json_time:.3f}s, file size: {file_size/1024/1024:.1f}MB"
+            )
+
             return result_id
 
         except Exception as e:
-            logger.error(f"[LLM_MEMORY] Failed to save result {result_id}: {e}")
+            logger.error(f"[MEMORY_SAVE_ERROR] Failed to save {result_id}: {e}", exc_info=True)
+
+            # Additional debugging for JSON errors
+            if "not JSON serializable" in str(e):
+                logger.error("[MEMORY_JSON_ERROR] Analyzing non-serializable data...")
+                for i, item in enumerate(data[:5]):  # Sample first 5
+                    try:
+                        json.dumps(item, default=str)
+                    except Exception as item_error:
+                        logger.error(f"[MEMORY_JSON_ITEM_ERROR] Item {i}: {item_error}")
+
             raise
 
     def load_result(self, result_id: str) -> Optional[Dict[str, Any]]:
@@ -92,21 +144,36 @@ class LLMMemory:
         Returns:
             Dictionary with metadata and data, or None if not found
         """
+        import time
+
+        logger.debug(f"[MEMORY_LOAD_START] Loading {result_id}")
+
         result_file = self.base_dir / f"{result_id}.json"
 
         if not result_file.exists():
-            logger.warning(f"[LLM_MEMORY] Result not found: {result_id}")
+            logger.error(f"[MEMORY_LOAD_MISSING] File not found: {result_file}")
             return None
 
+        file_size = result_file.stat().st_size
+        logger.debug(f"[MEMORY_LOAD_FILE] File size: {file_size/1024/1024:.1f}MB")
+
         try:
+            load_start = time.time()
+
             with open(result_file, encoding="utf-8") as f:
                 result = json.load(f)
 
-            logger.info(f"[LLM_MEMORY] Loaded result: {result_id}")
+            load_time = time.time() - load_start
+            data_count = len(result.get("data", []))
+
+            logger.info(
+                f"[MEMORY_LOAD_SUCCESS] {result_id} loaded in {load_time:.3f}s, {data_count} items"
+            )
+
             return result
 
         except Exception as e:
-            logger.error(f"[LLM_MEMORY] Failed to load result {result_id}: {e}")
+            logger.error(f"[MEMORY_LOAD_ERROR] Failed to load {result_id}: {e}", exc_info=True)
             return None
 
     def list_results(self, result_type: str = None) -> List[Dict[str, Any]]:
