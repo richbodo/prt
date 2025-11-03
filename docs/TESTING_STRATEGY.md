@@ -1,7 +1,9 @@
 # PRT Testing Strategy
 
-**Last Updated**: 2025-10-14
+**Last Updated**: 2025-11-04
 **Status**: Canonical reference for all PRT testing
+
+> ⚠️ **IMPORTANT UPDATE**: As of November 2025, we have identified critical issues with current integration test categorization. Tests marked as `integration` (< 5s) are violating timing contracts by taking 6-11+ seconds with real LLM calls. New implementation plans in `specs/integration_test_*` address these issues through proper test categorization and MockLLMService infrastructure.
 
 ---
 
@@ -35,13 +37,13 @@ We use a layered approach from fast/frequent (bottom) to slow/rare (top):
            └──────────────────┘
                     │
            ┌──────────────────┐
-           │ Contract Tests   │  🧪 1-5 min   (before merge)
-           │ LLM with Promptfoo│
-           └──────────────────┘
-                    │
+           │ Contract Tests   │  🧪 1-5 min   (nightly/release)
+           │  Real LLM APIs   │  @pytest.mark.contract
+           └──────────────────┘  @pytest.mark.requires_llm
+                    │            @pytest.mark.timeout(300)
            ┌──────────────────┐
-           │Integration Tests │  ⚙️  < 5 sec  (before commit)
-           │  Mock LLM/Pilot  │
+           │Integration Tests │  ⚙️  < 5 sec  (every commit)
+           │ MockLLMService   │  Real DB + Mock LLM
            └──────────────────┘
                     │
            ┌──────────────────┐
@@ -49,6 +51,8 @@ We use a layered approach from fast/frequent (bottom) to slow/rare (top):
            │  No external deps│
            └──────────────────┘
 ```
+
+> **⚠️ CURRENT ISSUE**: Some tests marked `@pytest.mark.integration` are actually calling real LLM services and taking 6-11+ seconds, violating the < 5s contract. These need reclassification as contract tests and MockLLMService substitution. See implementation plans in `specs/integration_test_*` for fixes.
 
 ### Layer 1: Unit Tests ⚡
 - **Speed**: < 1 second total
@@ -74,9 +78,9 @@ def test_numbered_list_formatting():
 - **Speed**: < 5 seconds total
 - **Frequency**: Before every commit
 - **What**: Component interactions, workflows, screen navigation
-- **With**: Real database (fixture), mock LLM, Pilot for TUI
+- **With**: Real database (fixture), **MockLLMService**, Pilot for TUI
 
-**Example**: `tests/test_home_screen.py`
+**TUI Example**: `tests/test_home_screen.py`
 ```python
 async def test_home_screen_navigation(pilot_screen):
     """Test navigation using Textual Pilot (headless TUI testing)."""
@@ -88,57 +92,69 @@ async def test_home_screen_navigation(pilot_screen):
         assert isinstance(pilot.app.screen, HelpScreen)
 ```
 
-**Example**: `tests/integration/test_llm_one_query.py`
+**MockLLM Example**: `tests/integration/test_llm_integration_mocked.py`
 ```python
-@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
-def test_count_contacts_integration(test_db):
-    """Integration test with real LLM (skipped in CI if Ollama unavailable)."""
+@pytest.mark.integration
+def test_contact_count_query_fast(test_db):
+    """Fast integration test using MockLLMService (< 1s execution)."""
     db, fixtures = test_db
     api = PRTAPI(config=test_db_config)
-    llm = OllamaLLM(api=api)
 
-    response = llm.chat("How many contacts do I have?")
+    # Use MockLLMService instead of real LLM
+    mock_llm = MockOllamaLLM(api=api)
+    mock_llm.set_response("how many contacts", "You have 7 contacts in your database.")
 
-    assert "7" in response or "seven" in response.lower()
+    response = mock_llm.chat("How many contacts do I have?")
+
+    assert "7 contacts" in response
+    # Completes in < 100ms with deterministic response
 ```
 
-**Run**: `./prt_env/bin/pytest tests/integration/ tests/test_*.py`
+> **⚠️ BAD EXAMPLE** (violates < 5s contract):
+> ```python
+> # DON'T DO THIS in integration tests:
+> llm = OllamaLLM(api=api)  # Real LLM - takes 6-11+ seconds
+> response = llm.chat("test")  # This belongs in contract tests
+> ```
+
+**Run**: `./prt_env/bin/pytest -m integration`
 
 ### Layer 3: Contract Tests 🧪
 - **Speed**: 1-5 minutes
-- **Frequency**: Before merging PR
-- **What**: LLM behavior validation with real model
-- **Status**: ⚠️ **Not Currently Active** - Infrastructure exists but not actively maintained
+- **Frequency**: Nightly or before release
+- **What**: Real LLM behavior validation with actual Ollama models
+- **With**: Real LLM + timeout protection + skip when unavailable
 
-**Note**: Contract testing files exist in `tests/llm_contracts/` but are not currently part of the standard test flow. Instead, we rely on:
-- Layer 2 integration tests with `@pytest.mark.skipif` for LLM validation
-- Manual testing documented in `docs/MANUAL_TESTING.md`
+**Real LLM Example**: `tests/contracts/test_llm_real_behavior.py`
+```python
+@pytest.mark.contract
+@pytest.mark.requires_llm
+@pytest.mark.timeout(300)  # 5-minute timeout protection
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
+def test_count_contacts_contract(test_db):
+    """Contract test validating real LLM tool calling behavior."""
+    db, fixtures = test_db
+    api = PRTAPI(config=test_db_config)
 
-**If/when we reactivate contract testing**, the infrastructure uses Promptfoo:
+    # Use real OllamaLLM for contract validation
+    llm = OllamaLLM(api=api)
 
-<details>
-<summary>Example Promptfoo Configuration (click to expand)</summary>
+    # Contract: LLM should use get_database_stats tool and return count
+    response = llm.chat("How many contacts do I have?")
 
-```yaml
-# tests/llm_contracts/promptfooconfig_search_only.yaml
-prompts:
-  - "How many contacts do I have?"
-  - "Find contacts named John"
-  - "Show me all contacts with email"
-
-tests:
-  - vars:
-      query: "count contacts"
-    assert:
-      - type: contains
-        value: "contacts"
-      - type: javascript
-        value: output.includes('7') || output.includes('seven')
+    # Validate contract behavior (not just mock responses)
+    assert isinstance(response, str)
+    assert len(response) > 0
+    assert "7" in response or "seven" in response.lower()
+    assert "contact" in response.lower()
 ```
 
-**Run**: `npx promptfoo@latest eval -c tests/llm_contracts/promptfooconfig_search_only.yaml`
+**CI Strategy**:
+- **Fast CI (every PR)**: Skip contract tests, run integration with mocks
+- **Nightly CI**: Run contract tests with real Ollama setup
+- **Local development**: Run contract tests when Ollama available
 
-</details>
+**Legacy Promptfoo**: Contract testing files exist in `tests/llm_contracts/` but are not currently maintained. The new approach uses pytest with real LLM integration for more reliable validation.
 
 ### Layer 4: E2E / Manual Tests 🐢
 - **Speed**: 5-10 minutes
@@ -203,33 +219,51 @@ def test_command_extraction():
     assert command["query"] == "Alice"
 ```
 
-**Integration Tests**: Mock LLM responses
+**Integration Tests**: Use MockLLMService for fast, deterministic testing
 ```python
-def test_search_workflow_with_mock_llm(mock_llm):
-    mock_llm.add_response("find Alice", '{"action": "search", "query": "Alice"}')
+@pytest.mark.integration
+def test_search_workflow_with_mock_llm(test_db):
+    """Fast integration test using MockLLMService."""
+    db, fixtures = test_db
+    api = PRTAPI(config=test_db_config)
 
-    result = chat_handler.process("find Alice", llm=mock_llm)
+    # MockLLMService provides deterministic responses
+    mock_llm = MockOllamaLLM(api=api)
+    mock_llm.set_response("find Alice", "I found 1 contact named Alice Johnson.")
 
-    assert len(result.contacts) > 0
-    assert "Alice" in result.contacts[0].name
+    response = mock_llm.chat("find Alice")
+
+    assert "Alice" in response
+    assert "found" in response.lower()
+    # Completes in < 100ms
 ```
 
-**Contract Tests**: ⚠️ **Not currently active** - use integration tests with `@pytest.mark.skipif` instead
-
-**Skip in CI When Ollama Unavailable**:
+**Contract Tests**: Real LLM with timeout protection
 ```python
-def is_ollama_available() -> bool:
-    try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=2)
-        return response.status_code == 200
-    except (requests.RequestException, ConnectionError):
-        return False
-
+@pytest.mark.contract
+@pytest.mark.requires_llm
+@pytest.mark.timeout(300)
 @pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
-def test_real_llm_integration():
-    # This test runs locally but skips in CI
-    pass
+def test_real_llm_tool_calling(test_db):
+    """Validate real LLM behavior with actual Ollama."""
+    db, fixtures = test_db
+    api = PRTAPI(config=test_db_config)
+
+    # Real OllamaLLM for contract validation
+    llm = OllamaLLM(api=api)
+    response = llm.chat("How many contacts?")
+
+    # Contract validation - real LLM should call tools correctly
+    assert isinstance(response, str)
+    assert len(response) > 0
+    # May take 1-5 minutes but validates real behavior
 ```
+
+**MockLLMService Features**:
+- **Pattern matching**: Set responses based on query patterns
+- **Tool simulation**: Simulates tool calls without real LLM processing
+- **Deterministic**: Same input always produces same output
+- **Fast**: < 100ms per operation vs 6-11s for real LLM
 
 ### Database Testing
 
@@ -277,14 +311,21 @@ def test_contact_count(test_db):
 # Activate environment
 source ./init.sh
 
-# Run all tests (fast)
-./prt_env/bin/pytest tests/ -x
+# Fast feedback loop (every commit) - uses MockLLMService
+./prt_env/bin/pytest -m "unit or integration" --maxfail=5
+# Expected: ~30s total, all deterministic
 
-# Run unit tests only (< 1 sec)
+# Run unit tests only (< 1 sec each)
 ./prt_env/bin/pytest -m unit
 
-# Run integration tests only (< 5 sec)
+# Run integration tests only (< 5 sec each, uses mocks)
 ./prt_env/bin/pytest -m integration
+
+# Run contract tests (real LLM, if available)
+./prt_env/bin/pytest -m "contract and requires_llm" --timeout=600
+
+# Run all tests including contract (when Ollama available)
+./prt_env/bin/pytest -m "unit or integration or (contract and requires_llm)"
 
 # Run specific test file
 ./prt_env/bin/pytest tests/test_home_screen.py -v
@@ -295,17 +336,32 @@ source ./init.sh
 # Run with coverage
 ./prt_env/bin/pytest tests/ --cov=prt_src --cov-report=html --cov-report=term
 
-# Watch mode (re-run on file save)
-./prt_env/bin/pytest tests/ --watch
+# Watch mode (re-run on file save) - fast tests only
+./prt_env/bin/pytest -m "unit or integration" --watch
 ```
 
 ### Test Markers
 
 Tests are marked for selective execution:
 ```python
-@pytest.mark.unit          # Fast, no external dependencies
-@pytest.mark.integration   # Moderate speed, real database/Pilot
-@pytest.mark.slow          # Requires LLM, manual testing
+@pytest.mark.unit              # Fast (< 1s), no external dependencies
+@pytest.mark.integration       # Fast (< 5s), real DB + MockLLMService + Pilot
+@pytest.mark.contract          # Slow (1-5min), real LLM validation
+@pytest.mark.requires_llm      # Requires Ollama running (skips in CI)
+@pytest.mark.timeout(300)      # 5-minute timeout for contract tests
+@pytest.mark.slow             # Very slow (5-10min), manual/nightly only
+```
+
+**Common Combinations**:
+```python
+# Fast integration test with mock LLM
+@pytest.mark.integration
+
+# Real LLM contract test with timeout protection
+@pytest.mark.contract
+@pytest.mark.requires_llm
+@pytest.mark.timeout(300)
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
 ```
 
 ### Debug Mode Testing
@@ -484,27 +540,49 @@ tail -200 prt_data/prt.log
 
 ## CI/CD Integration
 
-GitHub Actions runs tests automatically on every push:
+**Two-Pipeline Strategy** for fast feedback and comprehensive validation:
 
+### Fast CI Pipeline (Every PR)
 ```yaml
-# .github/workflows/test.yml
-- name: Run Unit Tests
-  run: ./prt_env/bin/pytest -m unit --tb=short
+# .github/workflows/fast-tests.yml
+name: Fast Tests (Unit + Integration)
+on: [push, pull_request]
 
-- name: Run Integration Tests
-  run: ./prt_env/bin/pytest -m integration --tb=short
+- name: Run Fast Tests
+  run: ./prt_env/bin/pytest -m "unit or integration" --maxfail=5 --timeout=30
+  # Expected: ~30s total, uses MockLLMService
 ```
 
-**Tests that skip in CI**:
-- LLM integration tests (Ollama not available)
-- Performance tests (CI environment too variable)
-- Manual tests (require human interaction)
+**Characteristics**:
+- ✅ **Speed**: ~30 seconds total
+- ✅ **Reliability**: No external dependencies (MockLLMService)
+- ✅ **Coverage**: All integration workflows with deterministic responses
+
+### Contract Test Pipeline (Nightly)
+```yaml
+# .github/workflows/contract-tests.yml
+name: Contract Tests (Real LLM)
+on:
+  schedule:
+    - cron: "0 2 * * *"  # Nightly at 2 AM
+  workflow_dispatch:      # Manual trigger
+
+- name: Setup Ollama
+  run: |
+    ollama pull gpt-oss:20b
+    ollama serve &
+
+- name: Run Contract Tests
+  run: ./prt_env/bin/pytest -m "contract and requires_llm" --timeout=600 --maxfail=3
+  # Expected: 5-10 minutes, validates real LLM behavior
+```
 
 **Exit Criteria for Merge**:
-- ✅ All unit tests pass
-- ✅ All integration tests pass
+- ✅ All unit tests pass (< 1s each)
+- ✅ All integration tests pass (< 5s each, using mocks)
 - ✅ Linting passes (ruff + black)
 - ✅ No decrease in code coverage
+- ℹ️ Contract tests run nightly (not blocking for PRs)
 
 ---
 
@@ -533,10 +611,24 @@ Follow TDD cycle where appropriate:
 
 ---
 
+## Implementation Plans & Upgrades
+
+### Current Integration Test Issues
+As of November 2025, we have identified critical problems with integration test categorization and performance. Detailed implementation plans are available:
+
+- **`specs/integration_test_bug_fixes.md`**: Fix 7 critical test failures (async/await issues, method signatures, content-type validation)
+- **`specs/integration_test_categorization_upgrade.md`**: Implement MockLLMService, reclassify tests, add timeout protection
+
+### Implementation Branch
+- **Branch**: `feature/integration-test-upgrades`
+- **Status**: Ready for implementation
+- **Target**: Transform integration tests from slow/unreliable (45s, 7 failures) to fast/reliable (30s, 0 failures)
+
 ## Resources
 
 ### PRT-Specific
 - **This Document**: Canonical testing strategy
+- **Implementation Plans**: `specs/integration_test_*.md` (detailed upgrade roadmap)
 - **TUI Testing**: `docs/TUI/TUI_Dev_Tips.md`
 - **Chat Testing**: `docs/TUI/Chat_Screen_Testing_Strategy.md`
 - **Manual Testing**: `docs/MANUAL_TESTING.md`
