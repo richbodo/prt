@@ -6,6 +6,8 @@ Tests that Phase 4 tools:
 3. Directory generation creates D3.js visualizations
 4. Relationship management tools create backups
 5. Error handling works correctly
+
+These tests call tool methods directly (not chat()) so they remain fast integration tests.
 """
 
 from pathlib import Path
@@ -16,6 +18,7 @@ from prt_src.api import PRTAPI
 from prt_src.llm_ollama import OllamaLLM
 
 
+@pytest.mark.integration
 class TestLLMPhase4Tools:
     """Test Phase 4 advanced tools (SQL, directory, relationships)."""
 

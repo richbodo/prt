@@ -1,7 +1,11 @@
-"""Integration test: ONE query to prove tool calling works.
+"""Contract tests: Real LLM testing to validate tool calling functionality.
 
-This tests the actual app code (OllamaLLM.chat) rather than raw Ollama API.
-If this passes, tool calling works. If it fails, we have a real problem.
+RECLASSIFIED: These tests were previously marked as integration tests but they:
+1. Take 6-11+ seconds (violates < 5s integration test contract)
+2. Require real LLM services (not deterministic)
+3. Test actual end-to-end LLM behavior (contract validation)
+
+They are now properly categorized as contract tests with timeout protection.
 """
 
 import pytest
@@ -21,7 +25,9 @@ def is_ollama_available() -> bool:
         return False
 
 
-@pytest.mark.integration
+@pytest.mark.contract
+@pytest.mark.requires_llm
+@pytest.mark.timeout(300)
 @pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
 def test_count_contacts_integration(test_db):
     """Integration: 'How many contacts?' should return correct count.
@@ -87,7 +93,10 @@ def test_count_contacts_integration(test_db):
     print(f"[TEST] ✅ SUCCESS - Response contains correct count: {expected_count}")
 
 
-@pytest.mark.integration
+@pytest.mark.contract
+@pytest.mark.requires_llm
+@pytest.mark.timeout(300)
+@pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
 def test_debug_tool_execution(test_db):
     """Debug test: Shows exactly what the LLM does with tools.
 

@@ -2,6 +2,8 @@
 
 Tests that the Ollama LLM client properly validates HTTP responses
 and handles malicious or malformed responses safely.
+
+These tests use mocks to avoid network dependencies and ensure fast execution.
 """
 
 from unittest.mock import Mock
@@ -15,6 +17,7 @@ from prt_src.llm_ollama import MAX_RESPONSE_SIZE_WARNING
 from prt_src.llm_ollama import OllamaLLM
 
 
+@pytest.mark.integration
 class TestLLMNetworkValidation:
     """Test network request validation in OllamaLLM."""
 
