@@ -737,17 +737,18 @@ class PRTAPI:
         'create a directory of all contacts with images'
         """
         import time
+
         from .models import Contact
 
-        self.logger.info(f"[API_QUERY_START] get_contacts_with_images() called")
+        self.logger.info("[API_QUERY_START] get_contacts_with_images() called")
 
         try:
             # SQL logging
-            self.logger.debug(f"[SQL_QUERY] Executing optimized contacts with images query")
-            self.logger.debug(f"[SQL_DETAIL] WHERE profile_image IS NOT NULL ORDER BY name")
+            self.logger.debug("[SQL_QUERY] Executing optimized contacts with images query")
+            self.logger.debug("[SQL_DETAIL] WHERE profile_image IS NOT NULL ORDER BY name")
 
             # Check index usage (if possible)
-            self.logger.debug(f"[INDEX_CHECK] Assuming idx_contacts_profile_image_not_null exists")
+            self.logger.debug("[INDEX_CHECK] Assuming idx_contacts_profile_image_not_null exists")
 
             start_time = time.time()
 

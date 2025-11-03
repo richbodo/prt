@@ -890,8 +890,8 @@ class OllamaLLM:
         Returns:
             Dict with success status and memory ID for chaining
         """
-        import time
         import copy
+        import time
 
         desc = description or "contacts with images"
         logger.info(f"[TOOL_START] save_contacts_with_images(description='{desc}')")
@@ -901,14 +901,14 @@ class OllamaLLM:
 
         try:
             # Query execution
-            logger.debug(f"[QUERY_START] Calling api.get_contacts_with_images()")
+            logger.debug("[QUERY_START] Calling api.get_contacts_with_images()")
             contacts = self.api.get_contacts_with_images()
             query_time = time.time() - start_time
 
             logger.info(f"[QUERY_RESULT] Found {len(contacts)} contacts in {query_time:.3f}s")
 
             if len(contacts) == 0:
-                logger.warning(f"[QUERY_EMPTY] No contacts with images found")
+                logger.warning("[QUERY_EMPTY] No contacts with images found")
                 return {"success": False, "error": "No contacts with images found", "count": 0}
 
             # Data analysis
