@@ -1744,7 +1744,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                 for i, tool_call in enumerate(tool_calls):
                     function_name = tool_call.get("function", {}).get("name", "unknown")
                     function_args = tool_call.get("function", {}).get("arguments", "{}")
-                    logger.info(f"[TOOL_CALL_{i}] {function_name}({function_args[:200]}...)")
+                    # Safely convert function_args to string and slice for logging
+                    args_str = str(function_args)
+                    logger.info(f"[TOOL_CALL_{i}] {function_name}({args_str[:200]}...)")
 
                 tool_results = []
 
