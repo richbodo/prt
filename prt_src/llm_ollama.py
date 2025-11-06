@@ -1706,6 +1706,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         logger.info(f"[LLM] Sending request to {url}, model={self.model}, timeout={self.timeout}s")
         logger.debug(f"[LLM] Message history length: {len(self.conversation_history)}")
 
+        # Initialize variables for error handling
+        response_content = None
+
         try:
             # Send request to Ollama
             logger.debug("[LLM] Making POST request to Ollama native API...")
@@ -1717,9 +1720,19 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             )
             logger.debug(f"[LLM] Received response with status code: {response.status_code}")
 
-            # Log error response body if we got an error
+            # Capture response content before any consumption to avoid stream issues
             if response.status_code >= 400:
-                logger.error(f"[LLM] Error response body: {response.text}")
+                try:
+                    # Capture response content once for both logging and error parsing
+                    response_content = response.content
+                    if response_content:
+                        # Log the error response for debugging
+                        error_text = response_content.decode("utf-8", errors="replace")
+                        logger.error(f"[LLM] Error response body: {error_text}")
+                except Exception as content_error:
+                    logger.warning(
+                        f"[LLM] Could not capture error response content: {content_error}"
+                    )
 
             response.raise_for_status()
 
@@ -1901,9 +1914,15 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             # Check if the error is about tool support
             if e.response is not None and e.response.status_code == 400:
                 try:
-                    # Safely parse error response with validation
-                    error_response = self._validate_and_parse_response(e.response, "chat_error")
-                    error_detail = error_response.get("error", "")
+                    # Parse error response using captured content to avoid stream consumption issues
+                    if response_content:
+                        # Parse the captured content directly
+                        error_response = json.loads(response_content.decode("utf-8"))
+                        error_detail = error_response.get("error", "")
+                    else:
+                        # Fallback: try to parse response normally (may fail if stream consumed)
+                        error_response = self._validate_and_parse_response(e.response, "chat_error")
+                        error_detail = error_response.get("error", "")
                     if "does not support tools" in error_detail:
                         logger.warning(
                             f"[LLM] Model {self.model} does not support tools. Retrying without tools..."
