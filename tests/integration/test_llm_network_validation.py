@@ -2,6 +2,8 @@
 
 Tests that the Ollama LLM client properly validates HTTP responses
 and handles malicious or malformed responses safely.
+
+These tests use mocks to avoid network dependencies and ensure fast execution.
 """
 
 from unittest.mock import Mock
@@ -15,6 +17,7 @@ from prt_src.llm_ollama import MAX_RESPONSE_SIZE_WARNING
 from prt_src.llm_ollama import OllamaLLM
 
 
+@pytest.mark.integration
 class TestLLMNetworkValidation:
     """Test network request validation in OllamaLLM."""
 
@@ -98,7 +101,7 @@ class TestLLMNetworkValidation:
         """Test warning for large but acceptable response."""
         mock_response = Mock()
         mock_response.headers = {
-            "content-type": "application/json",
+            "Content-Type": "application/json",  # Use proper case
             "Content-Length": str(6 * 1024 * 1024),  # 6MB (> 5MB warning threshold)
         }
         mock_response.iter_content.return_value = [
@@ -139,83 +142,110 @@ class TestLLMNetworkValidation:
         with pytest.raises(ValueError, match="Invalid JSON response"):
             self.llm._validate_and_parse_response(mock_response, "test")
 
-    def test_health_check_with_validation(self):
+    @pytest.mark.asyncio
+    async def test_health_check_with_validation(self):
         """Test health_check uses validation."""
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.get") as mock_get:
-                mock_response = Mock()
-                mock_get.return_value = mock_response
-                mock_validate.return_value = {"status": "ok"}
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.get") as mock_get,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_get.return_value = mock_response
+            mock_validate.return_value = {"status": "ok"}
 
-                result = self.llm.health_check()
+            result = await self.llm.health_check()
 
-                assert result is True
-                mock_validate.assert_called_once_with(mock_response, "health_check")
+            assert result is True
+            mock_validate.assert_called_once_with(mock_response, "health_check")
 
-    def test_health_check_validation_fails(self):
+    @pytest.mark.asyncio
+    async def test_health_check_validation_fails(self):
         """Test health_check when validation fails."""
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.get") as mock_get:
-                mock_response = Mock()
-                mock_get.return_value = mock_response
-                mock_validate.return_value = None  # Validation failure
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.get") as mock_get,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_get.return_value = mock_response
+            mock_validate.side_effect = ValueError(
+                "Validation failed"
+            )  # Make validation raise exception
 
-                result = self.llm.health_check()
+            result = await self.llm.health_check()
 
-                assert result is False
+            assert result is False
 
-    def test_preload_model_with_validation(self):
+    @pytest.mark.asyncio
+    async def test_preload_model_with_validation(self):
         """Test preload_model uses validation."""
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.post") as mock_post:
-                mock_response = Mock()
-                mock_post.return_value = mock_response
-                mock_validate.return_value = {"status": "success"}
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.post") as mock_post,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_post.return_value = mock_response
+            mock_validate.return_value = {"status": "success"}
 
-                result = self.llm.preload_model("test-model")
+            result = await self.llm.preload_model()
 
-                assert result is True
-                mock_validate.assert_called_once_with(mock_response, "preload_model")
+            assert result is True
+            mock_validate.assert_called_once_with(mock_response, "preload_model")
 
-    def test_preload_model_validation_fails(self):
+    @pytest.mark.asyncio
+    async def test_preload_model_validation_fails(self):
         """Test preload_model when validation fails."""
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.post") as mock_post:
-                mock_response = Mock()
-                mock_post.return_value = mock_response
-                mock_validate.return_value = None  # Validation failure
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.post") as mock_post,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_post.return_value = mock_response
+            mock_validate.side_effect = ValueError(
+                "Validation failed"
+            )  # Make validation raise exception
 
-                result = self.llm.preload_model("test-model")
+            result = await self.llm.preload_model()
 
-                assert result is False
+            assert result is False
 
     def test_chat_with_validation(self):
         """Test chat method uses validation for main response."""
-        messages = [{"role": "user", "content": "Hello"}]
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.post") as mock_post,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_response.raise_for_status.return_value = None  # Mock raise_for_status method
+            mock_post.return_value = mock_response
+            mock_validate.return_value = {"message": {"content": "Hello!"}, "done": True}
 
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.post") as mock_post:
-                mock_response = Mock()
-                mock_post.return_value = mock_response
-                mock_validate.return_value = {"message": {"content": "Hello!"}, "done": True}
+            response = self.llm.chat("Hello")
 
-                response = self.llm.chat(messages, "test-model")
-
-                assert response["message"]["content"] == "Hello!"
-                mock_validate.assert_called_with(mock_response, "chat")
+            assert "Hello!" in response
+            mock_validate.assert_called_with(mock_response, "chat")
 
     def test_chat_validation_fails_main_response(self):
         """Test chat method when main response validation fails."""
-        messages = [{"role": "user", "content": "Hello"}]
+        with (
+            patch.object(self.llm, "_validate_and_parse_response") as mock_validate,
+            patch("requests.post") as mock_post,
+        ):
+            mock_response = Mock()
+            mock_response.status_code = 200  # Add missing status code
+            mock_response.raise_for_status.return_value = None  # Mock raise_for_status method
+            mock_post.return_value = mock_response
+            mock_validate.side_effect = ValueError(
+                "Validation failed"
+            )  # Make validation raise exception
 
-        with patch.object(self.llm, "_validate_and_parse_response") as mock_validate:
-            with patch("requests.post") as mock_post:
-                mock_response = Mock()
-                mock_post.return_value = mock_response
-                mock_validate.return_value = None  # Validation failure
-
-                with pytest.raises(Exception):
-                    self.llm.chat(messages, "test-model")
+            result = self.llm.chat("Hello")
+            # Chat method handles exceptions gracefully and returns error message
+            assert "Error" in result
 
     def test_security_constants_defined(self):
         """Test that security constants are properly defined."""

@@ -4,12 +4,17 @@ Tests that security validations work correctly:
 1. SQL injection attempts are blocked
 2. Relationship tools handle ambiguous contacts properly
 3. Prompt injection doesn't bypass safety features
+
+These tests call tool methods directly to validate security without LLM dependencies.
 """
+
+import pytest
 
 from prt_src.api import PRTAPI
 from prt_src.llm_ollama import OllamaLLM
 
 
+@pytest.mark.integration
 class TestLLMSecurity:
     """Test security features of LLM tools."""
 

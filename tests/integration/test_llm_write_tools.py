@@ -5,12 +5,17 @@ Tests that write operations:
 2. Execute successfully
 3. Return proper result structure with backup_id
 4. Handle errors gracefully
+
+These tests call tool methods directly to validate backup behavior without LLM calls.
 """
+
+import pytest
 
 from prt_src.api import PRTAPI
 from prt_src.llm_ollama import OllamaLLM
 
 
+@pytest.mark.integration
 class TestLLMWriteTools:
     """Test write tools create automatic backups and modify data correctly."""
 

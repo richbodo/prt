@@ -1,6 +1,7 @@
 """Integration tests for LLM model loading and initialization.
 
 Tests that model loading works correctly for both Ollama and LlamaCpp providers.
+These tests focus on configuration and factory patterns without making LLM calls.
 """
 
 import pytest
@@ -12,6 +13,7 @@ from prt_src.llm_factory import create_llm
 from prt_src.llm_factory import resolve_model_alias
 
 
+@pytest.mark.integration
 class TestLLMModelLoading:
     """Test LLM model loading for different providers."""
 
