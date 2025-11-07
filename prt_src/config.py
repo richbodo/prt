@@ -1,13 +1,21 @@
 import json
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 from typing import Any
 from typing import Dict
+from typing import List
 from typing import Optional
 
 CONFIG_FILE = "prt_config.json"
 DATA_DIR_NAME = "prt_data"
 REQUIRED_FIELDS = ["google_api_key", "openai_api_key", "db_path", "db_username", "db_password"]
+
+# Default tool flags until stability work is complete
+DEFAULT_DISABLED_LLM_TOOLS = [
+    "save_contacts_with_images",
+    "list_memory",
+]
 
 
 def _get_logger():
@@ -256,6 +264,13 @@ class LLMDeveloper:
     log_timing: bool = False
 
 
+@dataclass
+class LLMToolsConfig:
+    """LLM tool availability and feature toggles."""
+
+    disabled_tools: List[str] = field(default_factory=list)
+
+
 class LLMConfigManager:
     """Manager for LLM configuration with validation and defaults."""
 
@@ -273,6 +288,7 @@ class LLMConfigManager:
         self.prompts = self._load_prompts_config(config_dict.get("llm_prompts", {}))
         self.context = self._load_context_config(config_dict.get("llm_context", {}))
         self.developer = self._load_developer_config(config_dict.get("llm_developer", {}))
+        self.tools = self._load_tools_config(config_dict.get("llm_tools", {}))
 
     def _load_llm_config(self, llm_dict: Dict[str, Any]) -> LLMConfig:
         """Load LLM connection configuration with validation."""
@@ -342,6 +358,23 @@ class LLMConfigManager:
             log_responses=dev_dict.get("log_responses", False),
             log_timing=dev_dict.get("log_timing", False),
         )
+
+    def _load_tools_config(self, tools_dict: Dict[str, Any]) -> LLMToolsConfig:
+        """Load LLM tool enable/disable configuration."""
+
+        disabled = tools_dict.get("disabled")
+        if disabled is None:
+            disabled = DEFAULT_DISABLED_LLM_TOOLS.copy()
+        if not isinstance(disabled, list):
+            _get_logger().warning(
+                "Invalid llm_tools.disabled configuration. Expected list of tool names."
+            )
+            disabled = []
+
+        # Normalise tool names to strings for safety
+        normalized = [str(tool_name) for tool_name in disabled]
+
+        return LLMToolsConfig(disabled_tools=normalized)
 
     def get_system_prompt(self) -> Optional[str]:
         """Get the system prompt from configuration.

@@ -5,6 +5,7 @@ Tests for Ollama LLM integration.
 from unittest.mock import Mock
 from unittest.mock import patch
 
+from prt_src.config import LLMConfigManager
 from prt_src.llm_ollama import OllamaLLM
 from prt_src.llm_ollama import Tool
 
@@ -92,6 +93,25 @@ class TestOllamaLLM:
             assert "name" in tool
             assert "description" in tool
             assert "parameters" in tool
+
+    def test_default_disabled_tools_removed(self):
+        """Default configuration should remove unstable tools from availability."""
+        mock_api = Mock()
+        llm = OllamaLLM(mock_api)
+
+        tool_names = {tool.name for tool in llm.tools}
+        assert "save_contacts_with_images" not in tool_names
+        assert "list_memory" not in tool_names
+
+    def test_config_can_enable_disabled_tools(self):
+        """Custom configuration can re-enable disabled tools."""
+        mock_api = Mock()
+        config_manager = LLMConfigManager({"llm_tools": {"disabled": []}})
+        llm = OllamaLLM(mock_api, config_manager=config_manager)
+
+        tool_names = {tool.name for tool in llm.tools}
+        assert "save_contacts_with_images" in tool_names
+        assert "list_memory" in tool_names
 
     @patch("requests.post")
     def test_chat_without_tool_calls(self, mock_post):
