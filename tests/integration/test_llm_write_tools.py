@@ -291,6 +291,30 @@ class TestLLMWriteTools:
             assert "error" in result
             assert "message" in result
 
+    def test_write_operation_failure_propagates(self, test_db):
+        """Failures from write operations should propagate through the LLM wrapper."""
+        db, fixtures = test_db
+        config = {"db_path": str(db.path), "db_encrypted": False}
+        api = PRTAPI(config)
+        llm = OllamaLLM(api=api)
+
+        # Ensure we start with known backup count
+        initial_backups = api.get_backup_history()
+        initial_count = len(initial_backups)
+
+        # Attempt to remove a tag that doesn't exist on the contact
+        result = llm._call_tool(
+            "remove_tag_from_contact", {"contact_id": 1, "tag_name": "does-not-exist"}
+        )
+
+        assert result["success"] is False
+        assert "error" in result
+        assert "backup_id" in result
+
+        # Backup should still be created for audit purposes
+        final_backups = api.get_backup_history()
+        assert len(final_backups) == initial_count + 1
+
     def test_read_only_tools_no_backup(self, test_db):
         """Test that read-only tools don't create backups."""
         db, fixtures = test_db

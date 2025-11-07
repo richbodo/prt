@@ -79,6 +79,13 @@ class OllamaLLM:
         self.timeout = timeout if timeout is not None else config_manager.llm.timeout
         self.temperature = config_manager.llm.temperature
 
+        self.disabled_tools = set(config_manager.tools.disabled_tools)
+        if self.disabled_tools:
+            logger.warning(
+                "[LLM] Disabled tools via configuration: %s",
+                ", ".join(sorted(self.disabled_tools)),
+            )
+
         self.tools = self._create_tools()
         self.conversation_history = []
 
@@ -290,7 +297,7 @@ class OllamaLLM:
         PHASE 2 IN PROGRESS: Enabling read-only tools with test coverage
         Tools are enabled in priority order based on existing test coverage.
         """
-        return [
+        tools = [
             # ============================================================
             # READ-ONLY TOOLS - Priority 1 (Have API Tests)
             # ============================================================
@@ -712,6 +719,18 @@ class OllamaLLM:
                 function=self.api.remove_contact_relationship,
             ),
         ]
+
+        if self.disabled_tools:
+            enabled_tools = [t for t in tools if t.name not in self.disabled_tools]
+            disabled_missing = {t.name for t in tools} & self.disabled_tools
+            if disabled_missing:
+                logger.info(
+                    "[LLM] Tool(s) removed from availability: %s",
+                    ", ".join(sorted(disabled_missing)),
+                )
+            return enabled_tools
+
+        return tools
 
     def _get_tool_by_name(self, name: str) -> Optional[Tool]:
         """Get a tool by name."""
@@ -1351,13 +1370,45 @@ class OllamaLLM:
             logger.info(f"[LLM] Executing {tool_name} with args: {kwargs}")
             result = tool_function(**kwargs)
 
-            # Step 3: Return success with backup info
-            return {
-                "success": True,
+            # Step 3: Determine success state based on result content
+            success = True
+            error_message = None
+
+            if isinstance(result, dict) and "success" in result:
+                success = bool(result.get("success"))
+                if not success:
+                    error_message = result.get("message") or result.get("error")
+            elif isinstance(result, bool):
+                success = result
+                if not success:
+                    readable_name = tool_name.replace("_", " ")
+                    error_message = f"{readable_name} did not complete successfully."
+            elif result is None:
+                success = False
+                readable_name = tool_name.replace("_", " ")
+                error_message = f"{readable_name} returned no result."
+
+            response = {
+                "success": success,
                 "result": result,
                 "backup_id": backup_id,
-                "message": f"Operation completed. Backup #{backup_id} created before changes.",
+                "message": "Operation completed."
+                if success
+                else error_message
+                or "Operation failed.",
             }
+
+            if success:
+                response["message"] = (
+                    f"Operation completed. Backup #{backup_id} created before changes."
+                )
+            else:
+                response["error"] = error_message or "Unknown error"
+                response["message"] = response["message"] + (
+                    f" Backup #{backup_id} was created for safety."
+                )
+
+            return response
         except Exception as e:
             logger.error(f"[LLM] Error in {tool_name}: {e}", exc_info=True)
             return {"success": False, "error": str(e), "message": f"Operation failed: {str(e)}"}
@@ -1405,6 +1456,7 @@ class OllamaLLM:
 
     def _create_system_prompt(self) -> str:
         """Create the system prompt for the LLM."""
+        tool_names = {tool.name for tool in self.tools}
         tools_description = "\n".join([f"- {tool.name}: {tool.description}" for tool in self.tools])
 
         # Count tools for context
@@ -1416,6 +1468,23 @@ class OllamaLLM:
         except Exception as e:
             logger.warning(f"[LLM] Failed to get schema info: {e}")
             schema_info = "Schema information unavailable due to error."
+
+        directory_guidance = ""
+        if {"save_contacts_with_images", "generate_directory"}.issubset(tool_names):
+            directory_guidance = """
+
+**IMPORTANT - Tool Chaining for Contact Directories:**
+When user requests "directory of contacts with images", always use this 2-step process:
+1. Call `save_contacts_with_images` → get memory_id
+2. Call `generate_directory` with that memory_id
+Never stop after step 1 - users want the final HTML directory, not just saved data.
+"""
+        elif "generate_directory" in tool_names:
+            directory_guidance = """
+
+**Directory Requests:**
+When user explicitly asks for a directory visualization, use `generate_directory` with a clear `search_query` that matches the user's intent. Confirm results are available before responding.
+"""
 
         return f"""You are an AI assistant for the Personal Relationship Toolkit (PRT), a privacy-first personal contact management system.
 
@@ -1440,11 +1509,7 @@ Key responsibilities:
 - **Execute tool chains for complex workflows** (e.g., "directory of contacts with images")
 - Provide a conversational, helpful interface to their private data
 
-**IMPORTANT - Tool Chaining for Contact Directories:**
-When user requests "directory of contacts with images", always use this 2-step process:
-1. Call `save_contacts_with_images` → get memory_id
-2. Call `generate_directory` with that memory_id
-Never stop after step 1 - users want the final HTML directory, not just saved data.
+{directory_guidance}
 
 ## USER INTERFACE CONTEXT
 
@@ -1482,12 +1547,12 @@ These are NOT optional guidelines - they are hard-coded safety checks that execu
 
 ---
 
-## AVAILABLE TOOLS ({tool_count} total: read + write + advanced)
+## AVAILABLE TOOLS ({tool_count} total)
 
-**Read-Only Tools (10):** Safe operations that don't modify data
-**Write Tools (9):** Modify data - AUTOMATIC BACKUP created before each operation
-**Utility Tools (1):** Manual backup creation
-**Advanced Tools (4):** SQL, visualizations, relationships - use with caution
+**Read-only tools:** Safe operations that do not modify data
+**Write tools:** Data mutations that automatically trigger backups
+**Utility tools:** Manual or supporting operations (e.g., backups)
+**Advanced tools:** SQL, visualizations, and relationship management—use with caution
 
 {tools_description}
 
