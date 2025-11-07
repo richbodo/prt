@@ -82,11 +82,21 @@ if [ -n "$VIRTUAL_ENV" ]; then
     echo "If you don't see (prt_env), try running: source prt_env/bin/activate"
 
     # Set up pre-commit hooks (dev tools already installed)
-    pre-commit install || { echo "Failed to install pre-commit hooks"; return 1; }
-    echo "🔧 Pre-commit hooks installed"
+    PRE_COMMIT_READY=0
+    if [ "${PRT_SKIP_PRECOMMIT:-0}" = "1" ]; then
+        echo "⚠️  Skipping pre-commit installation (PRT_SKIP_PRECOMMIT=1)"
+    else
+        if pre-commit install; then
+            echo "🔧 Pre-commit hooks installed"
+            PRE_COMMIT_READY=1
+        else
+            echo "⚠️  Warning: Failed to install pre-commit hooks (continuing without them)."
+            echo "    Set PRT_SKIP_PRECOMMIT=1 to skip this step explicitly."
+        fi
+    fi
 
     # Optionally run pre-commit across the codebase to establish a baseline
-    if [ "${RUN_PRE_COMMIT:-0}" = "1" ]; then
+    if [ "${RUN_PRE_COMMIT:-0}" = "1" ] && [ "$PRE_COMMIT_READY" = "1" ]; then
         pre-commit run --all-files || { echo "pre-commit run failed"; return 1; }
     fi
     
