@@ -23,6 +23,14 @@ Note that this project is LICENSE.md GPLv3, and has the most basic CONTRIBUTING.
 
 There is a [github project](https://github.com/users/richbodo/projects/2) where I divide up the issues by feature-type-bucket.
 
+## Quick start for LLMs/Agents/AIs
+
+We have not merged these yet, so:
+
+Claude Code start with Claude.md
+Gemini CLI start with Gemini.md
+Codex CLI and all other AI/LLM agents start with Agents.md
+
 ## 🛠️ Basic Development Workflow
 
 ### Quick Setup
