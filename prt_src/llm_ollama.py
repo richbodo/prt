@@ -786,10 +786,9 @@ class OllamaLLM:
                 "success": success,
                 "result": result,
                 "backup_id": backup_id,
-                "message": "Operation completed."
-                if success
-                else error_message
-                or "Operation failed.",
+                "message": (
+                    "Operation completed." if success else error_message or "Operation failed."
+                ),
             }
 
             if success:
@@ -1120,7 +1119,48 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                 tool_results = []
                 for tool_call in tool_calls:
                     tool_name = tool_call["function"]["name"]
-                    arguments = json.loads(tool_call["function"]["arguments"])
+                    # Handle both string and dict formats for arguments
+                    raw_arguments = tool_call["function"]["arguments"]
+                    if isinstance(raw_arguments, str):
+                        try:
+                            arguments = json.loads(raw_arguments)
+                            logger.debug(
+                                f"[LLM] Parsed JSON arguments for tool '{tool_name}': {type(arguments)}"
+                            )
+                        except json.JSONDecodeError as e:
+                            logger.error(
+                                f"[LLM] Failed to parse JSON arguments for tool '{tool_name}': {e}"
+                            )
+                            logger.error(f"[LLM] Raw arguments: {raw_arguments}")
+                            tool_result = {"error": f"Invalid JSON arguments: {e}"}
+                            tool_results.append(
+                                {
+                                    "tool_call_id": tool_call.get("id", ""),
+                                    "name": tool_name,
+                                    "result": tool_result,
+                                }
+                            )
+                            continue
+                    elif isinstance(raw_arguments, dict):
+                        arguments = raw_arguments
+                        logger.debug(
+                            f"[LLM] Using dict arguments for tool '{tool_name}': {type(arguments)}"
+                        )
+                    else:
+                        logger.error(
+                            f"[LLM] Unexpected argument type for tool '{tool_name}': {type(raw_arguments)}"
+                        )
+                        logger.error(f"[LLM] Raw arguments: {raw_arguments}")
+                        tool_result = {"error": f"Unexpected argument type: {type(raw_arguments)}"}
+                        tool_results.append(
+                            {
+                                "tool_call_id": tool_call.get("id", ""),
+                                "name": tool_name,
+                                "result": tool_result,
+                            }
+                        )
+                        continue
+
                     tool_result = self._call_tool(tool_name, arguments)
                     tool_results.append(
                         {

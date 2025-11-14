@@ -4,13 +4,13 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
-        stages: [commit]
+        stages: [pre-commit]
 
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:
       - id: black
-        stages: [commit]
+        stages: [pre-commit]
 
   - repo: local
     hooks:
@@ -24,7 +24,7 @@ repos:
              echo "Warning: run-ci-tests.sh not found, skipping tests";
            fi'
         language: system
-        stages: [push]
+        stages: [pre-push]
         pass_filenames: false
         verbose: true
 
@@ -38,7 +38,7 @@ repos:
              echo "Warning: pytest not available, skipping marker check";
            fi'
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         files: ^tests/.*\.py$
         pass_filenames: false
 
@@ -46,5 +46,5 @@ repos:
         name: Test File Syntax Check
         entry: bash -c 'if [[ -f "./prt_env/bin/python" ]]; then ./prt_env/bin/python -m py_compile "$@"; else python -m py_compile "$@"; fi' --
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         files: ^tests/.*\.py$
