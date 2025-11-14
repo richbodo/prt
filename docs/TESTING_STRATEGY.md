@@ -1,7 +1,10 @@
 # PRT Testing Strategy
 
-**Last Updated**: 2025-11-04
+**Last Updated**: 2025-11-14
 **Status**: Canonical reference for all PRT testing
+
+> **📚 Testing Documentation Hierarchy:**
+> **README.md** (quick start) → **[RUNNING_TESTS.md](RUNNING_TESTS.md)** (commands & daily workflow) → **This Document** (comprehensive strategy)
 
 
 ## Core Philosophy: Headless First
@@ -346,7 +349,7 @@ Tests are marked for selective execution:
 @pytest.mark.contract          # Slow (1-5min), real LLM validation
 @pytest.mark.requires_llm      # Requires Ollama running (skips in CI)
 @pytest.mark.timeout(300)      # 5-minute timeout for contract tests
-@pytest.mark.slow             # Very slow (5-10min), manual/nightly only
+@pytest.mark.e2e              # End-to-end tests (5-10min), manual/nightly only
 ```
 
 **Common Combinations**:
@@ -624,7 +627,8 @@ As of November 2025, we have identified critical problems with integration test 
 ## Resources
 
 ### PRT-Specific
-- **This Document**: Canonical testing strategy
+- **This Document**: Canonical testing strategy and patterns
+- **[RUNNING_TESTS.md](RUNNING_TESTS.md)**: Commands, CI scripts, and daily workflow
 - **Implementation Plans**: `specs/integration_test_*.md` (detailed upgrade roadmap)
 - **TUI Testing**: `docs/TUI/TUI_Dev_Tips.md`
 - **Chat Testing**: `docs/TUI/Chat_Screen_Testing_Strategy.md`

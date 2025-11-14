@@ -81,7 +81,7 @@ This document outlines the phase-by-phase plan for implementing the Chat screen 
   - `@pytest.mark.unit` - Fast unit tests (< 1s)
   - `@pytest.mark.integration` - Integration with mocks (< 5s)
   - `@pytest.mark.contract` - LLM contract tests (1-5m)
-  - `@pytest.mark.slow` - E2E tests (5-10m)
+  - `@pytest.mark.e2e` - End-to-end tests (5-10m)
   - `@pytest.mark.requires_llm` - Requires real LLM
 - [ ] Set up pytest configuration (`pytest.ini`)
 
