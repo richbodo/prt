@@ -10,7 +10,9 @@ import base64
 import io
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
 
 def create_solid_color_image(color, size=(256, 256)):

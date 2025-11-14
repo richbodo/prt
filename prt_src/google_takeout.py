@@ -302,7 +302,7 @@ class GoogleTakeoutParser:
 
         # Get first few contact names for preview
         sample_contacts = []
-        for i, contact in enumerate(contacts[:5]):  # First 5 contacts
+        for _i, contact in enumerate(contacts[:5]):  # First 5 contacts
             first = contact.get("first", "")
             last = contact.get("last", "")
             name = f"{first} {last}".strip() or "(No name)"

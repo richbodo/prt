@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
@@ -51,7 +48,7 @@ def _credentials() -> Credentials:
     return creds
 
 
-def fetch_contacts(config: Dict[str, str]) -> List[Tuple[str, str]]:
+def fetch_contacts(config: dict[str, str]) -> list[tuple[str, str]]:
     """Fetch contacts from Google People API."""
     creds = _credentials()
     try:
@@ -73,7 +70,7 @@ def fetch_contacts(config: Dict[str, str]) -> List[Tuple[str, str]]:
     except Exception as e:
         raise RuntimeError(f"Unexpected error fetching contacts: {e}") from e
 
-    contacts: List[Tuple[str, str]] = []
+    contacts: list[tuple[str, str]] = []
     for person in result.get("connections", []):
         name = ""
         email = ""

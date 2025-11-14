@@ -290,7 +290,7 @@ class ContactSearchCache:
         try:
             items = list(trie.iteritems(prefix=prefix_lower))
 
-            for key, value in items[: self.max_autocomplete_results]:
+            for _key, value in items[: self.max_autocomplete_results]:
                 if isinstance(value, list):
                     # Multiple contacts for this key
                     for contact_id in value:

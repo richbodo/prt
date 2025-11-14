@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import csv
 import sys
-from typing import Dict, List
+from typing import Dict
+from typing import List
 
 
 def _extract_fields(row: Dict[str, str], prefix: str) -> List[str]:

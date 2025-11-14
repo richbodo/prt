@@ -4,6 +4,7 @@ Provides search bar, filter panel, and searchable list functionality
 with vim-style keybindings.
 """
 
+import contextlib
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -57,10 +58,8 @@ class SearchBar(Static):
             query: The search query
         """
         self.query = query
-        try:
+        with contextlib.suppress(Exception):
             self.query_one("#search-input", Input).value = query
-        except Exception:
-            pass
 
     def clear(self) -> None:
         """Clear the search query."""
@@ -86,10 +85,8 @@ class SearchBar(Static):
         if key == "/":
             # Focus search input
             self.is_focused = True
-            try:
+            with contextlib.suppress(Exception):
                 self.query_one("#search-input", Input).focus()
-            except Exception:
-                pass
             return True
         return False
 
@@ -285,11 +282,7 @@ class SearchableList(ModeAwareWidget):
             return True
 
         # Search in other text fields
-        for key, value in item.items():
-            if isinstance(value, str) and query in value.lower():
-                return True
-
-        return False
+        return any(isinstance(value, str) and query in value.lower() for key, value in item.items())
 
     def _item_matches_filter(self, item: Dict, category: str, value: str) -> bool:
         """Check if an item matches a filter.
@@ -414,10 +407,8 @@ class SearchScopeFilter(Static):
             if checkbox.value:
                 for scope in ["contacts", "relationships", "metadata"]:
                     self.scope_options[scope] = False
-                    try:
+                    with contextlib.suppress(Exception):
                         self.query_one(f"#scope_{scope}", Checkbox).value = False
-                    except Exception:
-                        pass
         else:
             scope_key = checkbox.id.replace("scope_", "")
             self.scope_options[scope_key] = checkbox.value
@@ -425,17 +416,13 @@ class SearchScopeFilter(Static):
             # If any specific scope is checked, uncheck 'all'
             if checkbox.value:
                 self.scope_options["all"] = False
-                try:
+                with contextlib.suppress(Exception):
                     self.query_one("#scope_all", Checkbox).value = False
-                except Exception:
-                    pass
             # If no specific scopes are selected, check 'all'
             elif not any(self.scope_options[k] for k in ["contacts", "relationships", "metadata"]):
                 self.scope_options["all"] = True
-                try:
+                with contextlib.suppress(Exception):
                     self.query_one("#scope_all", Checkbox).value = True
-                except Exception:
-                    pass
 
         # Notify parent of scope change
         if self.on_scope_change:

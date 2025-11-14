@@ -74,17 +74,20 @@ class SearchOperations:
             for contact in all_contacts:
                 # Check if contact has this tag via metadata
                 metadata = self.api.db.get_contact_metadata(contact["id"])
-                if metadata and metadata.get("tags"):
-                    if any(t["id"] == tag["id"] for t in metadata["tags"]):
-                        contacts_with_tag.append(
-                            {
-                                "id": contact["id"],
-                                "name": contact["name"],
-                                "email": contact.get("email"),
-                                "phone": contact.get("phone"),
-                                "tag": tag["name"],
-                            }
-                        )
+                if (
+                    metadata
+                    and metadata.get("tags")
+                    and any(t["id"] == tag["id"] for t in metadata["tags"])
+                ):
+                    contacts_with_tag.append(
+                        {
+                            "id": contact["id"],
+                            "name": contact["name"],
+                            "email": contact.get("email"),
+                            "phone": contact.get("phone"),
+                            "tag": tag["name"],
+                        }
+                    )
 
             return contacts_with_tag
 
@@ -113,15 +116,18 @@ class SearchOperations:
 
                 for contact in all_contacts:
                     metadata = self.api.db.get_contact_metadata(contact["id"])
-                    if metadata and metadata.get("notes"):
-                        if any(n["id"] == note["id"] for n in metadata["notes"]):
-                            associated_contacts.append(
-                                {
-                                    "id": contact["id"],
-                                    "name": contact["name"],
-                                    "email": contact.get("email"),
-                                }
-                            )
+                    if (
+                        metadata
+                        and metadata.get("notes")
+                        and any(n["id"] == note["id"] for n in metadata["notes"])
+                    ):
+                        associated_contacts.append(
+                            {
+                                "id": contact["id"],
+                                "name": contact["name"],
+                                "email": contact.get("email"),
+                            }
+                        )
 
                 results.append(
                     {

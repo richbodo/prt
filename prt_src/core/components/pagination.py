@@ -65,7 +65,7 @@ class AlphabeticalIndex:
                     self.index[first_letter] = i
                     letters_seen.add(first_letter)
 
-        self.available_letters = sorted(list(letters_seen))
+        self.available_letters = sorted(letters_seen)
 
     def get_available_letters(self) -> List[str]:
         """Get list of available letters in the index."""
@@ -204,10 +204,9 @@ class PaginationSystem:
         # Handle position memory
         if self.enable_memory and list_id:
             # Restore position if switching back to a known list
-            if self.current_list_id and self.current_list_id != list_id:
+            if self.current_list_id and self.current_list_id != list_id and self.position_memory:
                 # Save current position before switching
-                if self.position_memory:
-                    self.position_memory.save_position(self.current_list_id, self.current_page)
+                self.position_memory.save_position(self.current_list_id, self.current_page)
 
             self.current_list_id = list_id
 

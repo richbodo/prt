@@ -173,7 +173,7 @@ class SearchIndexer:
         try:
             # Search contacts with ranking
             sql = """
-                SELECT 
+                SELECT
                     c.id,
                     c.name,
                     c.email,
@@ -234,7 +234,7 @@ class SearchIndexer:
         try:
             # Search notes with ranking
             sql = """
-                SELECT 
+                SELECT
                     n.id,
                     n.title,
                     n.content,
@@ -293,7 +293,7 @@ class SearchIndexer:
         try:
             # Search tags with ranking
             sql = """
-                SELECT 
+                SELECT
                     t.id,
                     t.name,
                     t.description,
@@ -365,8 +365,8 @@ class SearchIndexer:
                 sql = """
                     SELECT id, name, email, phone
                     FROM contacts
-                    WHERE name LIKE :pattern 
-                       OR email LIKE :pattern 
+                    WHERE name LIKE :pattern
+                       OR email LIKE :pattern
                        OR phone LIKE :pattern
                     LIMIT :limit OFFSET :offset
                 """
@@ -414,7 +414,7 @@ class SearchIndexer:
                 # Re-insert with current data
                 sql = """
                     INSERT INTO contacts_fts (contact_id, name, email, phone, address, notes)
-                    SELECT 
+                    SELECT
                         c.id,
                         COALESCE(c.name, ''),
                         COALESCE(c.email, ''),
@@ -437,7 +437,7 @@ class SearchIndexer:
 
                 sql = """
                     INSERT INTO notes_fts (note_id, title, content, contact_names)
-                    SELECT 
+                    SELECT
                         n.id,
                         COALESCE(n.title, ''),
                         COALESCE(n.content, ''),
@@ -458,7 +458,7 @@ class SearchIndexer:
 
                 sql = """
                     INSERT INTO tags_fts (tag_id, name, description, contact_count)
-                    SELECT 
+                    SELECT
                         t.id,
                         COALESCE(t.name, ''),
                         COALESCE(t.description, ''),
@@ -501,7 +501,7 @@ class SearchIndexer:
             # Re-populate contacts_fts
             sql = """
                 INSERT INTO contacts_fts (contact_id, name, email, phone, address, notes)
-                SELECT 
+                SELECT
                     c.id,
                     COALESCE(c.name, ''),
                     COALESCE(c.email, ''),
@@ -518,7 +518,7 @@ class SearchIndexer:
             # Re-populate notes_fts
             sql = """
                 INSERT INTO notes_fts (note_id, title, content, contact_names)
-                SELECT 
+                SELECT
                     n.id,
                     COALESCE(n.title, ''),
                     COALESCE(n.content, ''),
@@ -533,7 +533,7 @@ class SearchIndexer:
             # Re-populate tags_fts
             sql = """
                 INSERT INTO tags_fts (tag_id, name, description, contact_count)
-                SELECT 
+                SELECT
                     t.id,
                     COALESCE(t.name, ''),
                     COALESCE(t.description, ''),

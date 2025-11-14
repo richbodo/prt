@@ -129,7 +129,7 @@ def _test_contact_search_export(api: PRTAPI, fixtures: dict):
     export_search_results(api, "contacts", "John", contacts, interactive=False)
 
     # Find the export directory
-    export_dirs = [d for d in Path(".").glob("exports/contacts_search_*")]
+    export_dirs = list(Path(".").glob("exports/contacts_search_*"))
     assert (
         len(export_dirs) == 1
     ), f"Should create exactly one export directory, found {len(export_dirs)}"
@@ -174,7 +174,7 @@ def _test_tag_search_export(api: PRTAPI, fixtures: dict):
     export_search_results(api, "tags", "friend", export_data, interactive=False)
 
     # Find the export directory
-    export_dirs = [d for d in Path(".").glob("exports/tags_search_*")]
+    export_dirs = list(Path(".").glob("exports/tags_search_*"))
     assert len(export_dirs) >= 1, "Should create at least one tag export directory"
 
     export_dir = sorted(export_dirs)[-1]  # Get the latest one
@@ -220,7 +220,7 @@ def _test_note_search_export(api: PRTAPI, fixtures: dict):
         export_search_results(api, "notes", "meeting", export_data, interactive=False)
 
         # Find the export directory
-        export_dirs = [d for d in Path(".").glob("exports/notes_search_*")]
+        export_dirs = list(Path(".").glob("exports/notes_search_*"))
         assert len(export_dirs) >= 1, "Should create at least one note export directory"
 
         export_dir = sorted(export_dirs)[-1]  # Get the latest one

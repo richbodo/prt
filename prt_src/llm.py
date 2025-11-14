@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 from typing import Any
-from typing import Optional
 
 if TYPE_CHECKING:  # pragma: no cover - for type hints only
     from transformers import AutoModelForCausalLM
@@ -14,12 +13,12 @@ if TYPE_CHECKING:  # pragma: no cover - for type hints only
 # Default model – can be overridden in tests by monkeypatching the constant
 _MODEL_NAME = "gpt-oss-20b"
 
-_tokenizer: Optional[AutoTokenizer] = None
-_model: Optional[AutoModelForCausalLM] = None
+_tokenizer: AutoTokenizer | None = None
+_model: AutoModelForCausalLM | None = None
 _generator = None
 
 
-def _get_hf_token(config: Any) -> Optional[str]:
+def _get_hf_token(config: Any) -> str | None:
     """Fetch a Hugging Face token from environment or config."""
     token = os.getenv("HF_TOKEN")
     if token:

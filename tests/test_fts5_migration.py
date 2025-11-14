@@ -76,7 +76,7 @@ class TestFTS5Migration:
             (1, 5, 4),  # v1 to v5 should have 4 migrations
         ]
 
-        for current, target, expected_count in paths_to_test:
+        for current, target, _expected_count in paths_to_test:
             # Create mocks for all migration methods
             schema_manager.apply_migration_v1_to_v2 = MagicMock()
             schema_manager.apply_migration_v2_to_v3 = MagicMock()
