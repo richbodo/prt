@@ -13,6 +13,7 @@ from prt_src.llm_ollama import OllamaLLM
 class TestJSONArgumentParsing:
     """Test the specific JSON argument parsing logic that was causing the bug."""
 
+    @pytest.mark.unit
     def test_parse_string_arguments(self):
         """Test parsing when arguments are provided as JSON string."""
         # This is what was causing the original bug
@@ -37,6 +38,7 @@ class TestJSONArgumentParsing:
         assert error is None
         assert arguments == {"sql": "SELECT COUNT(*) FROM contacts", "confirm": True}
 
+    @pytest.mark.unit
     def test_parse_dict_arguments(self):
         """Test parsing when arguments are already a dict (what Ollama sometimes returns)."""
         # This is what was causing "JSON object must be str, bytes or bytearray, not dict"
@@ -65,6 +67,7 @@ class TestJSONArgumentParsing:
         assert error is None
         assert arguments == {"sql": "SELECT COUNT(*) FROM contacts", "confirm": True}
 
+    @pytest.mark.unit
     def test_parse_malformed_json(self):
         """Test parsing malformed JSON string."""
         raw_arguments = '{"sql": "SELECT COUNT(*) FROM contacts", "confirm": '  # Malformed
@@ -91,6 +94,7 @@ class TestJSONArgumentParsing:
         )  # Different JSON error messages
         assert arguments is None
 
+    @pytest.mark.unit
     def test_parse_unexpected_type(self):
         """Test parsing unexpected argument types."""
         raw_arguments = ["invalid", "list", "type"]  # List instead of string or dict
@@ -118,6 +122,7 @@ class TestJSONArgumentParsing:
         assert error == "Unexpected argument type: <class 'list'>"
         assert arguments is None
 
+    @pytest.mark.unit
     def test_original_bug_simulation(self):
         """Simulate the original bug scenario."""
         # This would have caused: "the JSON object must be str, bytes or bytearray, not dict"
@@ -166,6 +171,7 @@ class TestJSONArgumentParsing:
                 # Should not throw JSON parsing errors and should return mock result
                 assert result is not None  # Should get the mocked result
 
+    @pytest.mark.unit
     def test_empty_arguments(self):
         """Test handling of empty arguments."""
         # Test both formats

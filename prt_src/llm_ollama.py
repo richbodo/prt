@@ -1132,7 +1132,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                                 f"[LLM] Failed to parse JSON arguments for tool '{tool_name}': {e}"
                             )
                             logger.error(f"[LLM] Raw arguments: {raw_arguments}")
-                            tool_result = {"error": f"Invalid JSON arguments: {e}"}
+                            tool_result = {
+                                "error": "Unable to process tool arguments - invalid format received"
+                            }
                             tool_results.append(
                                 {
                                     "tool_call_id": tool_call.get("id", ""),
@@ -1151,7 +1153,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                             f"[LLM] Unexpected argument type for tool '{tool_name}': {type(raw_arguments)}"
                         )
                         logger.error(f"[LLM] Raw arguments: {raw_arguments}")
-                        tool_result = {"error": f"Unexpected argument type: {type(raw_arguments)}"}
+                        tool_result = {
+                            "error": "Unable to process tool arguments - unsupported data format"
+                        }
                         tool_results.append(
                             {
                                 "tool_call_id": tool_call.get("id", ""),
