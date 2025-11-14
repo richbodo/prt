@@ -24,7 +24,7 @@ This document provides a comprehensive, de-duplicated guide for an AI agent to g
     - Creates and activates a Python virtual environment at `./prt_env/`.
     - Installs all dependencies from `requirements.txt`.
     - Installs pre-commit hooks for automated code quality checks.
-3.  **Download External Docs (Optional but Recommended):** Run `./download_library_src.sh` to download documentation for key libraries into the `EXTERNAL_DOCS/` directory. **Always check this directory first** before searching the web.
+3.  A human user may have downloaded documentation for key libraries into the `EXTERNAL_DOCS/` directory. **Always check this directory first** before searching the web.  If you are having trouble finding that directory and need it, try to prompt a human user to run the download_library_src.sh script for you to get that data.
 
 ### Daily Workflow
 - **Activate Environment:** `source ./init.sh`
