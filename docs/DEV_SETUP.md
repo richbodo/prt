@@ -45,16 +45,20 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Launch TUI | `python -m prt_src` |
 | Run classic CLI | `python -m prt_src --classic` |
 | Debug TUI with fixtures | `python -m prt_src --debug` |
-| Quick tests (fast) | `./prt_env/bin/pytest tests/ -x` |
+| **Fast CI tests (recommended)** | `./scripts/run-ci-tests.sh` |
+| **Full local test suite** | `./scripts/run-local-tests.sh` |
 | Unit tests only (< 1 sec) | `./prt_env/bin/pytest -m unit` |
 | Integration tests only (< 5 sec) | `./prt_env/bin/pytest -m integration` |
-| Full test suite | `./prt_env/bin/pytest tests/ -v` |
+| Quick tests (first failure) | `./prt_env/bin/pytest tests/ -x` |
+| Full test suite (verbose) | `./prt_env/bin/pytest tests/ -v` |
 | Coverage report | `./prt_env/bin/pytest tests/ --cov=prt_src --cov-report=html --cov-report=term` |
 | Lint | `./prt_env/bin/ruff check prt_src/ tests/` |
 | Auto-fix formatting | `./prt_env/bin/ruff check --fix prt_src/ tests/ && ./prt_env/bin/black prt_src/ tests/` |
 | Clean caches/builds | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; find . -type f -name "*.pyc" -delete` |
 | Check outdated packages | `./prt_env/bin/pip list --outdated` |
 | Run pre-commit everywhere | `./prt_env/bin/pre-commit run --all-files` |
+
+> **Note:** Use the test scripts (`./scripts/run-ci-tests.sh` and `./scripts/run-local-tests.sh`) for daily development. See `docs/RUNNING_TESTS.md` for complete testing guidance.
 
 > **Cursor/LLM tip:** Paste the table above into your prompt or keep it pinned in a scratchpad so Codex/Claude can cite the correct commands for you.
 
@@ -87,7 +91,8 @@ Tests are organized in layers from fast/frequent (bottom) to slow/rare (top):
 
 ### Key Testing Resources
 
-- **Comprehensive Guide**: `docs/TESTING_STRATEGY.md` - Complete testing strategy, examples, best practices
+- **🚀 Daily Testing Guide**: `docs/RUNNING_TESTS.md` - **Start here** for test execution, CI/CD patterns, troubleshooting
+- **Comprehensive Strategy**: `docs/TESTING_STRATEGY.md` - Complete testing strategy, examples, best practices
 - **TUI Testing**: `EXTERNAL_DOCS/textual/docs/guide/testing.md` - Official Textual testing patterns
 - **TUI Dev Tips**: `docs/TUI/TUI_Dev_Tips.md` - PRT-specific patterns and debugging
 - **Manual Testing**: `docs/MANUAL_TESTING.md` - Scenarios requiring manual testing
@@ -152,6 +157,7 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 | --- | --- | --- |
 | `README.md` | USE | High-level project overview and links into the doc set. |
 | `docs/DEV_SETUP.md` | USE | (This file) Day-to-day workflow, Git tips, testing cheat sheet. |
+| `docs/RUNNING_TESTS.md` | ✅ NEW | **Daily test execution guide** - CI/CD patterns, scripts, troubleshooting. |
 | `docs/TESTING_STRATEGY.md` | USE | **Canonical testing guide** - 4-layer pyramid, examples, best practices. |
 | `docs/MANUAL_TESTING.md` | USE | Scenarios requiring manual testing (visual, performance, etc). |
 | `docs/TUI/TUI_Dev_Tips.md` | USE | TUI-specific patterns, debugging, common issues. |

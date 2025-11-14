@@ -4,7 +4,47 @@ repos:
     hooks:
       - id: ruff
         args: [--fix]
+        stages: [commit]
+
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:
       - id: black
+        stages: [commit]
+
+  - repo: local
+    hooks:
+      - id: fast-tests
+        name: Fast CI Tests (Unit + Integration)
+        entry: >-
+          bash -c
+          'if [[ -f "./scripts/run-ci-tests.sh" ]]; then
+             ./scripts/run-ci-tests.sh;
+           else
+             echo "Warning: run-ci-tests.sh not found, skipping tests";
+           fi'
+        language: system
+        stages: [push]
+        pass_filenames: false
+        verbose: true
+
+      - id: pytest-markers
+        name: Verify Test Markers
+        entry: >-
+          bash -c
+          'if [[ -f "./prt_env/bin/pytest" ]]; then
+             ./prt_env/bin/pytest --markers | grep -E "(unit|integration|e2e)" > /dev/null || (echo "Error: Required test markers not found" && exit 1);
+           else
+             echo "Warning: pytest not available, skipping marker check";
+           fi'
+        language: system
+        stages: [commit]
+        files: ^tests/.*\.py$
+        pass_filenames: false
+
+      - id: test-syntax
+        name: Test File Syntax Check
+        entry: bash -c 'if [[ -f "./prt_env/bin/python" ]]; then ./prt_env/bin/python -m py_compile "$@"; else python -m py_compile "$@"; fi' --
+        language: system
+        stages: [commit]
+        files: ^tests/.*\.py$

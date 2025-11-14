@@ -200,6 +200,7 @@ def test_full_workflow_performance(test_db):
         total_time = time.time() - start_time
 
         # Verify we got a meaningful response
+        print(f"LLM response: {response}")
         assert isinstance(response, str)
         assert len(response) > 0
 

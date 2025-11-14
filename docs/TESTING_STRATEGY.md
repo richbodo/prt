@@ -3,9 +3,6 @@
 **Last Updated**: 2025-11-04
 **Status**: Canonical reference for all PRT testing
 
-> ⚠️ **IMPORTANT UPDATE**: As of November 2025, we have identified critical issues with current integration test categorization. Tests marked as `integration` (< 5s) are violating timing contracts by taking 6-11+ seconds with real LLM calls. New implementation plans in `specs/integration_test_*` address these issues through proper test categorization and MockLLMService infrastructure.
-
----
 
 ## Core Philosophy: Headless First
 

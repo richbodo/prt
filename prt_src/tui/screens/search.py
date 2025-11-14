@@ -108,8 +108,8 @@ class SearchScreen(BaseScreen):
             # Search input box - using custom TextArea subclass
             self.search_input = SearchTextArea(
                 id=WidgetIDs.SEARCH_INPUT,
-                placeholder="Enter search text...",
             )
+            self.search_input.placeholder = "Enter search text..."
             self.search_input.styles.height = 3
             self.search_input._parent_screen = self  # Link to parent for ENTER handling
             yield self.search_input

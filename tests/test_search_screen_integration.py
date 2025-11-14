@@ -67,7 +67,7 @@ async def test_search_contacts_integration(test_db, pilot_screen):
 
         # Verify results contain "John Doe"
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         assert "John Doe" in results_text
         assert "john.doe@example.com" in results_text
@@ -94,7 +94,7 @@ async def test_search_tags_integration(test_db, pilot_screen):
 
         # Verify results contain "friend" tag
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         assert "friend" in results_text.lower()
 
@@ -120,7 +120,7 @@ async def test_search_notes_integration(test_db, pilot_screen):
 
         # Verify results contain "Birthday Reminder"
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         assert "Birthday Reminder" in results_text
 
@@ -146,7 +146,7 @@ async def test_search_relationships_integration(test_db, pilot_screen):
 
         # Verify results contain the mother relationship
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show the relationship: Jane Smith -> mother -> John Doe
         assert "mother" in results_text.lower()
@@ -175,7 +175,7 @@ async def test_search_relationship_types_integration(test_db, pilot_screen):
 
         # Verify results contain "friend" relationship type
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         assert "friend" in results_text.lower()
         assert "Is a friend of" in results_text  # Description from fixtures
@@ -198,7 +198,7 @@ async def test_search_empty_returns_all_contacts(test_db, pilot_screen):
 
         # Verify results show all contacts from fixtures
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show fixture contacts
         assert "John Doe" in results_text
@@ -220,7 +220,7 @@ async def test_search_empty_returns_all_tags(test_db, pilot_screen):
         await pilot.pause(1.0)
 
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show fixture tags
         assert "friend" in results_text.lower()
@@ -239,7 +239,7 @@ async def test_search_empty_returns_all_notes(test_db, pilot_screen):
         await pilot.pause(1.0)
 
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show fixture notes
         assert "Birthday Reminder" in results_text
@@ -258,7 +258,7 @@ async def test_search_empty_returns_all_relationships(test_db, pilot_screen):
         await pilot.pause(1.0)
 
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show fixture relationships
         assert (
@@ -280,7 +280,7 @@ async def test_search_empty_returns_all_relationship_types(test_db, pilot_screen
         await pilot.pause(1.0)
 
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         # Should show all relationship types from fixtures
         assert "mother" in results_text.lower()
@@ -309,7 +309,7 @@ async def test_search_no_results(test_db, pilot_screen):
 
         # Verify results show no results message
         results_content = pilot.app.screen.query_one("#search-results-content")
-        results_text = str(results_content.content)
+        results_text = str(results_content.renderable)
 
         assert (
             "No contacts found" in results_text

@@ -31,6 +31,8 @@ class TestLLMNetworkValidation:
         """Test validation of valid JSON response."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b'{"test": "data"}'
+        mock_response.text = '{"test": "data"}'
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
         result = self.llm._validate_and_parse_response(mock_response, "test")
@@ -41,6 +43,8 @@ class TestLLMNetworkValidation:
         """Test validation of valid JSON response with charset."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/json; charset=utf-8"}
+        mock_response.content = b'{"test": "data"}'
+        mock_response.text = '{"test": "data"}'
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
         result = self.llm._validate_and_parse_response(mock_response, "test")
@@ -51,6 +55,8 @@ class TestLLMNetworkValidation:
         """Test rejection of HTML content type."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "text/html"}
+        mock_response.content = b"<html><body>Error</body></html>"
+        mock_response.text = "<html><body>Error</body></html>"
         mock_response.iter_content.return_value = [b"<html><body>Error</body></html>"]
 
         with pytest.raises(ValueError, match="Invalid Content-Type"):
@@ -60,6 +66,8 @@ class TestLLMNetworkValidation:
         """Test rejection of plain text content type."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "text/plain"}
+        mock_response.content = b"Error message"
+        mock_response.text = "Error message"
         mock_response.iter_content.return_value = [b"Error message"]
 
         with pytest.raises(ValueError, match="Invalid Content-Type"):
@@ -69,6 +77,8 @@ class TestLLMNetworkValidation:
         """Test handling of missing content-type header."""
         mock_response = Mock()
         mock_response.headers = {}
+        mock_response.content = b'{"test": "data"}'
+        mock_response.text = '{"test": "data"}'
         mock_response.iter_content.return_value = [b'{"test": "data"}']
 
         with pytest.raises(ValueError, match="Invalid Content-Type"):
@@ -81,6 +91,9 @@ class TestLLMNetworkValidation:
             "Content-Type": "application/json",
             "Content-Length": str(11 * 1024 * 1024),  # 11MB > 10MB limit
         }
+        # Content should simulate large size
+        mock_response.content = b"x" * (11 * 1024 * 1024)
+        mock_response.text = "x" * (11 * 1024 * 1024)
 
         with pytest.raises(ValueError, match="Response size.*exceeds maximum"):
             self.llm._validate_and_parse_response(mock_response, "test")
@@ -92,6 +105,8 @@ class TestLLMNetworkValidation:
 
         # Simulate reading chunks that exceed the limit
         large_chunk = b"x" * (6 * 1024 * 1024)  # 6MB chunks
+        mock_response.content = large_chunk + large_chunk  # Total: 12MB
+        mock_response.text = (large_chunk + large_chunk).decode()
         mock_response.iter_content.return_value = [large_chunk, large_chunk]  # Total: 12MB
 
         with pytest.raises(ValueError, match="Response size exceeded.*limit"):
@@ -104,9 +119,10 @@ class TestLLMNetworkValidation:
             "Content-Type": "application/json",  # Use proper case
             "Content-Length": str(6 * 1024 * 1024),  # 6MB (> 5MB warning threshold)
         }
-        mock_response.iter_content.return_value = [
-            b'{"large": "' + b"x" * (6 * 1024 * 1024 - 20) + b'"}'
-        ]
+        large_content = b'{"large": "' + b"x" * (6 * 1024 * 1024 - 20) + b'"}'
+        mock_response.content = large_content
+        mock_response.text = large_content.decode()
+        mock_response.iter_content.return_value = [large_content]
 
         with patch("prt_src.llm_ollama.logger") as mock_logger:
             result = self.llm._validate_and_parse_response(mock_response, "test")
@@ -119,6 +135,8 @@ class TestLLMNetworkValidation:
         """Test handling of malformed JSON."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b'{"invalid": json}'
+        mock_response.text = '{"invalid": json}'
         mock_response.iter_content.return_value = [b'{"invalid": json}']
 
         with pytest.raises(ValueError, match="Invalid JSON response"):
@@ -128,6 +146,8 @@ class TestLLMNetworkValidation:
         """Test handling of truncated JSON."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b'{"incomplete":'
+        mock_response.text = '{"incomplete":'
         mock_response.iter_content.return_value = [b'{"incomplete":']
 
         with pytest.raises(ValueError, match="Invalid JSON response"):
@@ -137,6 +157,8 @@ class TestLLMNetworkValidation:
         """Test handling of empty response."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b""
+        mock_response.text = ""
         mock_response.iter_content.return_value = [b""]
 
         with pytest.raises(ValueError, match="Invalid JSON response"):
@@ -261,6 +283,9 @@ class TestLLMNetworkValidation:
             "Content-Type": "application/json",
             "Content-Length": str(100 * 1024 * 1024),  # 100MB attack
         }
+        # Large content to simulate memory exhaustion attack
+        mock_response.content = b"x" * (100 * 1024 * 1024)
+        mock_response.text = "x" * (100 * 1024 * 1024)
 
         with pytest.raises(ValueError, match="Response size.*exceeds maximum"):
             self.llm._validate_and_parse_response(mock_response, "test")
@@ -272,6 +297,8 @@ class TestLLMNetworkValidation:
         """Test that validation prevents type confusion attacks."""
         mock_response = Mock()
         mock_response.headers = {"Content-Type": "application/javascript"}
+        mock_response.content = b'alert("xss")'
+        mock_response.text = 'alert("xss")'
         mock_response.iter_content.return_value = [b'alert("xss")']
 
         with pytest.raises(ValueError, match="Invalid Content-Type"):

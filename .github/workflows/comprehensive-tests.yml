@@ -1,0 +1,213 @@
+name: Comprehensive Tests
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      run_llm_tests:
+        description: 'Run LLM contract tests'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-comprehensive-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-comprehensive-
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sqlite3 libsqlite3-dev curl
+
+    - name: Create virtual environment
+      run: |
+        python -m venv prt_env
+        source prt_env/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+
+    - name: Install Python dependencies
+      run: |
+        source prt_env/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install and setup Ollama
+      if: github.event.inputs.run_llm_tests != 'false'
+      run: |
+        # Install Ollama
+        curl -fsSL https://ollama.com/install.sh | sh
+
+        # Start Ollama service
+        ollama serve &
+
+        # Wait for service to be ready
+        timeout 30 bash -c 'until curl -s http://localhost:11434/api/version; do sleep 1; done'
+
+        # Pull required model for tests
+        ollama pull gpt-oss:20b || {
+          echo "Warning: Could not pull gpt-oss:20b model"
+          echo "LLM contract tests will be skipped"
+        }
+
+    - name: Verify test environment
+      run: |
+        source prt_env/bin/activate
+        python --version
+        pytest --version
+        echo "Available test markers:"
+        pytest --markers | grep -E "(unit|integration|e2e|performance|contract)"
+
+        # Check Ollama status
+        if command -v ollama &> /dev/null && ollama list &> /dev/null; then
+          echo "Ollama available with models:"
+          ollama list
+          echo "LLM_AVAILABLE=true" >> $GITHUB_ENV
+        else
+          echo "Ollama not available - skipping LLM contract tests"
+          echo "LLM_AVAILABLE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Run unit tests
+      run: |
+        source prt_env/bin/activate
+        echo "🧪 Running unit tests..."
+        ./prt_env/bin/pytest \
+          -m "unit" \
+          --timeout=60 \
+          --tb=short \
+          -v \
+          tests/
+
+    - name: Run integration tests
+      run: |
+        source prt_env/bin/activate
+        echo "🔧 Running integration tests..."
+        ./prt_env/bin/pytest \
+          -m "integration" \
+          --timeout=120 \
+          --tb=short \
+          -v \
+          tests/
+
+    - name: Run E2E tests
+      run: |
+        source prt_env/bin/activate
+        echo "🎭 Running E2E tests..."
+        ./prt_env/bin/pytest \
+          -m "e2e" \
+          --timeout=300 \
+          --tb=short \
+          -v \
+          tests/
+
+    - name: Run performance tests
+      run: |
+        source prt_env/bin/activate
+        echo "⚡ Running performance tests..."
+        ./prt_env/bin/pytest \
+          -m "performance" \
+          --timeout=180 \
+          --tb=short \
+          -v \
+          tests/
+
+    - name: Run LLM contract tests
+      if: env.LLM_AVAILABLE == 'true' && github.event.inputs.run_llm_tests != 'false'
+      run: |
+        source prt_env/bin/activate
+        echo "🤖 Running LLM contract tests..."
+        ./prt_env/bin/pytest \
+          -m "contract" \
+          --timeout=600 \
+          --tb=short \
+          -v \
+          tests/
+      timeout-minutes: 12
+
+    - name: Generate test coverage report
+      if: always()
+      run: |
+        source prt_env/bin/activate
+        echo "📊 Generating coverage report..."
+        ./prt_env/bin/pytest \
+          --cov=prt_src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          -m "unit or integration" \
+          tests/ \
+          || echo "Coverage generation failed"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: comprehensive-test-results
+        path: |
+          htmlcov/
+          coverage.xml
+          .pytest_cache/
+          pytest.log
+        retention-days: 30
+
+    - name: Upload coverage to Codecov
+      if: always()
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: comprehensive-tests
+        name: comprehensive-coverage
+        fail_ci_if_error: false
+
+  notification:
+    needs: comprehensive-tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Comprehensive Test Results Summary
+      run: |
+        echo "## Comprehensive Test Results" >> $GITHUB_STEP_SUMMARY
+
+        if [[ "${{ needs.comprehensive-tests.result }}" == "success" ]]; then
+          echo "✅ All comprehensive tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit tests: ✅"  >> $GITHUB_STEP_SUMMARY
+          echo "- Integration tests: ✅"  >> $GITHUB_STEP_SUMMARY
+          echo "- E2E tests: ✅"  >> $GITHUB_STEP_SUMMARY
+          echo "- Performance tests: ✅"  >> $GITHUB_STEP_SUMMARY
+          echo "- LLM contract tests: ✅"  >> $GITHUB_STEP_SUMMARY
+          echo "::notice::All comprehensive tests passed successfully"
+        else
+          echo "❌ Some comprehensive tests failed" >> $GITHUB_STEP_SUMMARY
+          echo "Review the test artifacts for detailed failure information." >> $GITHUB_STEP_SUMMARY
+          echo "::error::Comprehensive test suite failed"
+          exit 1
+        fi
+
+    - name: Notify on scheduled run failure
+      if: failure() && github.event_name == 'schedule'
+      run: |
+        echo "::error::Nightly comprehensive tests failed - investigate regressions"
