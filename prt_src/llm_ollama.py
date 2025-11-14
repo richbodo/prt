@@ -93,7 +93,7 @@ class OllamaLLM:
             response_text = response.text
             if len(response.content) > MAX_RESPONSE_SIZE_BYTES:
                 raise ValueError(
-                    f"Response size exceeded {MAX_RESPONSE_SIZE_BYTES / 1024 / 1024:.0f}MB limit"
+                    f"Response size {len(response.content) / 1024 / 1024:.0f}MB exceeds maximum {MAX_RESPONSE_SIZE_BYTES / 1024 / 1024:.0f}MB"
                 )
             if len(response.content) > MAX_RESPONSE_SIZE_WARNING:
                 logger.warning(
@@ -600,29 +600,84 @@ class OllamaLLM:
         self, output_name: str = None
     ) -> Dict[str, Any]:
         """Create an interactive directory for contacts with images."""
+        import json
         import sys
+        import tempfile
         from pathlib import Path
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
         from make_directory import DirectoryGenerator
 
         try:
+            import time
+
+            # Time the query
+            query_start = time.time()
             contacts_result = self._get_contacts_with_images()
+            query_time = (time.time() - query_start) * 1000  # Convert to milliseconds
+
             if not contacts_result["success"]:
                 return contacts_result
             contacts = contacts_result["contacts"]
             if not contacts:
                 return {"success": False, "error": "No contacts with images found"}
 
-            output_path = Path("directories") / (output_name or "contacts_with_images_directory")
-            generator = DirectoryGenerator(
-                export_path=None, output_path=output_path, layout="graph"
-            )
-            if not generator.generate(contacts):
-                return {"success": False, "error": "Failed to generate directory"}
+            # Time the directory generation
+            directory_start = time.time()
 
-            url = f"file://{output_path.absolute() / 'index.html'}"
-            return {"success": True, "output_path": str(output_path.absolute()), "url": url}
+            # Create temporary export structure
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+
+                # Prepare contacts for JSON serialization (remove binary data)
+                json_contacts = []
+                for contact in contacts:
+                    contact_copy = dict(contact)
+                    # Remove binary fields that can't be JSON serialized
+                    if "profile_image" in contact_copy:
+                        contact_copy["has_profile_image"] = True
+                        contact_copy.pop("profile_image", None)
+                    json_contacts.append(contact_copy)
+
+                # Create export JSON structure
+                export_data = {
+                    "export_info": {
+                        "search_type": "contacts_with_images",
+                        "query": "contacts with profile images",
+                        "total_results": len(contacts),
+                        "export_date": str(Path().cwd()),  # Placeholder
+                    },
+                    "results": json_contacts,
+                }
+
+                # Write JSON file
+                json_file = temp_path / "contacts_with_images_search_results.json"
+                with open(json_file, "w", encoding="utf-8") as f:
+                    json.dump(export_data, f, indent=2, ensure_ascii=False)
+
+                output_path = Path("directories") / (
+                    output_name or "contacts_with_images_directory"
+                )
+                generator = DirectoryGenerator(
+                    export_path=temp_path, output_path=output_path, layout="graph"
+                )
+                if not generator.generate():
+                    return {"success": False, "error": "Failed to generate directory"}
+
+                directory_time = (time.time() - directory_start) * 1000  # Convert to milliseconds
+                total_time = query_time + directory_time
+
+                url = f"file://{output_path.absolute() / 'index.html'}"
+                return {
+                    "success": True,
+                    "output_path": str(output_path.absolute()),
+                    "url": url,
+                    "performance": {
+                        "query_time_ms": query_time,
+                        "directory_time_ms": directory_time,
+                        "total_time_ms": total_time,
+                    },
+                }
         except Exception as e:
             return {"success": False, "error": str(e)}
 

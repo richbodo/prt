@@ -1,0 +1,93 @@
+name: Fast Tests
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  fast-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sqlite3 libsqlite3-dev
+
+    - name: Create virtual environment
+      run: |
+        python -m venv prt_env
+        source prt_env/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+
+    - name: Install Python dependencies
+      run: |
+        source prt_env/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Verify test environment
+      run: |
+        source prt_env/bin/activate
+        python --version
+        pytest --version
+        pytest --markers | grep -E "(unit|integration)"
+
+    - name: Run fast CI tests
+      run: |
+        source prt_env/bin/activate
+        ./prt_env/bin/pytest \
+          -m "unit or integration" \
+          --timeout=30 \
+          --tb=short \
+          -v \
+          --maxfail=10 \
+          tests/
+      timeout-minutes: 3
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-fast
+        path: |
+          .pytest_cache/
+          pytest.log
+        retention-days: 7
+
+  test-summary:
+    needs: fast-tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Test Results Summary
+      run: |
+        if [[ "${{ needs.fast-tests.result }}" == "success" ]]; then
+          echo "✅ Fast CI tests passed - ready for merge"
+          echo "::notice::All fast tests passed successfully"
+        else
+          echo "❌ Fast CI tests failed"
+          echo "::error::Fast tests failed - review before merging"
+          exit 1
+        fi

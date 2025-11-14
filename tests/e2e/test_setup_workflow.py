@@ -320,15 +320,12 @@ class TestSetupWorkflowErrorHandling:
             def on_mount(self):
                 self.push_screen(SetupScreen(prt_app=self, data_service=self.data_service))
 
-        with patch("prt_src.tui.screens.setup.FixtureService") as MockFixtureService:
-            mock_service = MagicMock()
-            mock_service.get_fixture_summary = MagicMock(
-                return_value={"contacts": 7, "tags": 8, "notes": 6}
-            )
-            mock_service.clear_and_load_fixtures = AsyncMock(
-                return_value={"success": False, "error": "Database error"}
-            )
-            MockFixtureService.return_value = mock_service
+        # Mock the actual function used in setup.py
+        with patch("prt_src.fixture_manager.setup_fixture_mode") as mock_setup_fixture, patch(
+            "prt_src.fixture_manager.get_fixture_summary"
+        ) as mock_summary:
+            mock_summary.return_value = {"contacts": 7, "tags": 8, "notes": 6}
+            mock_setup_fixture.return_value = None  # Return None to trigger failure
 
             app = TestPRTApp()
             async with app.run_test() as pilot:
@@ -341,4 +338,4 @@ class TestSetupWorkflowErrorHandling:
                 screen = pilot.app.screen
                 error_widget = screen.query_one("#setup-error")
                 error_text = str(error_widget.render())
-                assert "Failed" in error_text or "Database error" in error_text
+                assert "Failed to create fixture database" in error_text
