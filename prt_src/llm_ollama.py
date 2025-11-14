@@ -685,7 +685,9 @@ class OllamaLLM:
         self, search_query: str = None, memory_id: str = None, output_name: str = None
     ) -> Dict[str, Any]:
         """Generate an interactive D3.js visualization of contacts."""
+        import json
         import sys
+        import tempfile
         from pathlib import Path
 
         sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
@@ -710,17 +712,47 @@ class OllamaLLM:
             if not contacts:
                 return {"success": False, "error": "No contacts found"}
 
-            output_path = Path("directories") / (
-                output_name or f"chat_{query_name.replace(' ', '_')}"
-            )
-            generator = DirectoryGenerator(
-                export_path=None, output_path=output_path, layout="graph"
-            )
-            if not generator.generate(contacts):
-                return {"success": False, "error": "Directory generation failed"}
+            # Create temporary export structure
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
 
-            url = f"file://{output_path.absolute() / 'index.html'}"
-            return {"success": True, "output_path": str(output_path.absolute()), "url": url}
+                # Prepare contacts for JSON serialization (remove binary data)
+                json_contacts = []
+                for contact in contacts:
+                    contact_copy = dict(contact)
+                    # Remove binary fields that can't be JSON serialized
+                    if "profile_image" in contact_copy:
+                        contact_copy["has_profile_image"] = True
+                        contact_copy.pop("profile_image", None)
+                    json_contacts.append(contact_copy)
+
+                # Create export JSON structure
+                export_data = {
+                    "export_info": {
+                        "search_type": "contacts",
+                        "query": query_name,
+                        "total_results": len(contacts),
+                        "export_date": str(Path().cwd()),  # Placeholder
+                    },
+                    "results": json_contacts,
+                }
+
+                # Write JSON file
+                json_file = temp_path / f"{query_name}_search_results.json"
+                with open(json_file, "w", encoding="utf-8") as f:
+                    json.dump(export_data, f, indent=2, ensure_ascii=False)
+
+                output_path = Path("directories") / (
+                    output_name or f"chat_{query_name.replace(' ', '_')}"
+                )
+                generator = DirectoryGenerator(
+                    export_path=temp_path, output_path=output_path, layout="graph"
+                )
+                if not generator.generate():
+                    return {"success": False, "error": "Directory generation failed"}
+
+                url = f"file://{output_path.absolute() / 'index.html'}"
+                return {"success": True, "output_path": str(output_path.absolute()), "url": url}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -1050,11 +1082,7 @@ When using execute_sql tool with databases containing 1000+ contacts, follow the
 - **Be helpful**: Guide users to discover and manage their relationship data effectively
 
 Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, respect privacy, always create backups before modifications, and ALWAYS get user confirmation before executing SQL."""
-        return prompt.format(
-            tool_count=tool_count,
-            tools_description=tools_description,
-            schema_info=schema_info,
-        )
+        return prompt
 
     def _format_tool_calls(self) -> List[Dict[str, Any]]:
         """Format tools for Ollama native API."""
