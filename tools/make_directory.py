@@ -14,7 +14,10 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 import typer
 from rich.console import Console
@@ -71,7 +74,7 @@ class DirectoryGenerator:
     def load_export_data(self) -> bool:
         """Load and parse the JSON export data."""
         try:
-            with open(self.json_file, "r", encoding="utf-8") as f:
+            with open(self.json_file, encoding="utf-8") as f:
                 self.export_data = json.load(f)
 
             # Validate JSON structure

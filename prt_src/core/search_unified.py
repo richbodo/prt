@@ -535,7 +535,7 @@ class UnifiedSearchAPI:
         # If we have results, suggest refinements
         if results:
             # Suggest searching in specific entity types
-            entity_types = set(r.entity_type for r in results)
+            entity_types = {r.entity_type for r in results}
             if len(entity_types) > 1:
                 if EntityType.CONTACT in entity_types:
                     suggestions.append(f"contacts:{query}")

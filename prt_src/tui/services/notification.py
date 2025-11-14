@@ -3,6 +3,7 @@
 Provides toast notifications and dialog management.
 """
 
+import contextlib
 from enum import Enum
 from typing import Optional
 
@@ -85,10 +86,8 @@ class NotificationService:
         Args:
             toast: Toast widget to remove
         """
-        try:
-            toast.remove()
-        except Exception:
-            pass  # Toast may already be removed
+        with contextlib.suppress(Exception):
+            toast.remove()  # Toast may already be removed
 
     def show_info(self, message: str) -> None:
         """Show info toast.

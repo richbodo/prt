@@ -300,9 +300,12 @@ class RelationshipValidator:
                     errors.append("Invalid end_date format")
 
             # Check date order
-            if isinstance(start_date, date) and isinstance(end_date, date):
-                if end_date < start_date:
-                    errors.append("End date cannot be before start date")
+            if (
+                isinstance(start_date, date)
+                and isinstance(end_date, date)
+                and end_date < start_date
+            ):
+                errors.append("End date cannot be before start date")
 
         return ValidationResult(is_valid=len(errors) == 0, errors=errors)
 

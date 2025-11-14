@@ -4,6 +4,7 @@ Displays and allows editing of contact information with
 field-level editing and validation support.
 """
 
+import contextlib
 from typing import Callable
 from typing import Dict
 from typing import Optional
@@ -216,11 +217,8 @@ class ContactDetailView(ModeAwareWidget):
         """
         self.selected_field = field_name
         if field_name in self.field_editors:
-            try:
-                self.field_editors[field_name].focus()
-            except Exception:
-                # Not in app context
-                pass
+            with contextlib.suppress(Exception):
+                self.field_editors[field_name].focus()  # Not in app context
 
     def set_mode(self, mode: AppMode) -> None:
         """Set the mode and update editing state.

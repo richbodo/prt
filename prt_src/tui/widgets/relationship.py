@@ -156,9 +156,8 @@ class RelationshipEditor(Static):
                 "strength": strength,
             }
 
-            if self.validate_relationship(self.relationship):
-                if self.on_save:
-                    self.on_save(self.relationship)
+            if self.validate_relationship(self.relationship) and self.on_save:
+                self.on_save(self.relationship)
         except Exception:
             pass
 
@@ -171,9 +170,8 @@ class RelationshipEditor(Static):
 
     def save(self) -> None:
         """Save the current relationship."""
-        if self.relationship and self.validate_relationship(self.relationship):
-            if self.on_save:
-                self.on_save(self.relationship)
+        if self.relationship and self.validate_relationship(self.relationship) and self.on_save:
+            self.on_save(self.relationship)
 
 
 class RelationshipList(ModeAwareWidget):

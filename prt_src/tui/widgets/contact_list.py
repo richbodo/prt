@@ -4,6 +4,7 @@ Provides a scrollable list of contacts with vim-style navigation
 and selection support.
 """
 
+import contextlib
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -93,7 +94,7 @@ class ContactListWidget(ModeAwareWidget):
             container.remove_children()
 
             # Add new rows
-            for i, contact in enumerate(contacts):
+            for _i, contact in enumerate(contacts):
                 row = ContactRow(contact)
                 self.contact_rows.append(row)
                 container.mount(row)
@@ -124,10 +125,8 @@ class ContactListWidget(ModeAwareWidget):
                 self.contact_rows[index].set_selected(True)
 
                 # Scroll to selected row
-                try:
+                with contextlib.suppress(Exception):
                     self.contact_rows[index].scroll_visible()
-                except Exception:
-                    pass
 
     def handle_key(self, key: str) -> bool:
         """Handle key press events for navigation.

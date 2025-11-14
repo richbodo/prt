@@ -218,7 +218,7 @@ class AutocompleteEngine:
         try:
             # Get from search history
             if hasattr(self.search_api, "_search_history"):
-                for search_text, timestamp in self.search_api._search_history:
+                for search_text, _timestamp in self.search_api._search_history:
                     if query.lower() in search_text.lower():
                         suggestions.append(
                             Suggestion(text=search_text, source=SuggestionSource.HISTORY, score=0.8)

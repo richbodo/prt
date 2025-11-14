@@ -688,10 +688,7 @@ class Database:
             if rel.end_date:
                 from datetime import date
 
-                if rel.end_date <= date.today():
-                    status = "Ended"
-                else:
-                    status = "Future End"
+                status = "Ended" if rel.end_date <= date.today() else "Future End"
 
             results.append(
                 {
