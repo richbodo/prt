@@ -390,12 +390,13 @@ def test_launch_tui_with_fallback_import_error():
     from prt_src.cli import _launch_tui_with_fallback
 
     # Mock the import to raise an ImportError
-    with patch("prt_src.cli.console") as mock_console:
-        with patch("builtins.__import__", side_effect=ImportError("Mock TUI import error")):
-            _launch_tui_with_fallback(debug=False)
+    with patch("prt_src.cli.console") as mock_console, patch(
+        "builtins.__import__", side_effect=ImportError("Mock TUI import error")
+    ):
+        _launch_tui_with_fallback(debug=False)
 
-            # Verify error message was printed
-            mock_console.print.assert_any_call(
-                "Failed to launch TUI: Mock TUI import error", style="red"
-            )
-            mock_console.print.assert_any_call("Falling back to classic CLI...", style="yellow")
+        # Verify error message was printed
+        mock_console.print.assert_any_call(
+            "Failed to launch TUI: Mock TUI import error", style="red"
+        )
+        mock_console.print.assert_any_call("Falling back to classic CLI...", style="yellow")

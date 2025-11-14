@@ -1,5 +1,6 @@
 """Test FTS5 full-text search migration and functionality."""
 
+import contextlib
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -30,21 +31,22 @@ class TestFTS5Migration:
     def test_migration_v4_to_v5_creates_fts_tables(self, schema_manager, mock_db):
         """Verify FTS5 tables are created during migration."""
         # Mock the migration file to exist
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", create=True) as mock_open:
-                # Provide sample SQL content
-                mock_open.return_value.__enter__.return_value.read.return_value = """
-                CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
-                CREATE VIRTUAL TABLE notes_fts USING fts5(note_id, title);
-                CREATE VIRTUAL TABLE tags_fts USING fts5(tag_id, name);
-                """
+        with patch("pathlib.Path.exists", return_value=True), patch(
+            "builtins.open", create=True
+        ) as mock_open:
+            # Provide sample SQL content
+            mock_open.return_value.__enter__.return_value.read.return_value = """
+            CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
+            CREATE VIRTUAL TABLE notes_fts USING fts5(note_id, title);
+            CREATE VIRTUAL TABLE tags_fts USING fts5(tag_id, name);
+            """
 
-                # Run migration
-                schema_manager.apply_migration_v4_to_v5()
+            # Run migration
+            schema_manager.apply_migration_v4_to_v5()
 
-                # Verify SQL statements were executed
-                assert mock_db.session.execute.called
-                assert mock_db.session.commit.called
+            # Verify SQL statements were executed
+            assert mock_db.session.execute.called
+            assert mock_db.session.commit.called
 
     def test_migration_handles_existing_tables(self, schema_manager, mock_db):
         """Verify migration handles already existing FTS tables gracefully."""
@@ -55,16 +57,17 @@ class TestFTS5Migration:
             None,
         ]
 
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value.read.return_value = """
-                CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
-                UPDATE schema_version SET version = 5;
-                """
+        with patch("pathlib.Path.exists", return_value=True), patch(
+            "builtins.open", create=True
+        ) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = """
+            CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
+            UPDATE schema_version SET version = 5;
+            """
 
-                # Should not raise exception
-                schema_manager.apply_migration_v4_to_v5()
-                assert mock_db.session.commit.called
+            # Should not raise exception
+            schema_manager.apply_migration_v4_to_v5()
+            assert mock_db.session.commit.called
 
     def test_migration_path_includes_v5(self, schema_manager):
         """Verify migration paths include version 5."""
@@ -84,11 +87,10 @@ class TestFTS5Migration:
             schema_manager.apply_migration_v4_to_v5 = MagicMock()
 
             # Get migration path (don't execute, just check it exists)
-            try:
-                schema_manager.migrate_to_version(target, current)
-            except AttributeError:
-                # Expected since we're using mocks
-                pass
+            with contextlib.suppress(AttributeError):
+                schema_manager.migrate_to_version(
+                    target, current
+                )  # Expected since we're using mocks
 
             # Verify v4_to_v5 is called for all paths ending at v5
             if current < 5:
@@ -100,9 +102,10 @@ class TestFTS5Migration:
 
     def test_migration_file_not_found(self, schema_manager, mock_db):
         """Verify proper error when migration file is missing."""
-        with patch("pathlib.Path.exists", return_value=False):
-            with pytest.raises(RuntimeError, match="Migration file not found"):
-                schema_manager.apply_migration_v4_to_v5()
+        with patch("pathlib.Path.exists", return_value=False), pytest.raises(
+            RuntimeError, match="Migration file not found"
+        ):
+            schema_manager.apply_migration_v4_to_v5()
 
     def test_fts5_sql_file_content(self):
         """Verify the FTS5 SQL file has proper structure."""
@@ -126,26 +129,27 @@ class TestFTS5Migration:
 
     def test_schema_version_tracking(self, schema_manager, mock_db):
         """Verify schema version is updated to 5."""
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("builtins.open", create=True) as mock_open:
-                mock_open.return_value.__enter__.return_value.read.return_value = """
-                UPDATE schema_version SET version = 5;
-                """
+        with patch("pathlib.Path.exists", return_value=True), patch(
+            "builtins.open", create=True
+        ) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = """
+            UPDATE schema_version SET version = 5;
+            """
 
-                schema_manager.apply_migration_v4_to_v5()
+            schema_manager.apply_migration_v4_to_v5()
 
-                # Check that version update SQL was executed
-                calls = mock_db.session.execute.call_args_list
-                version_update_called = False
-                for call in calls:
-                    # Check if the call has arguments and convert to string for checking
-                    if len(call[0]) > 0:
-                        sql_text = str(call[0][0])
-                        if "version = 5" in sql_text:
-                            version_update_called = True
-                            break
+            # Check that version update SQL was executed
+            calls = mock_db.session.execute.call_args_list
+            version_update_called = False
+            for call in calls:
+                # Check if the call has arguments and convert to string for checking
+                if len(call[0]) > 0:
+                    sql_text = str(call[0][0])
+                    if "version = 5" in sql_text:
+                        version_update_called = True
+                        break
 
-                assert version_update_called or mock_db.session.execute.called
+            assert version_update_called or mock_db.session.execute.called
 
 
 class TestFTS5Integration:
