@@ -412,7 +412,7 @@ def compare_baseline(new_results, baseline_path='baseline.json'):
 ### Example Test
 
 ```python
-@pytest.mark.slow
+@pytest.mark.e2e
 @pytest.mark.requires_llm
 async def test_complete_search_workflow_with_real_llm():
     """Full integration test with real LLM and TUI."""
@@ -439,7 +439,7 @@ async def test_complete_search_workflow_with_real_llm():
 
 ```bash
 # Run manually (slow!)
-pytest -m slow -m requires_llm
+pytest -m e2e -m requires_llm
 
 # Or run specific test
 pytest tests/e2e/test_chat_screen_e2e.py::test_complete_search_workflow -v
@@ -467,8 +467,8 @@ pytest tests/e2e/test_chat_screen_e2e.py::test_complete_search_workflow -v
 markers =
     unit: Fast unit tests (< 1 second)
     integration: Integration tests with mocks (< 5 seconds)
-    contract: LLM contract tests with promptfoo (1-5 minutes)
-    slow: Slow end-to-end tests (5-10 minutes)
+    contract: LLM contract tests with real LLM (1-5 minutes)
+    e2e: End-to-end tests (5-10 minutes)
     requires_llm: Requires real LLM connection
 ```
 

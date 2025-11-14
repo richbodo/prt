@@ -320,5 +320,8 @@ async def test_user_workflow():
 
 ---
 
-For detailed testing strategy, see [TESTING_STRATEGY.md](TESTING_STRATEGY.md).
-For TUI testing specifics, see [TUI_Dev_Tips.md](TUI/TUI_Dev_Tips.md).
+**For other testing documentation:**
+- **[TESTING_STRATEGY.md](TESTING_STRATEGY.md)** - Comprehensive testing strategy and patterns
+- **[MANUAL_TESTING.md](MANUAL_TESTING.md)** - Manual testing scenarios when headless testing isn't possible
+- **[TUI/TUI_Dev_Tips.md](TUI/TUI_Dev_Tips.md)** - TUI-specific testing patterns and debugging
+- **[TUI/Chat_Screen_Testing_Strategy.md](TUI/Chat_Screen_Testing_Strategy.md)** - Detailed chat screen testing approach

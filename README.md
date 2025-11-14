@@ -276,19 +276,58 @@ source ./init.sh
 source prt_env/bin/activate
 ```
 
+### Testing
+
+PRT follows a **"headless-first"** testing philosophy using a 4-layer testing pyramid:
+
+- **⚡ Unit Tests** (< 1s each): Pure functions, formatters, parsers
+- **⚙️ Integration Tests** (< 5s total): Component interactions with mocked dependencies
+- **🧪 Contract Tests** (1-5min): Real LLM behavior validation
+- **🐢 E2E Tests** (manual): Full system integration for critical workflows
+
+**Key Principles**:
+- Always write automated, headless tests when possible
+- Use mocks for fast, deterministic testing
+- Manual testing only when headless testing is impossible
+- Test fixtures provide realistic sample data (6 contacts, 8 tags, 6 notes)
+
 ### Running Tests
 
+**Quick Commands** (ensure you've run `source ./init.sh` first):
 ```bash
-# Run all tests
-python -m pytest tests/
+# Fast CI tests (unit + integration) - run before committing
+./scripts/run-ci-tests.sh
 
-# Run specific test modules
-python -m pytest tests/test_api.py -v
-python -m pytest tests/test_db.py -v
+# Full local test suite (with LLM tests if available)
+./scripts/run-local-tests.sh
+
+# Specific test categories
+./prt_env/bin/pytest -m unit          # Unit tests only (< 1 sec each)
+./prt_env/bin/pytest -m integration   # Integration tests (< 5 sec total)
+./prt_env/bin/pytest -m e2e           # End-to-end tests
+
+# Specific test files
+./prt_env/bin/pytest tests/test_api.py -v
+./prt_env/bin/pytest tests/test_db.py -v
 
 # Run tests with coverage
-python -m pytest tests/ --tb=short -q
+./prt_env/bin/pytest tests/ --cov=prt_src --cov-report=html
 ```
+
+**Performance Targets**:
+- Unit tests: < 1 second each
+- Integration tests: < 5 seconds total
+- CI pipeline: < 2 minutes (fast tests only)
+- Coverage target: > 85% for testable components
+
+**CI/CD Integration**:
+- Fast CI runs on every PR (unit + integration tests with mocks)
+- Comprehensive CI runs nightly (includes real LLM contract tests)
+- Use `./scripts/run-ci-tests.sh` to run the same tests locally that CI runs
+
+**Documentation**: For complete testing strategy, commands, and troubleshooting, see:
+- **[RUNNING_TESTS.md](docs/RUNNING_TESTS.md)** - Test execution guide and daily workflow
+- **[TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md)** - Comprehensive testing strategy and patterns
 
 ### Working with Test Fixtures
 
@@ -306,29 +345,37 @@ The fixture system provides a pre-populated database with:
 #### Using Fixtures in Tests
 
 ```python
+from tests.fixtures import get_fixture_spec
+
 # Example test using the test_db fixture
 def test_search_functionality(test_db):
     """Test search with populated database."""
     db, fixtures = test_db
+    spec = get_fixture_spec()  # Get fixture specification
+
     config = {"db_path": str(db.path), "db_encrypted": False}
     api = PRTAPI(config)
-    
+
     # Search will find "John Doe" in the fixture data
     results = api.search_contacts("John")
     assert len(results) > 0
+    assert len(results) <= spec["contacts"]["count"]  # Use spec for validation
     assert "John Doe" in [contact["name"] for contact in results]
 ```
 
 #### Creating Standalone Test Database
 
-You can create a test database for manual testing or debugging:
+For manual testing or debugging, you can create a test database with fixture data:
 
 ```bash
-cd tests
-python fixtures.py
+# Run with fixture data (recommended approach)
+./prt_env/bin/python -m prt_src --debug --regenerate-fixtures
+
+# This creates prt_data/debug.db with all fixture data loaded
+# Use this for development and testing without affecting production data
 ```
 
-This creates a database at `tests/prt_data/test_fixtures.db` with all sample data loaded.
+**Note**: The `--debug` mode uses an isolated database and never touches your production data.
 
 #### Viewing Profile Images
 
@@ -345,21 +392,24 @@ python extract_profile_images.py
 Use the SQLite command line to examine test data:
 
 ```bash
-# Navigate to test data directory
-cd tests/prt_data
+# First, ensure you have debug database with fixture data
+./prt_env/bin/python -m prt_src --debug --regenerate-fixtures
 
-# Open the test database
-sqlite3 test_fixtures.db
+# Navigate to data directory
+cd prt_data
 
-# Examine the data
+# Open the debug database (NOT production database)
+sqlite3 debug.db
+
+# Examine the fixture data
 .tables                          # List all tables
 SELECT * FROM contacts LIMIT 5;  # View sample contacts
 SELECT * FROM tags;               # View all tags
 SELECT * FROM notes;              # View all notes
 
 # View relationships
-SELECT c.name, t.name as tag 
-FROM contacts c 
+SELECT c.name, t.name as tag
+FROM contacts c
 JOIN relationships r ON c.id = r.contact_id
 JOIN relationship_tags rt ON r.id = rt.relationship_id
 JOIN tags t ON rt.tag_id = t.id;
@@ -368,11 +418,24 @@ JOIN tags t ON rt.tag_id = t.id;
 .quit
 ```
 
+**Important**: Always use the debug database (`debug.db`) for exploration, never the production database (`prt.db`).
+
 #### Available Fixtures
 
 - **`test_db`**: Full database with sample data (contacts, tags, notes, relationships)
 - **`test_db_empty`**: Empty database with tables initialized but no data
-- **`sample_config`**: Sample configuration for testing
+- **`get_fixture_spec()`**: Returns specification of fixture data (counts, expected values)
+- **Debug mode**: `--debug` flag for isolated testing environment
+
+**Best Practice**: Use `get_fixture_spec()` in tests instead of hardcoded values:
+```python
+# Good: Uses fixture spec
+spec = get_fixture_spec()
+assert len(contacts) == spec["contacts"]["count"]
+
+# Bad: Hardcoded values
+assert len(contacts) == 6  # Breaks if fixture data changes
+```
 
 #### Adding New Fixtures
 
