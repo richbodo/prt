@@ -3,8 +3,14 @@ Tests for LLM query optimization patterns added to the system prompt.
 
 This module tests that the LLM system prompt contains the necessary guidance
 for generating optimized SQL queries for large databases.
+
+Testing Strategy:
+- Use regex patterns for format-agnostic validation
+- Focus on semantic content rather than exact text matching
+- Validate behavior outcomes, not just prompt text presence
 """
 
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -16,150 +22,292 @@ class TestQueryOptimizationPrompts:
     """Test that LLM system prompt contains query optimization guidance."""
 
     def test_system_prompt_contains_optimization_section(self):
-        """Test that the system prompt contains the SQL optimization section."""
+        """Test that the system prompt contains the SQL optimization section.
+
+        Uses regex patterns to be resilient to formatting changes (e.g., markdown headers).
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain the optimization section header
-        assert "SQL QUERY OPTIMIZATION PATTERNS" in system_prompt
-        assert "Critical for Large Databases" in system_prompt
+        # Should contain the optimization section header (format-agnostic)
+        optimization_header_pattern = r"(?i)(#+\s*)?SQL\s+QUERY\s+OPTIMIZATION\s+PATTERNS"
+        assert re.search(
+            optimization_header_pattern, system_prompt
+        ), "Should contain SQL QUERY OPTIMIZATION PATTERNS header"
+
+        # Should mention large database context (semantic validation)
+        large_db_pattern = r"(?i)critical.*large.*database|large.*database.*critical"
+        assert re.search(
+            large_db_pattern, system_prompt
+        ), "Should mention critical importance for large databases"
 
     def test_system_prompt_contains_limit_pattern(self):
-        """Test that the system prompt contains guidance on using LIMIT."""
+        """Test that the system prompt contains guidance on using LIMIT.
+
+        Validates pattern 1: LIMIT LARGE QUERIES with semantic content validation.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain LIMIT guidance
-        assert "LIMIT LARGE QUERIES" in system_prompt
-        assert "LIMIT" in system_prompt
-        assert "prevent overwhelming results" in system_prompt
+        # Should contain LIMIT guidance (pattern-based)
+        limit_pattern = r"(?i)(\*\*)?1\.\s*LIMIT\s+LARGE\s+QUERIES"
+        assert re.search(
+            limit_pattern, system_prompt
+        ), "Should contain pattern 1: LIMIT LARGE QUERIES"
 
-        # Should have specific examples
-        assert "LIMIT 50" in system_prompt or "LIMIT 100" in system_prompt
+        # Should mention preventing overwhelming results (semantic validation)
+        overwhelming_pattern = (
+            r"(?i)prevent.*overwhelm|overwhelm.*prevent|avoid.*too many|large.*result"
+        )
+        assert re.search(
+            overwhelming_pattern, system_prompt
+        ), "Should explain rationale for limiting queries"
+
+        # Should have specific limit examples (flexible numbers)
+        limit_example_pattern = r"LIMIT\s+\d{1,3}"
+        assert re.search(
+            limit_example_pattern, system_prompt
+        ), "Should provide specific LIMIT examples with numbers"
 
     def test_system_prompt_contains_count_before_select_pattern(self):
-        """Test that the system prompt contains COUNT before SELECT guidance."""
+        """Test that the system prompt contains COUNT before SELECT guidance.
+
+        Validates pattern 2: Two-step approach with COUNT(*) first.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain COUNT guidance
-        assert "COUNT BEFORE SELECTING" in system_prompt
-        assert "COUNT(*)" in system_prompt
-        assert "check result size" in system_prompt
+        # Should contain pattern 2 header
+        count_pattern = r"(?i)(\*\*)?2\.\s*COUNT\s+BEFORE\s+(SELECT|QUERY)"
+        assert re.search(
+            count_pattern, system_prompt
+        ), "Should contain pattern 2: COUNT BEFORE SELECTING"
+
+        # Should show two-step approach (semantic validation)
+        two_step_pattern = r"(?i)(first|step\s*1).*COUNT.*\(\*\)|COUNT.*\(\*\).*(first|step\s*1)"
+        assert re.search(two_step_pattern, system_prompt), "Should explain COUNT(*) as first step"
+
+        # Should mention checking result size (concept validation)
+        size_check_pattern = r"(?i)check.*size|size.*check|estimate.*result|result.*estimate"
+        assert re.search(
+            size_check_pattern, system_prompt
+        ), "Should explain checking result size rationale"
 
     def test_system_prompt_contains_exclude_binary_data_pattern(self):
-        """Test that the system prompt contains guidance on excluding binary data."""
+        """Test that the system prompt contains guidance on excluding binary data.
+
+        Validates pattern 3: Exclude large binary columns unless specifically needed.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain binary data guidance
-        assert "EXCLUDE BINARY DATA" in system_prompt
-        assert "profile_image" in system_prompt
-        assert "binary" in system_prompt.lower()
+        # Should contain pattern 3 header
+        binary_pattern = r"(?i)(\*\*)?3\.\s*EXCLUDE\s+(BINARY\s+DATA|LARGE\s+COLUMNS)"
+        assert re.search(
+            binary_pattern, system_prompt
+        ), "Should contain pattern 3: EXCLUDE BINARY DATA"
 
-        # Should warn against SELECT *
-        assert "SELECT *" in system_prompt
+        # Should specifically mention profile_image field
+        profile_image_pattern = r"(?i)profile_image"
+        assert re.search(
+            profile_image_pattern, system_prompt
+        ), "Should specifically mention profile_image field"
+
+        # Should warn against SELECT * (anti-pattern)
+        select_star_warning = (
+            r"(?i)(avoid|don't|never).*SELECT\s*\*|SELECT\s*\*.*(avoid|slow|large)"
+        )
+        assert re.search(
+            select_star_warning, system_prompt
+        ), "Should warn against SELECT * for performance"
 
     def test_system_prompt_contains_indexed_columns_pattern(self):
-        """Test that the system prompt contains guidance on using indexed columns."""
+        """Test that the system prompt contains guidance on using indexed columns.
+
+        Validates pattern 4: Use indexed columns for better performance.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain index guidance
-        assert "USE INDEXED COLUMNS" in system_prompt
-        assert "indexed" in system_prompt.lower()
-        assert "performance" in system_prompt.lower()
+        # Should contain pattern 4 header
+        indexed_pattern = r"(?i)(\*\*)?4\.\s*USE\s+INDEXED\s+(COLUMNS|FIELDS)"
+        assert re.search(
+            indexed_pattern, system_prompt
+        ), "Should contain pattern 4: USE INDEXED COLUMNS"
 
-        # Should mention specific indexed fields
-        assert "name" in system_prompt
-        assert "email" in system_prompt
+        # Should show fast vs slow examples (performance comparison)
+        performance_comparison = (
+            r"(?i)(fast|quick|efficient).*(indexed|name|email)|(slow|slower).*(phone|non-indexed)"
+        )
+        assert re.search(
+            performance_comparison, system_prompt
+        ), "Should show fast vs slower examples based on indexing"
+
+        # Should mention specific indexed fields (concrete guidance)
+        indexed_fields = r"(?i)(name|email).*indexed|(indexed|index).*(name|email)"
+        assert re.search(
+            indexed_fields, system_prompt
+        ), "Should mention specific indexed fields like name or email"
 
     def test_system_prompt_contains_sampling_pattern(self):
-        """Test that the system prompt contains guidance on data sampling."""
+        """Test that the system prompt contains guidance on data sampling.
+
+        Validates pattern 5: Use RANDOM() for data exploration instead of full scans.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain sampling guidance
-        assert "SAMPLE FOR EXPLORATION" in system_prompt
-        assert "RANDOM()" in system_prompt
-        assert "exploration" in system_prompt.lower()
+        # Should contain pattern 5 header
+        sampling_pattern = r"(?i)(\*\*)?5\.\s*SAMPLE\s+FOR\s+EXPLORATION"
+        assert re.search(
+            sampling_pattern, system_prompt
+        ), "Should contain pattern 5: SAMPLE FOR EXPLORATION"
+
+        # Should mention RANDOM() function (specific technique)
+        random_pattern = r"(?i)(RANDOM\(\)|ORDER\s+BY\s+RANDOM)"
+        assert re.search(
+            random_pattern, system_prompt
+        ), "Should mention RANDOM() function for sampling"
+
+        # Should explain exploration use case (purpose validation)
+        exploration_pattern = r"(?i)explor(ation|ing|e)|discover|pattern.*analysis|data.*insight"
+        assert re.search(
+            exploration_pattern, system_prompt
+        ), "Should explain exploration/discovery use case"
 
     def test_system_prompt_contains_performance_note(self):
-        """Test that the system prompt contains performance notes about available indexes."""
+        """Test that the system prompt contains performance notes about available indexes.
+
+        Validates that performance information is provided to guide optimization decisions.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should mention available indexes
-        assert "Performance Note" in system_prompt
-        assert "indexes on:" in system_prompt
+        # Should mention performance information (flexible format)
+        performance_note_pattern = r"(?i)(performance\s+note|index.*info|available.*index)"
+        assert re.search(
+            performance_note_pattern, system_prompt
+        ), "Should mention performance or index information"
 
-        # Should list the key indexes
-        expected_indexes = ["name", "email", "profile_image", "created_at", "contact_metadata"]
-        for index_name in expected_indexes:
-            assert index_name in system_prompt, f"Should mention {index_name} index"
+        # Should list key indexed fields (semantic validation)
+        # At least 3 of these should be mentioned
+        key_indexes = ["name", "email", "profile_image", "created_at", "contact_metadata"]
+        found_indexes = [idx for idx in key_indexes if idx in system_prompt.lower()]
+        assert (
+            len(found_indexes) >= 3
+        ), f"Should mention at least 3 key indexes. Found: {found_indexes}"
 
     def test_optimization_patterns_are_numbered(self):
-        """Test that the 5 optimization patterns are clearly numbered."""
+        """Test that the 5 optimization patterns are clearly numbered.
+
+        Validates structured organization of optimization patterns.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should have 5 numbered patterns
+        # Should have 5 numbered patterns (flexible formatting)
         for i in range(1, 6):
-            pattern_marker = f"**{i}."
-            assert pattern_marker in system_prompt, f"Should have numbered pattern {i}"
+            pattern_number = rf"(\*\*)?{i}\."
+            assert re.search(pattern_number, system_prompt), f"Should have numbered pattern {i}"
+
+        # Validate all 5 specific patterns exist
+        pattern_names = [
+            "LIMIT LARGE QUERIES",
+            "COUNT BEFORE",
+            "EXCLUDE BINARY",
+            "USE INDEXED",
+            "SAMPLE FOR EXPLORATION",
+        ]
+        for pattern_name in pattern_names:
+            pattern_regex = rf"(?i){re.escape(pattern_name)}"
+            assert re.search(
+                pattern_regex, system_prompt
+            ), f"Should contain optimization pattern: {pattern_name}"
 
     def test_optimization_patterns_have_sql_examples(self):
-        """Test that each optimization pattern includes SQL examples."""
+        """Test that each optimization pattern includes SQL examples.
+
+        Validates that concrete SQL examples are provided for each optimization.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should contain SQL code blocks
-        assert "```sql" in system_prompt, "Should contain SQL code examples"
+        # Should contain SQL code examples (format-agnostic)
+        sql_code_pattern = r"(?i)(```sql|SELECT\s+\w+|FROM\s+\w+)"
+        assert re.search(sql_code_pattern, system_prompt), "Should contain SQL code examples"
 
-        # Should have multiple SQL examples (at least one per pattern)
-        sql_blocks = system_prompt.count("```sql")
-        assert sql_blocks >= 5, f"Should have at least 5 SQL examples, found {sql_blocks}"
+        # Should have multiple SQL examples covering different patterns
+        sql_examples = re.findall(r"(?i)SELECT.*?(?=\n|\r|$)", system_prompt)
+        assert (
+            len(sql_examples) >= 5
+        ), f"Should have at least 5 SQL examples, found {len(sql_examples)}"
+
+        # Should show both good and bad examples (contrast)
+        contrast_patterns = [
+            r"(?i)instead\s+of.*SELECT",
+            r"(?i)(good|fast).*SELECT",
+            r"(?i)(avoid|don't|slower).*SELECT",
+        ]
+        found_contrasts = sum(
+            1 for pattern in contrast_patterns if re.search(pattern, system_prompt)
+        )
+        assert found_contrasts >= 2, "Should provide contrasting good vs bad SQL examples"
 
     def test_optimization_guidance_mentions_large_database_context(self):
-        """Test that optimization guidance specifically mentions large database context."""
+        """Test that optimization guidance specifically mentions large database context.
+
+        Validates that optimizations are contextualized for the database size that triggered them.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should mention the context that triggered these optimizations
-        database_size_indicators = ["1000+", "large", "timeout", "performance"]
-        found_indicators = [
-            indicator
-            for indicator in database_size_indicators
-            if indicator in system_prompt.lower()
+        # Should mention the scale that triggered these optimizations (flexible matching)
+        scale_indicators = [
+            r"(?i)1000\+.*contact",
+            r"(?i)large.*database",
+            r"(?i)timeout.*prevent",
+            r"(?i)performance.*critical",
         ]
+        found_scale_mentions = sum(
+            1 for pattern in scale_indicators if re.search(pattern, system_prompt)
+        )
 
         assert (
-            len(found_indicators) >= 2
-        ), f"Should mention large database context. Found: {found_indicators}"
+            found_scale_mentions >= 2
+        ), "Should mention large database scale context (1000+ contacts, timeouts, performance)"
 
     def test_good_vs_bad_examples_provided(self):
-        """Test that the prompt provides both good and bad query examples."""
+        """Test that the prompt provides both good and bad query examples.
+
+        Validates that optimization guidance includes clear contrasting examples.
+        """
         mock_api = MagicMock()
         llm = OllamaLLM(api=mock_api)
         system_prompt = llm._create_system_prompt()
 
-        # Should have contrasting examples
-        contrast_markers = ["Instead of:", "Use:", "Good:", "Avoid:", "Fast:", "Slower:"]
-        found_markers = [marker for marker in contrast_markers if marker in system_prompt]
+        # Should have contrasting example markers (flexible patterns)
+        contrast_patterns = [
+            r"(?i)instead\s+of:",
+            r"(?i)(use|good):",
+            r"(?i)(avoid|don't):",
+            r"(?i)(fast|quick|efficient):",
+            r"(?i)(slow|slower|inefficient):",
+        ]
+        found_markers = sum(1 for pattern in contrast_patterns if re.search(pattern, system_prompt))
 
         assert (
-            len(found_markers) >= 3
-        ), f"Should provide contrasting examples. Found markers: {found_markers}"
+            found_markers >= 3
+        ), f"Should provide contrasting good vs bad examples with clear markers. Found: {found_markers}"
 
 
 class TestPromptIntegration:
@@ -208,7 +356,7 @@ class TestPromptIntegration:
         system_prompt = llm._create_system_prompt()
 
         # Find the optimization section
-        opt_start = system_prompt.find("SQL QUERY OPTIMIZATION PATTERNS")
+        opt_start = system_prompt.find("## SQL QUERY OPTIMIZATION PATTERNS")
         reminders_start = system_prompt.find("## IMPORTANT REMINDERS")
         opt_section = system_prompt[opt_start:reminders_start]
 

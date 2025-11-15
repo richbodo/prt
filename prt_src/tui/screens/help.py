@@ -7,6 +7,7 @@ from textual.widgets import Static
 from prt_src.logging_config import get_logger
 from prt_src.tui.constants import WidgetIDs
 from prt_src.tui.screens.base import BaseScreen
+from prt_src.tui.screens.base import EscapeIntent
 from prt_src.tui.widgets import BottomNav
 from prt_src.tui.widgets import DropdownMenu
 from prt_src.tui.widgets import TopNav
@@ -57,6 +58,14 @@ class HelpScreen(BaseScreen):
         """Handle screen mount."""
         await super().on_mount()
         logger.info("Help screen mounted")
+
+    def on_escape(self) -> EscapeIntent:
+        """Handle ESC key on help screen.
+
+        Returns:
+            EscapeIntent.POP to go back to previous screen
+        """
+        return EscapeIntent.POP
 
     def on_key(self, event) -> None:
         """Handle key presses.

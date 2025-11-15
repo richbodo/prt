@@ -263,6 +263,21 @@ class BaseScreen(Screen):
         """
         logger.debug(f"{self.__class__.__name__} mode changed to {mode.value}")
 
+    def get_screen_name(self) -> str:
+        """Get the screen identifier for navigation.
+
+        Override in subclasses to return the screen's identifier
+        from the app's screen_map (e.g., "help", "home", "chat").
+
+        Returns:
+            Screen identifier string
+        """
+        # Default implementation returns lowercase class name without "Screen" suffix
+        class_name = self.__class__.__name__
+        if class_name.endswith("Screen"):
+            class_name = class_name[:-6]  # Remove "Screen" suffix
+        return class_name.lower()
+
     def compose(self) -> ComposeResult:
         """Default compose for screens.
 

@@ -501,14 +501,17 @@ class TestIntegration:
         """Test complex queries across relationship tables."""
         db, _ = test_db
 
-        # Create various relationship types
+        # Create various relationship types (using unique type_keys to avoid conflicts)
         friend = RelationshipType(
-            type_key="friend", description="Friend", inverse_type_key="friend", is_symmetrical=1
+            type_key="test_friend",
+            description="Test Friend",
+            inverse_type_key="test_friend",
+            is_symmetrical=1,
         )
         colleague = RelationshipType(
-            type_key="colleague",
-            description="Colleague",
-            inverse_type_key="colleague",
+            type_key="test_colleague",
+            description="Test Colleague",
+            inverse_type_key="test_colleague",
             is_symmetrical=1,
         )
         db.session.add_all([friend, colleague])
@@ -530,7 +533,7 @@ class TestIntegration:
         friend_rels = (
             db.session.query(ContactRelationship)
             .join(RelationshipType)
-            .filter(RelationshipType.type_key == "friend")
+            .filter(RelationshipType.type_key == "test_friend")
             .count()
         )
 
@@ -540,7 +543,7 @@ class TestIntegration:
         colleague_rels = (
             db.session.query(ContactRelationship)
             .join(RelationshipType)
-            .filter(RelationshipType.type_key == "colleague")
+            .filter(RelationshipType.type_key == "test_colleague")
             .count()
         )
 
@@ -578,9 +581,12 @@ class TestIntegration:
         """Test counting relationships per contact."""
         db, _ = test_db
 
-        # Create friend type
+        # Create friend type (using unique type_key to avoid conflicts)
         friend = RelationshipType(
-            type_key="friend", description="Friend", inverse_type_key="friend", is_symmetrical=1
+            type_key="count_test_friend",
+            description="Count Test Friend",
+            inverse_type_key="count_test_friend",
+            is_symmetrical=1,
         )
         db.session.add(friend)
         db.session.commit()

@@ -32,9 +32,10 @@ class ModelInfo:
         """
         self.name = data.get("name", "")
         self.model = data.get("model", self.name)
-        self.size = data.get("size", 0)
-        self.modified_at = data.get("modified_at", "")
-        self.digest = data.get("digest", "")
+        self.size = data.get("size")
+        self.modified_at = data.get("modified_at")
+        self.digest = data.get("digest")
+        self.details = data.get("details")
 
         # Extended info from /api/show
         self.modelfile = data.get("modelfile", "")
@@ -50,45 +51,90 @@ class ModelInfo:
             gpt-oss:20b -> gpt-oss-20b
             llama3-8b-local:latest -> llama3-8b-local
             mistral:latest -> mistral
+            mistral:7b:latest -> mistral-7b-latest
         """
-        # Remove :latest suffix
-        name = self.name.replace(":latest", "")
-        # Replace : with -
-        name = name.replace(":", "-")
+        # Special case: if name ends with :latest and has no other colons, remove :latest
+        if self.name.endswith(":latest") and self.name.count(":") == 1:
+            name = self.name[:-7]  # Remove ":latest" (7 characters)
+        else:
+            # Otherwise, replace all : with -
+            name = self.name.replace(":", "-")
+
+        # Replace dots with dashes for consistency (e.g., "3.8b" -> "3-8b")
+        name = name.replace(".", "-")
+
+        # Clean up leading/trailing dashes and multiple consecutive dashes
+        name = name.strip("-")
+        while "--" in name:
+            name = name.replace("--", "-")
+
         return name
 
     @property
     def size_human(self) -> str:
         """Human-readable size string."""
-        if self.size == 0:
+        if self.size is None:
             return "Unknown"
+        if self.size == 0:
+            return "0B"
+
+        tb = self.size / (1024**4)
+        if tb >= 1:
+            # Always show 1 decimal place for TB
+            return f"{tb:.1f}TB"
 
         gb = self.size / (1024**3)
         if gb >= 1:
+            # Always show 1 decimal place for GB
             return f"{gb:.1f}GB"
-        else:
-            mb = self.size / (1024**2)
-            return f"{mb:.0f}MB"
+
+        mb = self.size / (1024**2)
+        if mb >= 1:
+            # Show as integer if whole number, otherwise 1 decimal place for MB
+            return f"{int(mb)}MB" if mb == int(mb) else f"{mb:.1f}MB"
+
+        kb = self.size / 1024
+        if kb >= 1:
+            # Show as integer if whole number, otherwise 1 decimal place for KB
+            return f"{int(kb)}KB" if kb == int(kb) else f"{kb:.1f}KB"
+
+        return f"{self.size}B"
 
     def is_local_gguf(self) -> bool:
         """Check if this model was created from a local .gguf file.
 
         Returns:
-            True if modelfile contains FROM with a .gguf path
+            True if model name ends with .gguf or modelfile contains FROM with a .gguf path
         """
-        if not self.modelfile:
-            return False
+        # Check if the model name itself ends with .gguf
+        if self.name.lower().endswith(".gguf"):
+            return True
 
-        # Look for "FROM ./*.gguf" or "FROM /path/to/*.gguf"
-        from_match = re.search(r"FROM\s+([^\s]+\.gguf)", self.modelfile, re.IGNORECASE)
-        return from_match is not None
+        # Check if modelfile indicates it was created from a .gguf file
+        if self.modelfile:
+            # Look for "FROM ./*.gguf" or "FROM /path/to/*.gguf"
+            from_match = re.search(r"FROM\s+([^\s]+\.gguf)", self.modelfile, re.IGNORECASE)
+            return from_match is not None
+
+        return False
 
     def get_description(self) -> str:
         """Generate a description for this model."""
-        if self.is_local_gguf():
-            return f"Local GGUF model ({self.size_human})"
-        else:
-            return f"Ollama model ({self.size_human})"
+        if self.details:
+            # Build description from details
+            parts = []
+            if "family" in self.details:
+                parts.append(self.details["family"])
+            if "parameter_size" in self.details:
+                parts.append(self.details["parameter_size"])
+            if "quantization_level" in self.details:
+                parts.append(self.details["quantization_level"])
+
+            if parts:
+                return " ".join(parts)
+
+        # Fallback to model name if no details
+        return self.name
 
 
 class OllamaModelRegistry:
@@ -160,6 +206,7 @@ class OllamaModelRegistry:
         if not force_refresh and self._is_cache_valid():
             self._stats["hits"] += 1
             logger.debug(f"Returning {len(self._model_cache)} models from cache")
+            # Return cached models (order may not be preserved from original response)
             return list(self._model_cache.values())
 
         self._stats["refreshes"] += 1
@@ -174,10 +221,12 @@ class OllamaModelRegistry:
 
             # Clear cache and rebuild
             self._model_cache.clear()
+            model_list = []
 
             for model_data in models:
                 model_info = ModelInfo(model_data)
                 self._model_cache[model_info.name] = model_info
+                model_list.append(model_info)
                 logger.debug(f"Discovered model: {model_info.name} ({model_info.size_human})")
 
             self._cache_timestamp = datetime.now()
@@ -190,16 +239,16 @@ class OllamaModelRegistry:
                     f"Cache stats: {self._stats}, current size: {len(self._model_cache)}/{self.max_cache_size}"
                 )
 
-            return list(self._model_cache.values())
+            return model_list
 
         except requests.exceptions.ConnectionError:
-            logger.warning("Cannot connect to Ollama - is it running?")
+            logger.debug("Cannot connect to Ollama - is it running?")
             return []
         except requests.exceptions.Timeout:
-            logger.warning("Ollama API request timed out")
+            logger.debug("Ollama API request timed out")
             return []
         except Exception as e:
-            logger.error(f"Error fetching models from Ollama: {e}")
+            logger.debug(f"Error fetching models from Ollama: {e}")
             return []
 
     def get_model_info(self, model_name: str, force_refresh: bool = False) -> Optional[ModelInfo]:
@@ -275,7 +324,7 @@ class OllamaModelRegistry:
             return model_info
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 404:
+            if e.response and e.response.status_code == 404:
                 logger.warning(f"Model not found: {model_name}")
             else:
                 logger.error(f"HTTP error getting model info: {e}")

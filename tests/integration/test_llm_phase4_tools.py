@@ -131,8 +131,8 @@ class TestLLMPhase4Tools:
         assert result["success"] is True
         assert "output_path" in result
         assert "url" in result
-        assert "contacts_count" in result
-        assert result["contacts_count"] > 0
+        assert "contact_count" in result
+        assert result["contact_count"] > 0
 
         # Verify output directory exists
         output_path = Path(result["output_path"])
@@ -160,7 +160,7 @@ class TestLLMPhase4Tools:
 
         # Verify success
         assert result["success"] is True
-        assert result["contacts_count"] >= 1
+        assert result["contact_count"] >= 1
 
         # Verify output exists
         output_path = Path(result["output_path"])
@@ -243,8 +243,13 @@ class TestLLMPhase4Tools:
         contact1_name = contacts[0]["name"]
         contact2_name = contacts[1]["name"]
 
-        # First add a relationship
-        api.add_contact_relationship(contact1_name, contact2_name, "colleague")
+        # First add a relationship using an available relationship type
+        relationship_types = api.list_all_relationship_types()
+        if not relationship_types:
+            pytest.skip("Test requires at least one relationship type")
+
+        test_type = relationship_types[0]["type_key"]  # Use first available type
+        api.add_contact_relationship(contact1_name, contact2_name, test_type)
 
         # Get backup count after add
         initial_backups = api.get_backup_history()
@@ -256,7 +261,7 @@ class TestLLMPhase4Tools:
             {
                 "from_contact_name": contact1_name,
                 "to_contact_name": contact2_name,
-                "type_key": "colleague",
+                "type_key": test_type,
             },
         )
 

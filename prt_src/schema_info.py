@@ -99,8 +99,7 @@ class SchemaInfoGenerator:
 
         # Get columns information
         columns = []
-        for column_name in model_class.__table__.columns:
-            column = model_class.__table__.columns[column_name]
+        for column in model_class.__table__.columns:
             columns.append(self.get_column_info(column))
 
         # Get relationships information

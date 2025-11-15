@@ -21,7 +21,7 @@ class TestToolCallingJSONHandling:
             {"id": 1, "name": "John Doe", "email": "john@example.com"},
             {"id": 2, "name": "Jane Smith", "email": "jane@example.com"},
         ]
-        api.execute_sql.return_value = {"success": True, "result": [{"count": 1810}]}
+        api.execute_sql.return_value = {"rows": [{"count": 1810}], "rowcount": 1, "error": None}
         api.get_contacts_with_images.return_value = [
             {"id": 1, "name": "John Doe", "has_image": True},
             {"id": 2, "name": "Jane Smith", "has_image": True},
@@ -52,6 +52,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -74,6 +75,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -100,6 +102,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -126,6 +129,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -152,6 +156,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -174,6 +179,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -199,6 +205,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -225,6 +232,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -250,6 +258,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -272,6 +281,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -297,6 +307,7 @@ class TestToolCallingJSONHandling:
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.content = b"fake content"  # Add content attribute for validation
         mock_response.text = json.dumps(
             {
                 "message": {
@@ -330,6 +341,7 @@ class TestToolCallingJSONHandling:
         mock_final_response = Mock()
         mock_final_response.raise_for_status.return_value = None
         mock_final_response.headers = {"Content-Type": "application/json"}
+        mock_final_response.content = b"fake final content"  # Add content attribute for validation
         mock_final_response.text = json.dumps(
             {
                 "message": {
@@ -382,6 +394,9 @@ class TestChatScreenToolCalling:
                 mock_response = Mock()
                 mock_response.raise_for_status.return_value = None
                 mock_response.headers = {"Content-Type": "application/json"}
+                mock_response.content = (
+                    b"fake integration test content"  # Add content attribute for validation
+                )
                 mock_response.text = json.dumps(
                     {
                         "message": {

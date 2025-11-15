@@ -30,6 +30,9 @@ class ResponsePatterns:
         r"export.*contacts": "Exported {export_count} contacts to {export_path}",
         r"help|what.*can.*do": "I can help you manage contacts, search your database, create directories, and more. Available tools: get_database_stats, search_contacts, get_contact_by_id, add_tag, add_note, export_contacts.",
         r"test.*tool.*calling": "Tool calling is working correctly. Available tools: {tool_list}",
+        r"(get|show|find|list).*contacts.*(image|photo|picture)": "Found {contacts_with_images_count} contacts with profile images: {contacts_with_images_list}",
+        r"create.*directory.*(image|photo|picture)": "I'll create a directory of contacts with images. Let me gather the contacts and generate the directory... Created directory with {contacts_with_images_count} contacts at {directory_path}",
+        r"contacts.*(with|have).*(image|photo|picture)": "You have {contacts_with_images_count} contacts with profile images in your database.",
         r".*": "I understand you're asking about: {query}. I can help with contact management, search, and database operations.",  # Fallback
     }
 
@@ -218,6 +221,8 @@ class MockOllamaLLM:
         try:
             # Basic database stats
             contacts = self.api.list_all_contacts()
+            contacts_with_images = self.api.get_contacts_with_images()
+
             context.update(
                 {
                     "contact_count": len(contacts),
@@ -226,6 +231,11 @@ class MockOllamaLLM:
                     "contact_list": ", ".join([c.get("name", "Unknown") for c in contacts[:3]]),
                     "tool_list": ", ".join([tool["name"] for tool in self.tools]),
                     "query": message,
+                    "contacts_with_images_count": len(contacts_with_images),
+                    "contacts_with_images_list": ", ".join(
+                        [c.get("name", "Unknown") for c in contacts_with_images[:3]]
+                    ),
+                    "directory_path": "/mock/directories/contacts_with_images",
                 }
             )
 
@@ -277,6 +287,26 @@ class MockOllamaLLM:
         if any(phrase in message_lower for phrase in ["how many", "count", "stats", "database"]):
             return ("get_database_stats", {})
         elif (
+            "create" in message_lower
+            and "directory" in message_lower
+            and any(img_word in message_lower for img_word in ["image", "photo", "picture"])
+        ):
+            # Extract output name if provided
+            output_name = None
+            if "called" in message_lower or "named" in message_lower:
+                words = message.split()
+                for i, word in enumerate(words):
+                    if word.lower() in ["called", "named"] and i + 1 < len(words):
+                        output_name = words[i + 1].strip(".,!?\"'")
+                        break
+            return ("_create_directory_from_contacts_with_images", {"output_name": output_name})
+        elif (
+            any(phrase in message_lower for phrase in ["get", "show", "find", "list"])
+            and "contact" in message_lower
+            and any(img_word in message_lower for img_word in ["image", "photo", "picture"])
+        ):
+            return ("_get_contacts_with_images", {})
+        elif (
             any(phrase in message_lower for phrase in ["search", "find", "look for"])
             and "contact" in message_lower
         ):
@@ -319,6 +349,28 @@ class MockOllamaLLM:
                     response = "No contacts found matching your search."
             elif tool_name == "export_contacts":
                 response = f"Exported {tool_result['exported_count']} contacts to {tool_result['output_path']}"
+            elif tool_name == "_get_contacts_with_images":
+                if tool_result["success"]:
+                    if tool_result["count"] > 0:
+                        names = [
+                            contact.get("name", "Unknown")
+                            for contact in tool_result["contacts"][:3]
+                        ]
+                        names_str = ", ".join(names)
+                        if tool_result["count"] > 3:
+                            names_str += f" and {tool_result['count'] - 3} more"
+                        response = f"Found {tool_result['count']} contacts with profile images: {names_str}"
+                    else:
+                        response = "No contacts with profile images found in your database."
+                else:
+                    response = f"Error getting contacts with images: {tool_result.get('error', 'Unknown error')}"
+            elif tool_name == "_create_directory_from_contacts_with_images":
+                if tool_result["success"]:
+                    response = f"Created directory with {tool_result['contact_count']} contacts at {tool_result['output_path']}. You can view it at {tool_result['url']}"
+                else:
+                    response = (
+                        f"Failed to create directory: {tool_result.get('error', 'Unknown error')}"
+                    )
             else:
                 response = f"Tool {tool_name} executed successfully: {json.dumps(tool_result)}"
         else:
@@ -360,3 +412,76 @@ class MockOllamaLLM:
     def get_tool_call_history(self) -> List[dict]:
         """Get history of simulated tool calls."""
         return self.tool_call_history.copy()
+
+    def _get_contacts_with_images(self) -> Dict[str, Any]:
+        """Mock the _get_contacts_with_images tool for testing."""
+        self.last_tool_called = "_get_contacts_with_images"
+        self.tool_call_history.append({"tool": "_get_contacts_with_images", "args": {}})
+
+        try:
+            # Use real API to get contacts with images
+            contacts = self.api.get_contacts_with_images()
+
+            # If no real contacts, provide mock data for testing
+            if not contacts:
+                contacts = [
+                    {
+                        "id": 1,
+                        "name": "Mock Contact 1",
+                        "email": "mock1@example.com",
+                        "profile_image": b"mock_image_data_1",
+                    },
+                    {
+                        "id": 2,
+                        "name": "Mock Contact 2",
+                        "email": "mock2@example.com",
+                        "profile_image": b"mock_image_data_2",
+                    },
+                ]
+
+            return {
+                "success": True,
+                "contacts": contacts,
+                "count": len(contacts),
+                "message": f"Found {len(contacts)} contacts with profile images",
+            }
+
+        except Exception as e:
+            return {"success": False, "error": str(e), "contacts": [], "count": 0}
+
+    def _create_directory_from_contacts_with_images(
+        self, output_name: str = None
+    ) -> Dict[str, Any]:
+        """Mock the directory creation tool for testing."""
+        self.last_tool_called = "_create_directory_from_contacts_with_images"
+        self.tool_call_history.append(
+            {
+                "tool": "_create_directory_from_contacts_with_images",
+                "args": {"output_name": output_name},
+            }
+        )
+
+        try:
+            # Get contacts first
+            contacts_result = self._get_contacts_with_images()
+
+            if not contacts_result["success"] or contacts_result["count"] == 0:
+                return {"success": False, "error": "No contacts with images found"}
+
+            contact_count = contacts_result["count"]
+            output_path = f"/mock/directories/{output_name or 'contacts_with_images'}"
+
+            return {
+                "success": True,
+                "output_path": output_path,
+                "url": f"file://{output_path}/index.html",
+                "contact_count": contact_count,
+                "performance": {
+                    "query_time_ms": 5.0,
+                    "directory_time_ms": 10.0,
+                    "total_time_ms": 15.0,
+                },
+            }
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
