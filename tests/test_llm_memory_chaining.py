@@ -42,15 +42,15 @@ def test_memory_system_basic_operations(isolated_memory_context):
 
 
 @pytest.mark.integration
-def test_save_contacts_with_images_tool(test_db, isolated_memory_context):
+def test_save_contacts_with_images_tool(test_db, isolated_memory_context, llm_config):
     """Test the save_contacts_with_images tool with isolated memory."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
     mock_memory = isolated_memory_context
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Test saving contacts to memory
     result = llm._save_contacts_with_images("test contacts with images")
@@ -83,14 +83,14 @@ def test_save_contacts_with_images_tool(test_db, isolated_memory_context):
 
 
 @pytest.mark.integration
-def test_list_memory_tool(test_db, isolated_memory_context):
+def test_list_memory_tool(test_db, isolated_memory_context, llm_config):
     """Test the list_memory tool with isolated memory."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # First save some data
     save_result = llm._save_contacts_with_images("test memory listing")
@@ -116,15 +116,15 @@ def test_list_memory_tool(test_db, isolated_memory_context):
 
 
 @pytest.mark.integration
-def test_generate_directory_with_memory_id(test_db, isolated_memory_context):
+def test_generate_directory_with_memory_id(test_db, isolated_memory_context, llm_config):
     """Test generating directory using memory ID with isolated memory."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
     mock_memory = isolated_memory_context
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Step 1: Save contacts to memory
     save_result = llm._save_contacts_with_images("contacts for directory test")
@@ -170,14 +170,14 @@ def test_generate_directory_with_memory_id(test_db, isolated_memory_context):
 
 
 @pytest.mark.integration
-def test_generate_directory_error_handling(test_db, isolated_memory_context):
+def test_generate_directory_error_handling(test_db, isolated_memory_context, llm_config):
     """Test directory generation error handling with invalid memory IDs."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Test with invalid memory ID
     directory_result = llm._generate_directory(
@@ -233,15 +233,15 @@ def test_memory_chaining_edge_cases(isolated_memory_context):
 
 
 @pytest.mark.integration
-def test_memory_chaining_workflow_complete(test_db, isolated_memory_context):
+def test_memory_chaining_workflow_complete(test_db, isolated_memory_context, llm_config):
     """Test the complete chaining workflow: save -> list -> generate with isolated memory."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
     mock_memory = isolated_memory_context
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     start_time = time.time()
 

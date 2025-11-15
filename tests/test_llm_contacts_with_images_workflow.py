@@ -16,6 +16,8 @@ import requests
 from prt_src.api import PRTAPI
 from prt_src.llm_ollama import OllamaLLM
 from tests.fixtures import get_fixture_spec
+from tests.mocks.timeout_utils import is_ollama_inference_ready
+from tests.mocks.timeout_utils import timeout_context
 
 
 def is_ollama_available() -> bool:
@@ -38,11 +40,6 @@ def is_ollama_available() -> bool:
 
     except (requests.RequestException, ConnectionError, ValueError, KeyError):
         return False
-
-
-# Import from centralized utilities
-from tests.mocks.timeout_utils import is_ollama_inference_ready
-from tests.mocks.timeout_utils import timeout_context
 
 
 @pytest.mark.integration
@@ -93,14 +90,14 @@ def test_get_contacts_with_images_api(test_db):
 
 
 @pytest.mark.integration
-def test_get_contacts_with_images_tool(test_db):
+def test_get_contacts_with_images_tool(test_db, llm_config):
     """Test the LLM tool for getting contacts with images."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Call the tool directly
     start_time = time.time()
@@ -136,14 +133,14 @@ def test_get_contacts_with_images_tool(test_db):
 
 
 @pytest.mark.integration
-def test_create_directory_tool(test_db):
+def test_create_directory_tool(test_db, llm_config):
     """Test the combined tool for creating directory from contacts with images."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Call the combined tool
     start_time = time.time()
@@ -184,7 +181,7 @@ def test_create_directory_tool(test_db):
 
 @pytest.mark.contract
 @pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
-def test_llm_contacts_with_images_query_understanding(test_db):
+def test_llm_contacts_with_images_query_understanding(test_db, llm_config):
     """Test that LLM can understand and process 'contacts with images' queries.
 
     This is a contract test that validates real LLM behavior and may be flaky
@@ -193,9 +190,9 @@ def test_llm_contacts_with_images_query_understanding(test_db):
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     test_queries = [
         "get all contacts with profile images",
@@ -237,7 +234,7 @@ def test_llm_contacts_with_images_query_understanding(test_db):
 
 @pytest.mark.contract
 @pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
-def test_llm_basic_inference(test_db):
+def test_llm_basic_inference(test_db, llm_config):
     """Test basic LLM inference capability - simpler than full workflow test.
 
     This is a contract test that validates basic LLM responsiveness.
@@ -248,9 +245,9 @@ def test_llm_basic_inference(test_db):
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Test with a simple, predictable query
     query = "Hello, please respond with 'Hello' to confirm you are working"
@@ -281,7 +278,7 @@ def test_llm_basic_inference(test_db):
 @pytest.mark.contract
 @pytest.mark.flaky(max_runs=3, min_passes=1)
 @pytest.mark.skipif(not is_ollama_available(), reason="Ollama not available")
-def test_full_workflow_performance(test_db):
+def test_full_workflow_performance(test_db, llm_config):
     """Performance test for the full workflow: query understanding -> tool execution.
 
     NOTE: This test may show variable behavior based on LLM responses.
@@ -296,9 +293,9 @@ def test_full_workflow_performance(test_db):
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
-    # Initialize API and LLM
+    # Initialize API and LLM with test config
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Test the specific query that should trigger our optimized tool
     query = "create a directory of all contacts with images"

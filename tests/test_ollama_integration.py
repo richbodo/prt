@@ -14,10 +14,10 @@ from prt_src.llm_ollama import Tool
 class TestOllamaLLM:
     """Test Ollama LLM integration."""
 
-    def test_tool_creation(self):
+    def test_tool_creation(self, llm_config):
         """Test that tools are created correctly."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Check that tools are created
         assert len(llm.tools) > 0
@@ -30,10 +30,10 @@ class TestOllamaLLM:
             assert tool.parameters
             assert callable(tool.function)
 
-    def test_get_tool_by_name(self):
+    def test_get_tool_by_name(self, llm_config):
         """Test getting a tool by name."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Test getting an existing tool
         tool = llm._get_tool_by_name("search_contacts")
@@ -44,12 +44,12 @@ class TestOllamaLLM:
         tool = llm._get_tool_by_name("non_existent_tool")
         assert tool is None
 
-    def test_call_tool(self):
+    def test_call_tool(self, llm_config):
         """Test calling a tool."""
         mock_api = Mock()
         mock_api.search_contacts.return_value = [{"id": 1, "name": "Test Contact"}]
 
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Test successful tool call
         result = llm._call_tool("search_contacts", {"query": "test"})
@@ -67,10 +67,10 @@ class TestOllamaLLM:
         assert "error" in result
         assert "Test error" in result["error"]
 
-    def test_system_prompt_creation(self):
+    def test_system_prompt_creation(self, llm_config):
         """Test system prompt creation."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         prompt = llm._create_system_prompt()
 
@@ -80,10 +80,10 @@ class TestOllamaLLM:
         assert "search_contacts" in prompt  # At least one tool should be mentioned
         assert "USAGE INSTRUCTIONS" in prompt  # Updated to match new format
 
-    def test_format_tool_calls(self):
+    def test_format_tool_calls(self, llm_config):
         """Test formatting tools for Ollama API."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         formatted_tools = llm._format_tool_calls()
 
@@ -100,16 +100,16 @@ class TestOllamaLLM:
             assert "description" in function_def
             assert "parameters" in function_def
 
-    def test_default_disabled_tools_removed(self):
+    def test_default_disabled_tools_removed(self, llm_config):
         """Default configuration should remove unstable tools from availability."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         tool_names = {tool.name for tool in llm.tools}
         assert "save_contacts_with_images" not in tool_names
         assert "list_memory" not in tool_names
 
-    def test_config_can_enable_disabled_tools(self):
+    def test_config_can_enable_disabled_tools(self, llm_config):
         """Custom configuration can re-enable disabled tools."""
         mock_api = Mock()
         config_manager = LLMConfigManager({"llm_tools": {"disabled": []}})
@@ -120,10 +120,10 @@ class TestOllamaLLM:
         assert "list_memory" in tool_names
 
     @patch("requests.post")
-    def test_chat_without_tool_calls(self, mock_post):
+    def test_chat_without_tool_calls(self, mock_post, llm_config):
         """Test chat without tool calls."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Mock response without tool calls - using Ollama API format
         mock_response = Mock()
@@ -142,11 +142,11 @@ class TestOllamaLLM:
         assert len(llm.conversation_history) == 2  # user + assistant
 
     @patch("requests.post")
-    def test_chat_with_tool_calls(self, mock_post):
+    def test_chat_with_tool_calls(self, mock_post, llm_config):
         """Test chat with tool calls."""
         mock_api = Mock()
         mock_api.search_contacts.return_value = [{"id": 1, "name": "John Doe"}]
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Mock first response with tool call - using Ollama API format
         mock_response1 = Mock()
@@ -188,12 +188,12 @@ class TestOllamaLLM:
         assert mock_post.call_count == 2  # Two API calls (tool call + final response)
 
     @patch("requests.post")
-    def test_chat_connection_error(self, mock_post):
+    def test_chat_connection_error(self, mock_post, llm_config):
         """Test chat with connection error."""
         import requests
 
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Mock connection error - use requests.RequestException to match error handling
         mock_post.side_effect = requests.exceptions.RequestException("Connection failed")
@@ -203,10 +203,10 @@ class TestOllamaLLM:
         assert "Error" in result
         assert "Connection failed" in result
 
-    def test_clear_history(self):
+    def test_clear_history(self, llm_config):
         """Test clearing conversation history."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
 
         # Add some history
         llm.conversation_history = [{"role": "user", "content": "test"}]
@@ -216,18 +216,18 @@ class TestOllamaLLM:
 
         assert len(llm.conversation_history) == 0
 
-    def test_llm_registers_sql_and_backup_tools(self):
+    def test_llm_registers_sql_and_backup_tools(self, llm_config):
         """Ensure execute_sql and backup tools are available."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
         tool_names = [t.name for t in llm.tools]
         assert "execute_sql" in tool_names
         assert "create_backup_with_comment" in tool_names
 
-    def test_system_prompt_mentions_sql_safety(self):
+    def test_system_prompt_mentions_sql_safety(self, llm_config):
         """System prompt should warn about SQL write safety."""
         mock_api = Mock()
-        llm = OllamaLLM(mock_api)
+        llm = OllamaLLM(mock_api, config_manager=llm_config)
         prompt = llm._create_system_prompt()
         assert "execute_sql" in prompt
         assert "backup" in prompt.lower()
@@ -236,7 +236,7 @@ class TestOllamaLLM:
 class TestTool:
     """Test Tool dataclass."""
 
-    def test_tool_creation(self):
+    def test_tool_creation(self, llm_config):
         """Test Tool dataclass creation."""
 
         def test_function():

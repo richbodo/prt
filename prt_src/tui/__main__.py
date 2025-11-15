@@ -56,7 +56,7 @@ Examples:
         "--model",
         "-m",
         type=str,
-        help="Model alias to use (e.g., 'llama8', 'gpt-oss-20b'). Auto-detects provider.",
+        help="Model alias to use (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use CLI 'list-models' command to see available options.",
     )
 
     args = parser.parse_args()

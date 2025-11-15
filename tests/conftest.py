@@ -5,6 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from prt_src.config import LLMConfigManager  # noqa: E402
 from prt_src.db import create_database  # noqa: E402
 from tests.fixtures import setup_test_database  # noqa: E402
 from tests.mocks.mock_llm_memory import TestMemoryContext  # noqa: E402
@@ -149,3 +150,82 @@ def mock_directory_generator_fail():
 
     with MockDirectoryGeneratorPatcher(mock_success=False) as patcher:
         yield patcher
+
+
+@pytest.fixture
+def llm_config():
+    """Create a test LLM config manager that doesn't depend on global config file."""
+    test_config = {
+        "db_path": "prt_data/test.db",
+        "db_encrypted": False,
+        "database_mode": "test",
+        "llm": {
+            "provider": "ollama",
+            "model": "gpt-oss:20b",
+            "base_url": "http://localhost:11434",
+            "keep_alive": "30m",
+            "timeout": 300,
+            "temperature": 0.1,
+        },
+        "llm_permissions": {
+            "allow_create": True,
+            "allow_update": True,
+            "allow_delete": False,
+            "require_confirmation": {"delete": True, "bulk_operations": True},
+            "max_bulk_operations": 100,
+            "read_only_mode": False,
+        },
+        "llm_prompts": {"override_system_prompt": None, "use_file": False, "file_path": None},
+        "llm_context": {
+            "mode": "adaptive",
+            "max_conversation_history": 3,
+            "max_context_tokens": 4000,
+        },
+        "llm_developer": {
+            "debug_mode": False,
+            "log_prompts": False,
+            "log_responses": False,
+            "log_timing": False,
+        },
+        "llm_tools": {"disabled": ["save_contacts_with_images", "list_memory"]},
+    }
+    return LLMConfigManager(config_dict=test_config)
+
+
+@pytest.fixture
+def llm_config_dict():
+    """Create a test configuration dictionary for tests that need to pass config directly."""
+    return {
+        "db_path": "prt_data/test.db",
+        "db_encrypted": False,
+        "database_mode": "test",
+        "llm": {
+            "provider": "ollama",
+            "model": "gpt-oss:20b",
+            "base_url": "http://localhost:11434",
+            "keep_alive": "30m",
+            "timeout": 300,
+            "temperature": 0.1,
+        },
+        "llm_permissions": {
+            "allow_create": True,
+            "allow_update": True,
+            "allow_delete": False,
+            "require_confirmation": {"delete": True, "bulk_operations": True},
+            "max_bulk_operations": 100,
+            "read_only_mode": False,
+        },
+        "llm_prompts": {"override_system_prompt": None, "use_file": False, "file_path": None},
+        "llm_context": {
+            "mode": "adaptive",
+            "max_conversation_history": 3,
+            "max_context_tokens": 4000,
+        },
+        "llm_developer": {
+            "debug_mode": False,
+            "log_prompts": False,
+            "log_responses": False,
+            "log_timing": False,
+        },
+        "llm_tools": {"disabled": ["save_contacts_with_images", "list_memory"]},
+    }
