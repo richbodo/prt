@@ -79,7 +79,7 @@ class TestCollectSystemEnvironment:
 
         # Verify
         assert result["ollama"]["available"] is False
-        assert "TimeoutExpired" in result["ollama"]["error"]
+        assert "timed out" in result["ollama"]["error"]
 
 
 class TestCollectDatabaseInfo:
@@ -151,7 +151,7 @@ class TestCollectLLMInfo:
         mock_get_registry.return_value = mock_registry
 
         mock_resolve_alias.return_value = "gpt-oss:20b"
-        mock_check_availability.return_value = {"available": True, "error": None}
+        mock_check_availability.return_value = {"available_in_ollama": True, "error": None}
 
         # Test
         result = collect_llm_info()
@@ -265,9 +265,49 @@ class TestCollectSystemPrompt:
 
         # Verify
         assert result["status"] == "available"
-        assert result["prompt_preview"].endswith("...")  # Should be truncated
-        assert len(result["prompt_preview"]) == 503  # 500 chars + "..."
+        # With the new 6000 char limit, 1000 chars should not be truncated
+        assert not result["prompt_preview"].endswith("...")  # Should NOT be truncated
+        assert result["prompt_preview"] == long_prompt  # Should be the full prompt
         assert result["prompt_length"] == 1000
+
+    @patch("prt_src.debug_info.load_config")
+    @patch("prt_src.debug_info.PRTAPI")
+    @patch("prt_src.debug_info.resolve_model_alias")
+    @patch("prt_src.llm_ollama.OllamaLLM")
+    def test_collect_system_prompt_enhanced_preview(
+        self, mock_llm_class, mock_resolve_alias, mock_api_class, mock_load_config
+    ):
+        """Test that enhanced preview includes tools section."""
+        # Setup mocks
+        mock_config = {"llm": {}}
+        mock_load_config.return_value = mock_config
+
+        mock_api = Mock()
+        mock_api_class.return_value = mock_api
+
+        mock_resolve_alias.return_value = "gpt-oss:20b"
+
+        mock_llm = Mock()
+        # Create a realistic system prompt with tools section
+        long_prompt = (
+            "You are PRT Assistant, a specialized AI for managing personal relationships and contacts. "
+            * 10
+            + "\n\n## AVAILABLE TOOLS\n\nThe following tools are available for database operations:\n\n"
+            "### execute_sql\nExecute SQL queries on the database for complex searches and analytics."
+            * 20
+        )
+        mock_llm._create_system_prompt.return_value = long_prompt
+        mock_llm_class.return_value = mock_llm
+
+        # Test
+        result = collect_system_prompt()
+
+        # Verify
+        assert result["status"] == "available"
+        assert "AVAILABLE TOOLS" in result["prompt_preview"]
+        assert "execute_sql" in result["prompt_preview"]
+        assert len(result["prompt_preview"]) > 1000  # Should be longer than old limit
+        assert result["prompt_length"] == len(long_prompt)
 
 
 class TestCollectConfigInfo:
@@ -284,10 +324,13 @@ class TestCollectConfigInfo:
         }
         mock_load_config.return_value = mock_config
 
-        mock_path = Mock()
-        mock_path.exists.return_value = True
-        mock_data_dir.return_value = Mock()
-        mock_data_dir.return_value.__truediv__.return_value = mock_path
+        mock_config_path = Mock()
+        mock_config_path.exists.return_value = True
+        mock_config_path.__str__ = Mock(return_value="/test/config/prt_config.json")
+
+        mock_data_path = Mock()
+        mock_data_path.__truediv__ = Mock(return_value=mock_config_path)
+        mock_data_dir.return_value = mock_data_path
 
         # Test
         result = collect_config_info()

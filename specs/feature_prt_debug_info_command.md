@@ -1,7 +1,7 @@
 # Feature: PRT Debug Info Command
 
 ## Feature Description
-Add a `--prt-debug-info` command line option that provides comprehensive system debug information and exits. This command will **reuse existing system information gathering capabilities** to collect and display critical diagnostic information including the default LLM configuration, LLM connectivity test, system prompt preview, and system environment details. This feature is essential for troubleshooting user issues, validating LLM integration, and providing support information.
+Add a `--prt-debug-info` command line option that provides comprehensive system debug information and exits. This command will **reuse existing system information gathering capabilities** where possible, to collect and display critical diagnostic information including the default LLM configuration, LLM connectivity test, system prompt preview, and system environment details. This feature is essential for troubleshooting user issues, validating LLM integration, and providing support information.
 
 ## User Story
 As a **PRT user or developer**
@@ -12,10 +12,10 @@ So that **I can troubleshoot issues, verify my LLM setup is working, and provide
 Currently, PRT users experiencing issues have no single command to gather comprehensive diagnostic information about their system setup, LLM configuration, and connectivity status. Users must manually check multiple aspects of the system to troubleshoot problems, which is time-consuming and error-prone. Support requests often lack critical system information needed for effective debugging.
 
 ## Solution Statement
-Implement a `--prt-debug-info` command line flag that **orchestrates existing system information gathering functions** to collect and display all essential diagnostic information in a structured format. The command will **reuse existing database status, LLM connectivity, and configuration functions** rather than duplicating code, ensuring consistency with other parts of the application.
+Implement a `--prt-debug-info` command line flag that **orchestrates existing system information gathering functions** to collect and display all essential diagnostic information in a structured format. Wherever possible he command will **reuse existing database status, LLM connectivity, and configuration functions** rather than duplicating code, ensuring consistency with other parts of the application.  The goal is to have only one set of system information and llm information code that can be leveraged by various parts of the system.
 
 ## Relevant Files
-**CRITICAL: Reuse existing functions rather than duplicating functionality**
+**CRITICAL: Where possible - Reuse existing functions rather than duplicating functionality**
 
 ### Existing System Info Functions to Reuse:
 
@@ -61,7 +61,7 @@ Implement a `--prt-debug-info` command line flag that **orchestrates existing sy
 
 ### New Files:
 - **`prt_src/debug_info.py`**: Orchestration module that **calls existing functions**
-  - **NO duplicate functionality** - only orchestrates existing functions
+  - **NO duplicate functionality** - wherever possible - orchestrates existing functions
   - Handles formatting and display of information gathered from existing functions
   - Provides system environment detection (OS, Python version) - **only new functionality**
 
