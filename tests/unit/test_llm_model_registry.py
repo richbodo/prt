@@ -338,13 +338,13 @@ class TestOllamaModelRegistryGetModelInfo:
             "details": {"family": "llama", "parameter_size": "8B", "quantization_level": "Q4_K_M"},
         }
 
-    @patch("requests.get")
-    def test_get_model_info_success(self, mock_get, mock_show_response):
+    @patch("requests.post")
+    def test_get_model_info_success(self, mock_post, mock_show_response):
         """Test successful model info retrieval."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_show_response
-        mock_get.return_value = mock_response
+        mock_post.return_value = mock_response
 
         registry = OllamaModelRegistry()
         info = registry.get_model_info("llama3:8b")
@@ -353,13 +353,13 @@ class TestOllamaModelRegistryGetModelInfo:
         assert info.name == "llama3:8b"
         assert "llama3:8b" in registry._model_cache
 
-    @patch("requests.get")
-    def test_get_model_info_caching(self, mock_get, mock_show_response):
+    @patch("requests.post")
+    def test_get_model_info_caching(self, mock_post, mock_show_response):
         """Test that get_model_info caches results."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_show_response
-        mock_get.return_value = mock_response
+        mock_post.return_value = mock_response
 
         registry = OllamaModelRegistry()
 
@@ -372,15 +372,15 @@ class TestOllamaModelRegistryGetModelInfo:
         assert info2 is not None
 
         # Should only have made one HTTP request
-        assert mock_get.call_count == 1
+        assert mock_post.call_count == 1
 
-    @patch("requests.get")
-    def test_get_model_info_force_refresh(self, mock_get, mock_show_response):
+    @patch("requests.post")
+    def test_get_model_info_force_refresh(self, mock_post, mock_show_response):
         """Test force refresh bypasses cache."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = mock_show_response
-        mock_get.return_value = mock_response
+        mock_post.return_value = mock_response
 
         registry = OllamaModelRegistry()
 
@@ -393,37 +393,46 @@ class TestOllamaModelRegistryGetModelInfo:
         assert info2 is not None
 
         # Should have made two HTTP requests
-        assert mock_get.call_count == 2
+        assert mock_post.call_count == 2
 
-    @patch("requests.get")
-    def test_get_model_info_404_error(self, mock_get):
+    @patch("requests.post")
+    def test_get_model_info_404_error(self, mock_post):
         """Test get_model_info returns None on 404."""
         mock_response = Mock()
         mock_response.status_code = 404
-        mock_get.return_value = mock_response
+
+        # Create HTTPError with response attribute
+        http_error = requests.HTTPError("Not found")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+        mock_post.return_value = mock_response
 
         registry = OllamaModelRegistry()
         info = registry.get_model_info("nonexistent:model")
 
         assert info is None
 
-    @patch("requests.get")
-    def test_get_model_info_connection_error(self, mock_get):
+    @patch("requests.post")
+    def test_get_model_info_connection_error(self, mock_post):
         """Test get_model_info returns None on connection error."""
-        mock_get.side_effect = requests.ConnectionError("Connection refused")
+        mock_post.side_effect = requests.ConnectionError("Connection refused")
 
         registry = OllamaModelRegistry()
         info = registry.get_model_info("llama3:8b")
 
         assert info is None
 
-    @patch("requests.get")
-    def test_get_model_info_http_error(self, mock_get):
+    @patch("requests.post")
+    def test_get_model_info_http_error(self, mock_post):
         """Test get_model_info returns None on HTTP error."""
         mock_response = Mock()
         mock_response.status_code = 500
-        mock_response.raise_for_status.side_effect = requests.HTTPError("Server error")
-        mock_get.return_value = mock_response
+
+        # Create HTTPError with response attribute
+        http_error = requests.HTTPError("Server error")
+        http_error.response = mock_response
+        mock_response.raise_for_status.side_effect = http_error
+        mock_post.return_value = mock_response
 
         registry = OllamaModelRegistry()
         info = registry.get_model_info("llama3:8b")
@@ -508,8 +517,11 @@ class TestOllamaModelRegistryHelperMethods:
         cached_models = list(registry_with_models._model_cache.keys())
         assert default in cached_models
 
-    def test_get_default_model_empty_cache(self):
+    @patch.object(OllamaModelRegistry, "list_models")
+    def test_get_default_model_empty_cache(self, mock_list_models):
         """Test get_default_model returns None when no models."""
+        mock_list_models.return_value = []
+
         registry = OllamaModelRegistry()
         default = registry.get_default_model()
 
@@ -572,17 +584,24 @@ class TestOllamaModelRegistryCacheBehavior:
         assert "llama3:8b" in registry._model_cache
         assert registry._cache_timestamp is not None
 
-    def test_cache_force_refresh_clears_timestamp(self):
-        """Test force refresh clears cache timestamp."""
+    @patch("requests.get")
+    def test_cache_force_refresh_clears_timestamp(self, mock_get):
+        """Test force refresh updates cache timestamp."""
+        # Mock a successful API response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"models": []}
+        mock_get.return_value = mock_response
+
         registry = OllamaModelRegistry()
-        registry._cache_timestamp = datetime.now()
+        old_timestamp = datetime.now() - timedelta(seconds=100)
+        registry._cache_timestamp = old_timestamp
 
-        with patch.object(registry, "_fetch_models_from_api") as mock_fetch:
-            mock_fetch.return_value = []
-            registry.list_models(force_refresh=True)
+        registry.list_models(force_refresh=True)
 
-        # Timestamp should be refreshed
+        # Timestamp should be refreshed (newer than the old one)
         assert registry._cache_timestamp is not None
+        assert registry._cache_timestamp > old_timestamp
 
 
 class TestOllamaModelRegistryErrorHandling:

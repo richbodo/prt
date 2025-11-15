@@ -164,7 +164,11 @@ class LLMMemory:
                 result = json.load(f)
 
             load_time = time.time() - load_start
-            data_count = len(result.get("data", []))
+
+            # Calculate data count safely - use stored value or calculate for lists
+            data_count = result.get("data_count", 0)
+            if data_count == 0 and isinstance(result.get("data"), list):
+                data_count = len(result["data"])
 
             logger.info(
                 f"[MEMORY_LOAD_SUCCESS] {result_id} loaded in {load_time:.3f}s, {data_count} items"

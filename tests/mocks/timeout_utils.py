@@ -83,16 +83,96 @@ def contract_test_timeout(seconds: int = 300):
 
 def is_ollama_available() -> bool:
     """
-    Check if Ollama is available and responding.
+    Check if Ollama is available and responding with models.
+
+    This provides a tiered availability check:
+    1. Basic connectivity via /api/version
+    2. Model availability via /api/tags
+    3. At least one model is available
 
     Returns:
-        True if Ollama is available, False otherwise
+        True if Ollama is available with models, False otherwise
     """
     try:
         import requests
 
-        response = requests.get("http://localhost:11434/api/tags", timeout=2)
-        return response.status_code == 200
+        # Test basic connectivity
+        version_response = requests.get("http://localhost:11434/api/version", timeout=2)
+        if version_response.status_code != 200:
+            return False
+
+        # Test model availability
+        tags_response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        if tags_response.status_code != 200:
+            return False
+
+        # Check if any models are available
+        tags_data = tags_response.json()
+        models = tags_data.get("models", [])
+        return len(models) > 0
+
+    except Exception:
+        return False
+
+
+def is_ollama_inference_ready() -> bool:
+    """
+    Check if Ollama can actually perform inference (more thorough than just availability).
+
+    This tests actual inference capability with a simple prompt.
+    Use this for tests that need to verify LLM functionality, not just connectivity.
+
+    Returns:
+        True if Ollama can perform inference, False otherwise
+    """
+    try:
+        import requests
+
+        if not is_ollama_available():
+            return False
+
+        # Test with a simple inference call - try multiple models if available
+        # Get available models
+        tags_response = requests.get("http://localhost:11434/api/tags", timeout=2)
+        if tags_response.status_code != 200:
+            return False
+
+        models_data = tags_response.json()
+        available_models = [model["name"] for model in models_data.get("models", [])]
+
+        # Prefer faster/smaller models for the inference test
+        preferred_models = [
+            "phi4-mini:latest",
+            "phi3-mini-local:latest",
+            "mistral:7b-instruct",
+            "gpt-oss:20b",
+        ]
+        test_model = None
+
+        for preferred in preferred_models:
+            if preferred in available_models:
+                test_model = preferred
+                break
+
+        if not test_model and available_models:
+            # Use the first available model as fallback
+            test_model = available_models[0]
+
+        if not test_model:
+            return False
+
+        # Test with a simple inference call
+        test_data = {"model": test_model, "prompt": "Hi", "stream": False}
+        response = requests.post(
+            "http://localhost:11434/api/generate", json=test_data, timeout=20
+        )  # Increased timeout
+        if response.status_code != 200:
+            return False
+
+        result = response.json()
+        response_text = result.get("response", "").strip()
+        return len(response_text) > 0
+
     except Exception:
         return False
 
@@ -138,17 +218,17 @@ def contract_test(timeout_seconds: int = 300):
     return decorator
 
 
-def flaky_contract_test(reruns: int = 2, reruns_delay: int = 5, timeout_seconds: int = 300):
+def flaky_contract_test(max_runs: int = 3, min_passes: int = 1, timeout_seconds: int = 300):
     """
     Decorator for flaky contract tests with retry logic and timeout.
 
     Args:
-        reruns: Number of times to retry on failure
-        reruns_delay: Delay between retries in seconds
+        max_runs: Maximum number of times the test will be run
+        min_passes: Minimum number of times the test must pass to be a success
         timeout_seconds: Maximum time to allow for each test run
 
     Usage:
-        @flaky_contract_test(reruns=3, reruns_delay=10)
+        @flaky_contract_test(max_runs=3, min_passes=1)
         def test_flaky_llm_behavior():
             # Test implementation
             pass
@@ -156,7 +236,7 @@ def flaky_contract_test(reruns: int = 2, reruns_delay: int = 5, timeout_seconds:
 
     def decorator(func):
         # Apply decorators in sequence
-        func = pytest.mark.flaky(reruns=reruns, reruns_delay=reruns_delay)(func)
+        func = pytest.mark.flaky(max_runs=max_runs, min_passes=min_passes)(func)
         func = contract_test(timeout_seconds)(func)
         return func
 

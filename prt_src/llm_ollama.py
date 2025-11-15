@@ -573,11 +573,12 @@ class OllamaLLM:
                     contact["has_profile_image"] = False
 
             memory_id = llm_memory.save_result(clean_contacts, "contacts", desc)
+            usage_info = f"Saved {len(clean_contacts)} contacts to memory {memory_id}. Use this memory_id with generate_directory tool to create visualization."
             return {
                 "success": True,
                 "memory_id": memory_id,
                 "count": len(clean_contacts),
-                "usage": {},
+                "usage": usage_info,
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -1211,6 +1212,15 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             return f"Error: Request to Ollama timed out after {self.timeout} seconds."
         except requests.exceptions.RequestException as e:
             return f"Error communicating with Ollama: {e}"
+        except ValueError as e:
+            # Handle validation errors gracefully
+            if "Validation failed" in str(e) or "Response size" in str(e):
+                return f"Error: Invalid response from LLM service: {e}"
+            # Other ValueError types should still be raised
+            import traceback
+
+            traceback.print_exc()
+            raise e
         except Exception as e:
             return f"Error processing response: {e}"
 

@@ -109,7 +109,7 @@ class TestLLMNetworkValidation:
         mock_response.text = (large_chunk + large_chunk).decode()
         mock_response.iter_content.return_value = [large_chunk, large_chunk]  # Total: 12MB
 
-        with pytest.raises(ValueError, match="Response size exceeded.*limit"):
+        with pytest.raises(ValueError, match="Response size.*exceeds maximum"):
             self.llm._validate_and_parse_response(mock_response, "test")
 
     def test_validate_response_large_response_warning(self):

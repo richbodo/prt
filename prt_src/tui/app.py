@@ -340,21 +340,35 @@ class PRTApp(App):
 
     async def action_toggle_top_nav(self) -> None:
         """Toggle the top nav dropdown menu."""
-        logger.info(
-            f"[APP] action_toggle_top_nav called, current screen: {type(self.screen).__name__}"
-        )
-        # Delegate to current screen if it has the action
+        # Handle app-level nav menu state toggle
+        self.nav_menu_open = not self.nav_menu_open
+
+        # Update title to reflect menu state
+        if self.nav_menu_open:
+            self.title = "(N)av menu open"
+        else:
+            self.title = "(N)av menu closed"
+
+        logger.info(f"[APP] action_toggle_top_nav called, nav_menu_open: {self.nav_menu_open}")
+
+        # Delegate to current screen if it has the action and screens exist
         try:
-            if hasattr(self.screen, "action_toggle_menu"):
-                logger.info(
-                    f"[APP] Delegating to {type(self.screen).__name__}.action_toggle_menu()"
-                )
-                self.screen.action_toggle_menu()
-                logger.info("[APP] Toggled screen dropdown menu")
+            if hasattr(self, "screen_stack") and len(self.screen_stack) > 0:
+                current_screen = self.screen
+                logger.info(f"[APP] Current screen: {type(current_screen).__name__}")
+
+                if hasattr(current_screen, "action_toggle_menu"):
+                    logger.info(
+                        f"[APP] Delegating to {type(current_screen).__name__}.action_toggle_menu()"
+                    )
+                    current_screen.action_toggle_menu()
+                    logger.info("[APP] Toggled screen dropdown menu")
+                else:
+                    logger.warning(
+                        f"[APP] Screen {type(current_screen).__name__} has no action_toggle_menu method"
+                    )
             else:
-                logger.warning(
-                    f"[APP] Screen {type(self.screen).__name__} has no action_toggle_menu method"
-                )
+                logger.info("[APP] No screens on stack - only toggling app-level nav menu state")
         except Exception as e:
             logger.error(f"[APP] Could not toggle menu: {e}", exc_info=True)
 

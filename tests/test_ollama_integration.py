@@ -2,6 +2,7 @@
 Tests for Ollama LLM integration.
 """
 
+import json
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -75,9 +76,9 @@ class TestOllamaLLM:
 
         # Check that the prompt contains expected sections
         assert "Personal Relationship Toolkit" in prompt
-        assert "AVAILABLE TOOLS:" in prompt
+        assert "AVAILABLE TOOLS" in prompt  # Updated to match new format (without colon)
         assert "search_contacts" in prompt  # At least one tool should be mentioned
-        assert "INSTRUCTIONS:" in prompt
+        assert "USAGE INSTRUCTIONS" in prompt  # Updated to match new format
 
     def test_format_tool_calls(self):
         """Test formatting tools for Ollama API."""
@@ -90,9 +91,14 @@ class TestOllamaLLM:
         assert len(formatted_tools) == len(llm.tools)
 
         for tool in formatted_tools:
-            assert "name" in tool
-            assert "description" in tool
-            assert "parameters" in tool
+            assert "type" in tool
+            assert tool["type"] == "function"
+            assert "function" in tool
+            # Check the nested structure
+            function_def = tool["function"]
+            assert "name" in function_def
+            assert "description" in function_def
+            assert "parameters" in function_def
 
     def test_default_disabled_tools_removed(self):
         """Default configuration should remove unstable tools from availability."""
@@ -119,10 +125,14 @@ class TestOllamaLLM:
         mock_api = Mock()
         llm = OllamaLLM(mock_api)
 
-        # Mock response without tool calls
+        # Mock response without tool calls - using Ollama API format
         mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Content-Type": "application/json"}
+        mock_response.text = '{"message": {"content": "Hello! How can I help you today?"}}'
+        mock_response.content = mock_response.text.encode()
         mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Hello! How can I help you today?"}}]
+            "message": {"content": "Hello! How can I help you today?"}
         }
         mock_post.return_value = mock_response
 
@@ -138,30 +148,36 @@ class TestOllamaLLM:
         mock_api.search_contacts.return_value = [{"id": 1, "name": "John Doe"}]
         llm = OllamaLLM(mock_api)
 
-        # Mock first response with tool call
+        # Mock first response with tool call - using Ollama API format
         mock_response1 = Mock()
-        mock_response1.json.return_value = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "I'll search for contacts for you.",
-                        "tool_calls": [
-                            {
-                                "id": "call_1",
-                                "name": "search_contacts",
-                                "arguments": {"query": "John"},
-                            }
-                        ],
+        mock_response1.status_code = 200
+        mock_response1.headers = {"Content-Type": "application/json"}
+        mock_response1_data = {
+            "message": {
+                "content": "I'll search for contacts for you.",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "function": {
+                            "name": "search_contacts",
+                            "arguments": {"query": "John"},
+                        },
                     }
-                }
-            ]
+                ],
+            }
         }
+        mock_response1.text = json.dumps(mock_response1_data)
+        mock_response1.content = mock_response1.text.encode()
+        mock_response1.json.return_value = mock_response1_data
 
         # Mock second response (after tool call)
         mock_response2 = Mock()
-        mock_response2.json.return_value = {
-            "choices": [{"message": {"content": "I found 1 contact: John Doe"}}]
-        }
+        mock_response2.status_code = 200
+        mock_response2.headers = {"Content-Type": "application/json"}
+        mock_response2_data = {"message": {"content": "I found 1 contact: John Doe"}}
+        mock_response2.text = json.dumps(mock_response2_data)
+        mock_response2.content = mock_response2.text.encode()
+        mock_response2.json.return_value = mock_response2_data
 
         mock_post.side_effect = [mock_response1, mock_response2]
 
@@ -174,11 +190,13 @@ class TestOllamaLLM:
     @patch("requests.post")
     def test_chat_connection_error(self, mock_post):
         """Test chat with connection error."""
+        import requests
+
         mock_api = Mock()
         llm = OllamaLLM(mock_api)
 
-        # Mock connection error
-        mock_post.side_effect = Exception("Connection failed")
+        # Mock connection error - use requests.RequestException to match error handling
+        mock_post.side_effect = requests.exceptions.RequestException("Connection failed")
 
         result = llm.chat("Hello")
 

@@ -1,18 +1,53 @@
-"""Test FTS5 full-text search migration and functionality."""
+"""Test FTS5 full-text search migration and functionality.
 
-import contextlib
+This module contains both unit tests and integration tests for the FTS5 migration system.
+The integration tests use real SQLite databases to verify actual migration behavior,
+following the project's "headless-first" testing philosophy.
+
+Integration tests are marked with @pytest.mark.integration and target < 5 seconds total
+execution time as specified in the project testing strategy.
+"""
+
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import text
 
+from prt_src.db import create_database
 from prt_src.schema_manager import SchemaManager
 
 
 @pytest.fixture
+def migration_test_db(tmp_path):
+    """Create a test database at schema version 4 for migration testing."""
+    db_path = tmp_path / "migration_test.db"
+    db = create_database(db_path)
+
+    # Initialize the database tables
+    db.initialize()
+
+    # Create and initialize the schema_version table using SchemaManager
+    schema_manager = SchemaManager(db)
+    schema_manager.create_schema_version_table()
+
+    # Manually set schema version to 4 to simulate pre-migration state
+    db.session.execute(text("UPDATE schema_version SET version = 4"))
+    db.session.commit()
+
+    return db
+
+
+@pytest.fixture
+def schema_manager_real(migration_test_db):
+    """Create SchemaManager with real database for integration testing."""
+    return SchemaManager(migration_test_db)
+
+
+@pytest.fixture
 def mock_db():
-    """Create a mock database with session."""
+    """Create a mock database with session for legacy unit tests."""
     db = MagicMock()
     db.path = Path("/tmp/test.db")
     db.session = MagicMock()
@@ -21,80 +56,19 @@ def mock_db():
 
 @pytest.fixture
 def schema_manager(mock_db):
-    """Create SchemaManager with mock database."""
+    """Create SchemaManager with mock database for legacy unit tests."""
     return SchemaManager(mock_db)
 
 
 class TestFTS5Migration:
-    """Test FTS5 migration functionality."""
+    """Test FTS5 migration functionality.
 
-    def test_migration_v4_to_v5_creates_fts_tables(self, schema_manager, mock_db):
-        """Verify FTS5 tables are created during migration."""
-        # Mock the migration file to exist
-        with patch("pathlib.Path.exists", return_value=True), patch(
-            "builtins.open", create=True
-        ) as mock_open:
-            # Provide sample SQL content
-            mock_open.return_value.__enter__.return_value.read.return_value = """
-            CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
-            CREATE VIRTUAL TABLE notes_fts USING fts5(note_id, title);
-            CREATE VIRTUAL TABLE tags_fts USING fts5(tag_id, name);
-            """
+    This class contains both unit tests (that validate SQL file content and basic functionality)
+    and integration tests (that use real databases to test actual migration behavior).
 
-            # Run migration
-            schema_manager.apply_migration_v4_to_v5()
-
-            # Verify SQL statements were executed
-            assert mock_db.session.execute.called
-            assert mock_db.session.commit.called
-
-    def test_migration_handles_existing_tables(self, schema_manager, mock_db):
-        """Verify migration handles already existing FTS tables gracefully."""
-        # Mock execute to raise "already exists" error
-        mock_db.session.execute.side_effect = [
-            Exception("table contacts_fts already exists"),
-            None,  # Continue with other statements
-            None,
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True), patch(
-            "builtins.open", create=True
-        ) as mock_open:
-            mock_open.return_value.__enter__.return_value.read.return_value = """
-            CREATE VIRTUAL TABLE contacts_fts USING fts5(contact_id, name);
-            UPDATE schema_version SET version = 5;
-            """
-
-            # Should not raise exception
-            schema_manager.apply_migration_v4_to_v5()
-            assert mock_db.session.commit.called
-
-    def test_migration_path_includes_v5(self, schema_manager):
-        """Verify migration paths include version 5."""
-        # Test various paths to v5
-        paths_to_test = [
-            (4, 5, 1),  # v4 to v5 should have 1 migration
-            (3, 5, 2),  # v3 to v5 should have 2 migrations
-            (2, 5, 3),  # v2 to v5 should have 3 migrations
-            (1, 5, 4),  # v1 to v5 should have 4 migrations
-        ]
-
-        for current, target, _expected_count in paths_to_test:
-            # Create mocks for all migration methods
-            schema_manager.apply_migration_v1_to_v2 = MagicMock()
-            schema_manager.apply_migration_v2_to_v3 = MagicMock()
-            schema_manager.apply_migration_v3_to_v4 = MagicMock()
-            schema_manager.apply_migration_v4_to_v5 = MagicMock()
-
-            # Get migration path (don't execute, just check it exists)
-            with contextlib.suppress(AttributeError):
-                schema_manager.migrate_to_version(
-                    target, current
-                )  # Expected since we're using mocks
-
-            # Verify v4_to_v5 is called for all paths ending at v5
-            if current < 5:
-                assert schema_manager.apply_migration_v4_to_v5.called
+    Integration tests use the migration_test_db fixture which creates a database at schema
+    version 4, then test the actual migration to version 5 with real FTS5 table creation.
+    """
 
     def test_current_version_is_6(self, schema_manager):
         """Verify CURRENT_VERSION is set to 6."""
@@ -127,33 +101,124 @@ class TestFTS5Migration:
         assert "CREATE TRIGGER" in content
         assert "tokenize='porter unicode61'" in content
 
-    def test_schema_version_tracking(self, schema_manager, mock_db):
-        """Verify schema version is updated to 5."""
-        with patch("pathlib.Path.exists", return_value=True), patch(
-            "builtins.open", create=True
-        ) as mock_open:
-            mock_open.return_value.__enter__.return_value.read.return_value = """
-            UPDATE schema_version SET version = 5;
-            """
+    @pytest.mark.integration
+    def test_v4_to_v5_migration_integration(self, schema_manager_real, migration_test_db):
+        """Test actual FTS5 migration with real database."""
+        # Verify starting state: schema version should be 4
+        result = migration_test_db.session.execute(
+            text("SELECT version FROM schema_version")
+        ).fetchone()
+        assert result[0] == 4, f"Expected schema version 4, got {result[0]}"
 
-            schema_manager.apply_migration_v4_to_v5()
+        # Run the migration
+        schema_manager_real.apply_migration_v4_to_v5()
 
-            # Check that version update SQL was executed
-            calls = mock_db.session.execute.call_args_list
-            version_update_called = False
-            for call in calls:
-                # Check if the call has arguments and convert to string for checking
-                if len(call[0]) > 0:
-                    sql_text = str(call[0][0])
-                    if "version = 5" in sql_text:
-                        version_update_called = True
-                        break
+        # Verify schema version is updated to 5
+        result = migration_test_db.session.execute(
+            text("SELECT version FROM schema_version")
+        ).fetchone()
+        assert result[0] == 5, f"Expected schema version 5 after migration, got {result[0]}"
 
-            assert version_update_called or mock_db.session.execute.called
+    @pytest.mark.integration
+    def test_migration_creates_fts_tables(self, schema_manager_real, migration_test_db):
+        """Verify FTS5 virtual tables are created after migration."""
+        # Run the migration
+        schema_manager_real.apply_migration_v4_to_v5()
+
+        # Check that FTS5 virtual tables exist
+        tables_result = migration_test_db.session.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_fts'")
+        ).fetchall()
+
+        fts_tables = {row[0] for row in tables_result}
+        expected_tables = {"contacts_fts", "notes_fts", "tags_fts"}
+
+        assert expected_tables.issubset(
+            fts_tables
+        ), f"Missing FTS tables. Expected: {expected_tables}, Found: {fts_tables}"
+
+    @pytest.mark.integration
+    def test_migration_updates_schema_version(self, schema_manager_real, migration_test_db):
+        """Verify schema version progression from 4 to 5."""
+        # Check initial version
+        initial_version = migration_test_db.session.execute(
+            text("SELECT version FROM schema_version")
+        ).fetchone()
+        assert initial_version[0] == 4
+
+        # Apply migration
+        schema_manager_real.apply_migration_v4_to_v5()
+
+        # Verify final version
+        final_version = migration_test_db.session.execute(
+            text("SELECT version FROM schema_version")
+        ).fetchone()
+        assert final_version[0] == 5
+
+    @pytest.mark.integration
+    def test_fts_search_functionality_after_migration(self, schema_manager_real, migration_test_db):
+        """Validate that FTS search functionality works after migration."""
+        # Add some test data first
+        migration_test_db.session.execute(
+            text("INSERT INTO contacts (name, email) VALUES ('Test User', 'test@example.com')")
+        )
+        migration_test_db.session.execute(
+            text("INSERT INTO notes (title, content) VALUES ('Test Note', 'This is a test note')")
+        )
+        migration_test_db.session.execute(text("INSERT INTO tags (name) VALUES ('test-tag')"))
+        migration_test_db.session.commit()
+
+        # Run migration to create FTS tables
+        schema_manager_real.apply_migration_v4_to_v5()
+
+        # Test FTS search functionality
+        search_results = migration_test_db.session.execute(
+            text("SELECT contact_id FROM contacts_fts WHERE contacts_fts MATCH 'Test'")
+        ).fetchall()
+
+        assert len(search_results) > 0, "FTS search should find the test contact"
+
+    @pytest.mark.integration
+    def test_migration_is_idempotent(self, schema_manager_real, migration_test_db):
+        """Ensure running migration twice doesn't break anything."""
+        # Run migration first time
+        schema_manager_real.apply_migration_v4_to_v5()
+
+        # Verify it worked
+        version_after_first = migration_test_db.session.execute(
+            text("SELECT version FROM schema_version")
+        ).fetchone()
+        assert version_after_first[0] == 5
+
+        # Run migration again - this should handle existing tables gracefully
+        # Note: The current implementation uses executescript() which should handle this,
+        # but we expect this to potentially raise an exception since the implementation
+        # doesn't explicitly handle idempotency for FTS5 tables
+        try:
+            schema_manager_real.apply_migration_v4_to_v5()
+            # If it succeeds, verify version is still 5
+            version_after_second = migration_test_db.session.execute(
+                text("SELECT version FROM schema_version")
+            ).fetchone()
+            assert version_after_second[0] == 5
+        except RuntimeError:
+            # If it fails due to existing tables, that's expected behavior
+            # The important thing is that the database is not corrupted
+            version_after_error = migration_test_db.session.execute(
+                text("SELECT version FROM schema_version")
+            ).fetchone()
+            assert (
+                version_after_error[0] == 5
+            ), "Schema version should remain 5 even after failed re-migration"
 
 
 class TestFTS5Integration:
-    """Test FTS5 search functionality integration."""
+    """Test FTS5 search functionality integration.
+
+    This class contains unit tests that validate the SQL migration file content
+    without requiring actual database operations. These tests focus on ensuring
+    the migration SQL has proper structure and expected triggers/indexes.
+    """
 
     @pytest.fixture
     def sample_search_data(self):

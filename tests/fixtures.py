@@ -245,6 +245,9 @@ def get_fixture_spec():
             "without_email": [c for c in SAMPLE_CONTACTS if not c.get("email")],
             "is_you_contact": [c for c in SAMPLE_CONTACTS if c.get("is_you")],
             "regular_contacts": [c for c in SAMPLE_CONTACTS if not c.get("is_you")],
+            "with_images": [c for c in SAMPLE_CONTACTS if c.get("image_key")],
+            "without_images": [c for c in SAMPLE_CONTACTS if not c.get("image_key")],
+            "expected_with_images_count": len([c for c in SAMPLE_CONTACTS if c.get("image_key")]),
         },
         "tags": {
             "count": len(SAMPLE_TAGS),

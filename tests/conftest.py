@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from prt_src.db import create_database  # noqa: E402
 from tests.fixtures import setup_test_database  # noqa: E402
+from tests.mocks.mock_llm_memory import TestMemoryContext  # noqa: E402
+from tests.mocks.mock_llm_memory import create_test_memory  # noqa: E402
 
 # Configure pytest-asyncio
 pytest_plugins = ("pytest_asyncio",)
@@ -99,3 +101,51 @@ def pilot_screen():
             yield pilot
 
     return _pilot
+
+
+@pytest.fixture
+def mock_llm_memory(request):
+    """Create isolated mock memory for tests."""
+    test_name = request.node.name
+    return create_test_memory(test_name=test_name, use_temp_files=False)
+
+
+@pytest.fixture
+def mock_llm_memory_with_files(request):
+    """Create isolated mock memory with file storage for tests."""
+    test_name = request.node.name
+    return create_test_memory(test_name=test_name, use_temp_files=True)
+
+
+@pytest.fixture
+def isolated_memory_context(request):
+    """Context manager for completely isolated LLM memory during tests."""
+    test_name = request.node.name
+    with TestMemoryContext(test_name=test_name, use_temp_files=False, patch_global=True) as memory:
+        yield memory
+
+
+@pytest.fixture
+def isolated_memory_context_with_files(request):
+    """Context manager for isolated LLM memory with file storage during tests."""
+    test_name = request.node.name
+    with TestMemoryContext(test_name=test_name, use_temp_files=True, patch_global=True) as memory:
+        yield memory
+
+
+@pytest.fixture
+def mock_directory_generator():
+    """Mock directory generator to eliminate file system dependencies."""
+    from tests.mocks.mock_directory_generator import MockDirectoryGeneratorPatcher
+
+    with MockDirectoryGeneratorPatcher(mock_success=True) as patcher:
+        yield patcher
+
+
+@pytest.fixture
+def mock_directory_generator_fail():
+    """Mock directory generator that simulates generation failures."""
+    from tests.mocks.mock_directory_generator import MockDirectoryGeneratorPatcher
+
+    with MockDirectoryGeneratorPatcher(mock_success=False) as patcher:
+        yield patcher
