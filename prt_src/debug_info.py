@@ -254,10 +254,11 @@ def collect_system_prompt() -> Dict[str, Any]:
 
         # Get system prompt using existing method
         system_prompt = llm._create_system_prompt()
-        prompt_info["prompt_preview"] = (
-            system_prompt[:500] + "..." if len(system_prompt) > 500 else system_prompt
-        )
+        # Store the full system prompt
+        prompt_info["full_prompt"] = system_prompt
         prompt_info["prompt_length"] = len(system_prompt)
+        # For --prt-debug-info, show the full prompt (unlimited length)
+        prompt_info["prompt_preview"] = system_prompt
         prompt_info["status"] = "available"
 
     except Exception as e:
@@ -419,8 +420,10 @@ def format_debug_output(debug_data: Dict[str, Any]) -> str:
 
     if prompt["status"] == "available":
         lines.append(f"✅ System Prompt: Generated ({prompt['prompt_length']} characters)")
-        lines.append("Preview:")
+        lines.append("Full System Prompt:")
+        lines.append("-" * 50)
         lines.append(prompt["prompt_preview"])
+        lines.append("-" * 50)
     else:
         lines.append(f"❌ System Prompt: {prompt.get('error', 'Not available')}")
 
