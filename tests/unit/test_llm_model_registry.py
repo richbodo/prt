@@ -670,5 +670,5 @@ class TestOllamaModelRegistryErrorHandling:
             registry = OllamaModelRegistry()
             registry.list_models()
 
-            # Should log the error
-            mock_logger.debug.assert_called()
+            # Should log the connection error at WARNING level
+            mock_logger.warning.assert_called()

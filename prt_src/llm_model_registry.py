@@ -65,8 +65,7 @@ class ModelInfo:
 
         # Clean up leading/trailing dashes and multiple consecutive dashes
         name = name.strip("-")
-        while "--" in name:
-            name = name.replace("--", "-")
+        name = re.sub(r"-+", "-", name)
 
         return name
 
@@ -242,13 +241,13 @@ class OllamaModelRegistry:
             return model_list
 
         except requests.exceptions.ConnectionError:
-            logger.debug("Cannot connect to Ollama - is it running?")
+            logger.warning("Cannot connect to Ollama - is it running?")
             return []
         except requests.exceptions.Timeout:
-            logger.debug("Ollama API request timed out")
+            logger.warning("Ollama API request timed out")
             return []
         except Exception as e:
-            logger.debug(f"Error fetching models from Ollama: {e}")
+            logger.error(f"Error fetching models from Ollama: {e}")
             return []
 
     def get_model_info(self, model_name: str, force_refresh: bool = False) -> Optional[ModelInfo]:

@@ -77,7 +77,7 @@ class PRTAPI:
         import sys
 
         # Check for pytest in the command line or modules
-        if "pytest" in sys.modules or "pytest" in sys.argv[0]:
+        if "pytest" in sys.modules or (sys.argv and "pytest" in sys.argv[0]):
             return True
 
         # Check for test database paths

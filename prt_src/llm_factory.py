@@ -13,6 +13,7 @@ from typing import Union
 from .api import PRTAPI
 from .config import LLMConfigManager
 from .llm_model_registry import OllamaModelRegistry
+from .llm_supported_models import validate_model_selection
 from .logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -188,6 +189,10 @@ def create_llm(
     provider = provider.lower()
     logger.info(f"[LLM Factory] Creating LLM with provider={provider}, model={model}")
 
+    # Validate model selection and show warnings
+    if model:
+        validate_model_and_show_warnings(model, warn=True)
+
     if provider == "ollama":
         return _create_ollama_llm(api, model, config_manager, **kwargs)
     elif provider == "llamacpp":
@@ -306,6 +311,139 @@ def _create_llamacpp_llm(
         config_manager=config_manager,
         **kwargs,
     )
+
+
+def validate_model_and_show_warnings(model_name: str, warn: bool = True) -> tuple[bool, str]:
+    """Validate a model selection and optionally show warnings.
+
+    Args:
+        model_name: Model name to validate
+        warn: Whether to log warnings for unsupported models
+
+    Returns:
+        Tuple of (is_supported, message)
+    """
+    is_supported, message, model_info = validate_model_selection(model_name)
+
+    if warn:
+        if is_supported and model_info:
+            if model_info.support_status == "official":
+                logger.info(f"✓ Using officially supported model: {model_info.display_name}")
+            elif model_info.support_status == "experimental":
+                logger.warning(
+                    f"⚠️  Using experimental model: {model_info.display_name}. "
+                    f"Some features may not work correctly."
+                )
+            elif model_info.support_status == "deprecated":
+                logger.warning(
+                    f"⚠️  Model '{model_info.display_name}' is deprecated. "
+                    f"Consider upgrading to a newer model."
+                )
+        elif not is_supported:
+            logger.warning(
+                f"Model '{model_name}' is not officially supported. "
+                f"You can still try to use it, but some features may not work correctly."
+            )
+
+    return is_supported, message
+
+
+def get_model_validation_info(model_name: str) -> dict:
+    """Get comprehensive validation information for a model.
+
+    Args:
+        model_name: Model name to check
+
+    Returns:
+        Dictionary with validation information
+    """
+    is_supported, message, model_info = validate_model_selection(model_name)
+
+    result = {
+        "model_name": model_name,
+        "is_supported": is_supported,
+        "message": message,
+        "support_info": None,
+        "hardware_requirements": None,
+        "recommendations": [],
+    }
+
+    if model_info:
+        from .llm_supported_models import get_hardware_guidance
+
+        result["support_info"] = {
+            "status": model_info.support_status,
+            "display_name": model_info.display_name,
+            "description": model_info.description,
+            "use_cases": model_info.use_cases,
+            "provider": model_info.provider,
+            "parameter_count": model_info.parameter_count,
+            "context_size": model_info.context_size,
+            "notes": model_info.notes,
+        }
+        result["hardware_requirements"] = get_hardware_guidance(model_info)
+
+        # Add recommendations based on status
+        if model_info.support_status == "experimental":
+            result["recommendations"].append(
+                "Consider using an officially supported model for production use"
+            )
+        elif model_info.support_status == "deprecated":
+            result["recommendations"].append(
+                "This model is deprecated. Please upgrade to a newer model"
+            )
+    else:
+        # Model not in supported list - suggest alternatives
+        from .llm_supported_models import get_recommended_model
+
+        recommended = get_recommended_model()
+        result["recommendations"].append(
+            f"Consider using the recommended model: {recommended.display_name} ({recommended.friendly_name})"
+        )
+
+    return result
+
+
+def check_model_availability(model_name: str) -> dict:
+    """Check if a model is available in the registry.
+
+    Args:
+        model_name: Model name to check
+
+    Returns:
+        Dictionary with availability information
+    """
+    registry = get_registry()
+    result = {
+        "model_name": model_name,
+        "available_in_ollama": False,
+        "resolved_name": None,
+        "ollama_accessible": False,
+        "error": None,
+    }
+
+    try:
+        result["ollama_accessible"] = registry.is_available()
+
+        if result["ollama_accessible"]:
+            # Check if it's a known alias
+            resolved_name = registry.resolve_alias(model_name)
+            if resolved_name:
+                result["available_in_ollama"] = True
+                result["resolved_name"] = resolved_name
+            else:
+                # Check if it's a direct model name
+                model_info = registry.get_model_info(model_name)
+                if model_info:
+                    result["available_in_ollama"] = True
+                    result["resolved_name"] = model_name
+        else:
+            result["error"] = "Ollama is not running or not accessible"
+
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
 
 
 def get_available_providers() -> list[str]:

@@ -21,13 +21,13 @@ from prt_src.llm_ollama import OllamaLLM
 class TestQueryOptimizationPrompts:
     """Test that LLM system prompt contains query optimization guidance."""
 
-    def test_system_prompt_contains_optimization_section(self):
+    def test_system_prompt_contains_optimization_section(self, llm_config):
         """Test that the system prompt contains the SQL optimization section.
 
         Uses regex patterns to be resilient to formatting changes (e.g., markdown headers).
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain the optimization section header (format-agnostic)
@@ -42,13 +42,13 @@ class TestQueryOptimizationPrompts:
             large_db_pattern, system_prompt
         ), "Should mention critical importance for large databases"
 
-    def test_system_prompt_contains_limit_pattern(self):
+    def test_system_prompt_contains_limit_pattern(self, llm_config):
         """Test that the system prompt contains guidance on using LIMIT.
 
         Validates pattern 1: LIMIT LARGE QUERIES with semantic content validation.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain LIMIT guidance (pattern-based)
@@ -71,13 +71,13 @@ class TestQueryOptimizationPrompts:
             limit_example_pattern, system_prompt
         ), "Should provide specific LIMIT examples with numbers"
 
-    def test_system_prompt_contains_count_before_select_pattern(self):
+    def test_system_prompt_contains_count_before_select_pattern(self, llm_config):
         """Test that the system prompt contains COUNT before SELECT guidance.
 
         Validates pattern 2: Two-step approach with COUNT(*) first.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain pattern 2 header
@@ -96,13 +96,13 @@ class TestQueryOptimizationPrompts:
             size_check_pattern, system_prompt
         ), "Should explain checking result size rationale"
 
-    def test_system_prompt_contains_exclude_binary_data_pattern(self):
+    def test_system_prompt_contains_exclude_binary_data_pattern(self, llm_config):
         """Test that the system prompt contains guidance on excluding binary data.
 
         Validates pattern 3: Exclude large binary columns unless specifically needed.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain pattern 3 header
@@ -125,13 +125,13 @@ class TestQueryOptimizationPrompts:
             select_star_warning, system_prompt
         ), "Should warn against SELECT * for performance"
 
-    def test_system_prompt_contains_indexed_columns_pattern(self):
+    def test_system_prompt_contains_indexed_columns_pattern(self, llm_config):
         """Test that the system prompt contains guidance on using indexed columns.
 
         Validates pattern 4: Use indexed columns for better performance.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain pattern 4 header
@@ -154,13 +154,13 @@ class TestQueryOptimizationPrompts:
             indexed_fields, system_prompt
         ), "Should mention specific indexed fields like name or email"
 
-    def test_system_prompt_contains_sampling_pattern(self):
+    def test_system_prompt_contains_sampling_pattern(self, llm_config):
         """Test that the system prompt contains guidance on data sampling.
 
         Validates pattern 5: Use RANDOM() for data exploration instead of full scans.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain pattern 5 header
@@ -181,13 +181,13 @@ class TestQueryOptimizationPrompts:
             exploration_pattern, system_prompt
         ), "Should explain exploration/discovery use case"
 
-    def test_system_prompt_contains_performance_note(self):
+    def test_system_prompt_contains_performance_note(self, llm_config):
         """Test that the system prompt contains performance notes about available indexes.
 
         Validates that performance information is provided to guide optimization decisions.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should mention performance information (flexible format)
@@ -204,13 +204,13 @@ class TestQueryOptimizationPrompts:
             len(found_indexes) >= 3
         ), f"Should mention at least 3 key indexes. Found: {found_indexes}"
 
-    def test_optimization_patterns_are_numbered(self):
+    def test_optimization_patterns_are_numbered(self, llm_config):
         """Test that the 5 optimization patterns are clearly numbered.
 
         Validates structured organization of optimization patterns.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should have 5 numbered patterns (flexible formatting)
@@ -232,13 +232,13 @@ class TestQueryOptimizationPrompts:
                 pattern_regex, system_prompt
             ), f"Should contain optimization pattern: {pattern_name}"
 
-    def test_optimization_patterns_have_sql_examples(self):
+    def test_optimization_patterns_have_sql_examples(self, llm_config):
         """Test that each optimization pattern includes SQL examples.
 
         Validates that concrete SQL examples are provided for each optimization.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should contain SQL code examples (format-agnostic)
@@ -262,13 +262,13 @@ class TestQueryOptimizationPrompts:
         )
         assert found_contrasts >= 2, "Should provide contrasting good vs bad SQL examples"
 
-    def test_optimization_guidance_mentions_large_database_context(self):
+    def test_optimization_guidance_mentions_large_database_context(self, llm_config):
         """Test that optimization guidance specifically mentions large database context.
 
         Validates that optimizations are contextualized for the database size that triggered them.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should mention the scale that triggered these optimizations (flexible matching)
@@ -286,13 +286,13 @@ class TestQueryOptimizationPrompts:
             found_scale_mentions >= 2
         ), "Should mention large database scale context (1000+ contacts, timeouts, performance)"
 
-    def test_good_vs_bad_examples_provided(self):
+    def test_good_vs_bad_examples_provided(self, llm_config):
         """Test that the prompt provides both good and bad query examples.
 
         Validates that optimization guidance includes clear contrasting examples.
         """
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should have contrasting example markers (flexible patterns)
@@ -313,10 +313,10 @@ class TestQueryOptimizationPrompts:
 class TestPromptIntegration:
     """Test that the optimization prompts integrate well with the existing system prompt."""
 
-    def test_optimization_section_placement(self):
+    def test_optimization_section_placement(self, llm_config):
         """Test that optimization section is placed appropriately in the prompt."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Find the position of optimization section
@@ -331,10 +331,10 @@ class TestPromptIntegration:
         # Should not be at the very beginning
         assert opt_section_start > 1000, "Optimization section should not be at the beginning"
 
-    def test_optimization_section_doesnt_break_existing_content(self):
+    def test_optimization_section_doesnt_break_existing_content(self, llm_config):
         """Test that adding optimization section doesn't break existing prompt content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should still contain key existing sections
@@ -349,10 +349,10 @@ class TestPromptIntegration:
         for section in existing_sections:
             assert section in system_prompt, f"Should still contain {section} section"
 
-    def test_optimization_section_consistent_formatting(self):
+    def test_optimization_section_consistent_formatting(self, llm_config):
         """Test that optimization section uses consistent formatting with rest of prompt."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Find the optimization section
@@ -369,10 +369,10 @@ class TestPromptIntegration:
         # Should use code block formatting
         assert "```sql" in opt_section, "Should use code blocks for SQL examples"
 
-    def test_schema_info_still_included(self):
+    def test_schema_info_still_included(self, llm_config):
         """Test that schema information is still included despite optimization additions."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Should still contain database schema information
@@ -386,10 +386,10 @@ class TestPromptIntegration:
         ), f"Should still contain schema information. Found: {found_indicators}"
 
     @pytest.mark.integration
-    def test_complete_system_prompt_is_valid(self):
+    def test_complete_system_prompt_is_valid(self, llm_config):
         """Integration test that the complete system prompt is well-formed."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Basic validation checks
@@ -409,10 +409,10 @@ class TestPromptIntegration:
 class TestOptimizationPatternContent:
     """Test the specific content of each optimization pattern."""
 
-    def test_pattern_1_limit_queries_content(self):
+    def test_pattern_1_limit_queries_content(self, llm_config):
         """Test that pattern 1 (LIMIT queries) has appropriate content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         # Find pattern 1 section
@@ -426,10 +426,10 @@ class TestOptimizationPatternContent:
             limit in pattern_section for limit in limit_values
         ), "Pattern 1 should mention specific LIMIT values"
 
-    def test_pattern_2_count_before_select_content(self):
+    def test_pattern_2_count_before_select_content(self, llm_config):
         """Test that pattern 2 (COUNT before SELECT) has appropriate content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         pattern_start = system_prompt.find("**2. COUNT BEFORE SELECTING**")
@@ -440,10 +440,10 @@ class TestOptimizationPatternContent:
         assert "First:" in pattern_section, "Should show first step"
         assert "Then:" in pattern_section, "Should show second step"
 
-    def test_pattern_3_exclude_binary_data_content(self):
+    def test_pattern_3_exclude_binary_data_content(self, llm_config):
         """Test that pattern 3 (exclude binary data) has appropriate content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         pattern_start = system_prompt.find("**3. EXCLUDE BINARY DATA**")
@@ -453,10 +453,10 @@ class TestOptimizationPatternContent:
         pattern_section = system_prompt[pattern_start : pattern_start + 500]
         assert "profile_image" in pattern_section, "Should mention profile_image specifically"
 
-    def test_pattern_4_indexed_columns_content(self):
+    def test_pattern_4_indexed_columns_content(self, llm_config):
         """Test that pattern 4 (use indexed columns) has appropriate content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         pattern_start = system_prompt.find("**4. USE INDEXED COLUMNS**")
@@ -467,10 +467,10 @@ class TestOptimizationPatternContent:
         assert "Fast" in pattern_section, "Should show fast examples"
         assert "Slower" in pattern_section, "Should show slower examples"
 
-    def test_pattern_5_sampling_content(self):
+    def test_pattern_5_sampling_content(self, llm_config):
         """Test that pattern 5 (sampling) has appropriate content."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         system_prompt = llm._create_system_prompt()
 
         pattern_start = system_prompt.find("**5. SAMPLE FOR EXPLORATION**")
