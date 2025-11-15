@@ -166,9 +166,9 @@ def collect_llm_info() -> Dict[str, Any]:
                 for model in model_objects
             ]
 
-            # Resolve default model using existing function
+            # Resolve default model using existing function (don't pass "default" literally)
             try:
-                llm_info["default_model"] = resolve_model_alias("default")
+                llm_info["default_model"] = resolve_model_alias()  # Use default resolution strategy
             except Exception as e:
                 llm_info["default_model"] = f"Error resolving default: {e}"
 
@@ -236,16 +236,17 @@ def collect_system_prompt() -> Dict[str, Any]:
         # Create LLM instance to get system prompt
         config_manager = LLMConfigManager()
 
-        # Override model if different from default
-        default_model = resolve_model_alias("default")
-        original_model = config_manager.llm.model
-        if isinstance(default_model, tuple) and len(default_model) > 1:
-            # Extract model name from tuple
-            config_manager.llm.model = (
-                default_model[1] if default_model[1] != "default" else original_model
-            )
-        elif isinstance(default_model, str):
-            config_manager.llm.model = default_model
+        # Resolve the actual default model (don't pass "default" as literal string)
+        try:
+            default_model = resolve_model_alias()  # Let it use default resolution strategy
+            if isinstance(default_model, tuple) and len(default_model) > 1:
+                # Extract model name from tuple
+                config_manager.llm.model = default_model[1]
+            elif isinstance(default_model, str):
+                config_manager.llm.model = default_model
+        except Exception as e:
+            # If model resolution fails, keep the original model
+            logger.warning(f"Failed to resolve default model, using config model: {e}")
 
         llm = OllamaLLM(
             api=api,

@@ -4,6 +4,9 @@ Tests that model loading works correctly for both Ollama and LlamaCpp providers.
 These tests focus on configuration and factory patterns without making LLM calls.
 """
 
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 
 from prt_src.api import PRTAPI
@@ -120,9 +123,15 @@ class TestLLMModelLoading:
         with pytest.raises(ValueError, match="Unknown LLM provider"):
             create_llm(api=api, provider="invalid_provider")
 
-    def test_model_resolution_with_ollama_offline(self):
+    @patch("prt_src.llm_factory.get_registry")
+    def test_model_resolution_with_ollama_offline(self, mock_get_registry):
         """Test that model resolution works when Ollama is offline."""
         config = LLMConfigManager()
+
+        # Mock registry to simulate Ollama being offline
+        mock_registry = MagicMock()
+        mock_registry.is_available.return_value = False
+        mock_get_registry.return_value = mock_registry
 
         # Even if Ollama is offline, resolution should not crash
         # It should fall back to config or assumptions

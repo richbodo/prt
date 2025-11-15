@@ -32,14 +32,68 @@ from .llm_ollama import start_ollama_chat
 
 # Encryption imports removed as part of Issue #41
 
-app = typer.Typer(help="Personal Relationship Toolkit (PRT)")
+app = typer.Typer(
+    help="Personal Relationship Toolkit (PRT) - Privacy-first contact management with AI-powered search",
+    add_completion=False,
+    no_args_is_help=False,
+)
 console = Console()
 
 # Required configuration fields
 REQUIRED_FIELDS = ["db_username", "db_password", "db_path"]
 
 
-def start_llm_chat(llm, api: PRTAPI):
+def print_custom_help():
+    """Print clean, accessible help text without Rich formatting."""
+    help_text = """Usage: python -m prt_src [OPTIONS] [COMMAND]
+
+Personal Relationship Toolkit (PRT)
+Privacy-first contact management with AI-powered search
+
+A privacy-first contact management system with AI-powered search.
+All data stored locally on your machine, no cloud sync.
+
+Default behavior: Launches TUI (Text User Interface)
+First time? Run with --setup to import contacts or --debug to try sample data.
+
+OPTIONS:
+  --debug, -d              Run with sample data (safe, isolated database)
+  --regenerate-fixtures    Reset sample data (use with --debug)
+  --setup                  First-time setup: import contacts or try demo data
+  --cli                    Use command-line interface instead of TUI
+  --tui                    Use TUI interface (default)
+  --model, -m MODEL        Choose AI model (e.g. 'gpt-oss-20b', 'mistral-7b-instruct')
+                          Use 'list-models' to see options. Put this flag BEFORE --chat.
+  --chat [TEXT]           Start AI chat mode. Provide query text or use --chat=""
+                          for interactive mode. Use AFTER --model flag.
+  --help                  Show this message and exit.
+
+COMMANDS:
+  test-db                 Test database connection and credentials.
+  list-models             List available LLM models with support status and hardware requirements.
+  prt-debug-info          Display comprehensive system diagnostic information and exit.
+  db-status               Check the database status.
+
+GETTING STARTED:
+  python -m prt_src --setup         # First-time setup with your data
+  python -m prt_src --debug         # Try with sample data (safe)
+  python -m prt_src                 # Launch main interface (TUI)
+
+CHAT WITH AI:
+  python -m prt_src --model gpt-oss-20b --chat
+  python -m prt_src --model mistral-7b-instruct --chat "find friends"
+  python -m prt_src --chat="" --model gpt-oss-20b
+
+IMPORTANT: Put --model flag BEFORE --chat to avoid parsing issues
+
+MORE HELP:
+  python -m prt_src list-models     # Show available AI models
+  Documentation: https://github.com/richbodo/prt
+"""
+    print(help_text)
+
+
+def start_llm_chat(llm, api: PRTAPI, initial_prompt: str = None):
     """Start an interactive chat session with any LLM provider.
 
     This is a generic chat function that works with both OllamaLLM and LlamaCppLLM.
@@ -47,12 +101,24 @@ def start_llm_chat(llm, api: PRTAPI):
     Args:
         llm: LLM instance (OllamaLLM or LlamaCppLLM)
         api: PRTAPI instance
+        initial_prompt: Optional initial prompt to send immediately
     """
     console.print("🤖 LLM Chat Mode", style="bold blue")
     console.print(
         "Type 'quit' to exit, 'clear' to clear history, 'help' for assistance", style="cyan"
     )
     console.print("=" * 50, style="blue")
+
+    # Handle initial prompt if provided
+    if initial_prompt:
+        console.print(f"\n[bold green]You[/bold green]: {initial_prompt}")
+        console.print("\n[bold blue]Assistant[/bold blue]")
+        console.print("Thinking...", style="dim")
+        try:
+            response = llm.chat(initial_prompt)
+            console.print(response, style="white")
+        except Exception as e:
+            console.print(f"Error processing initial prompt: {e}", style="red")
 
     while True:
         try:
@@ -2844,6 +2910,7 @@ def _launch_tui_with_fallback(
     regenerate_fixtures: bool = False,
     force_setup: bool = False,
     model: Optional[str] = None,
+    initial_screen: Optional[str] = None,
 ) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     try:
@@ -2859,9 +2926,10 @@ def _launch_tui_with_fallback(
                 debug=True,
                 force_setup=force_setup,
                 model=model,
+                initial_screen=initial_screen,
             )
         else:
-            app = PRTApp(force_setup=force_setup, model=model)
+            app = PRTApp(force_setup=force_setup, model=model, initial_screen=initial_screen)
 
         app.run()
     except Exception as e:
@@ -2877,50 +2945,125 @@ def _launch_tui_with_fallback(
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
-    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
+    debug: bool = typer.Option(
+        False, "--debug", "-d", help="Run with sample data (safe, isolated database)"
+    ),
     regenerate_fixtures: bool = typer.Option(
         False,
         "--regenerate-fixtures",
-        help="Force regeneration of fixture database (use with --debug)",
+        help="Reset sample data (use with --debug)",
     ),
     setup: bool = typer.Option(
-        False, "--setup", help="Force setup mode for importing contacts or trying demo data (safe)"
+        False, "--setup", help="First-time setup: import contacts or try demo data"
     ),
-    classic: bool = typer.Option(False, "--classic", help="Run the classic CLI instead of TUI"),
-    tui: bool = typer.Option(True, "--tui", help="Run TUI mode (default)"),
+    cli: bool = typer.Option(False, "--cli", help="Use command-line interface instead of TUI"),
+    tui: bool = typer.Option(True, "--tui", help="Use TUI interface (default)"),
     model: Optional[str] = typer.Option(
         None,
         "--model",
         "-m",
-        help="Model alias (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use 'list-models' to see available options with support status.",
+        help="Choose AI model (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use 'list-models' to see options. Put this flag BEFORE --chat.",
     ),
-    prt_debug_info: bool = typer.Option(
-        False,
-        "--prt-debug-info",
-        help="Display comprehensive system diagnostic information and exit",
+    chat: Optional[str] = typer.Option(
+        None,
+        "--chat",
+        help='Start AI chat mode. Provide query text or use --chat="" for interactive mode. Use AFTER --model flag.',
     ),
+    help_flag: bool = typer.Option(False, "--help", help="Show this message and exit."),
 ):
-    """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
-    # Handle debug info command first (early exit)
-    if prt_debug_info:
-        from .debug_info import generate_debug_report
+    """
+    Personal Relationship Toolkit (PRT)
 
-        try:
-            report = generate_debug_report()
-            console.print(report)
-        except Exception as e:
-            console.print(f"Error generating debug report: {e}", style="red")
-            raise typer.Exit(1) from e
-        # Exit successfully after displaying report
-        raise typer.Exit(0)
+    A privacy-first contact management system with AI-powered search.
+    All data stored locally on your machine, no cloud sync.
+
+    Default behavior: Launches TUI (Text User Interface)
+    First time? Run with --setup to import contacts or --debug to try sample data.
+    """
+    # Handle custom help first
+    if help_flag:
+        print_custom_help()
+        raise typer.Exit()
 
     # Store LLM settings in context for subcommands
     if ctx.obj is None:
         ctx.obj = {}
     ctx.obj["model"] = model
 
+    # Handle chat mode
+    if chat is not None:
+        # Handle special case: --chat --
+        # This means open chat interface without an initial prompt
+        chat_prompt = None if chat == "--" else chat
+
+        # If both --chat and --tui are specified, launch TUI with chat screen
+        if tui and not cli:
+            _launch_tui_with_fallback(
+                debug=debug,
+                regenerate_fixtures=regenerate_fixtures,
+                force_setup=setup,
+                model=model,
+                initial_screen="chat",
+            )
+            return
+
+        # Otherwise, start standalone chat mode
+        # Handle debug mode
+        if debug:
+            config = setup_debug_mode(regenerate=regenerate_fixtures)
+        else:
+            # Check setup status
+            status = check_setup_status()
+
+            if status["needs_setup"]:
+                console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
+                console.print()
+
+                if Confirm.ask("Would you like to run the setup wizard now?"):
+                    config = run_setup_wizard()
+                else:
+                    console.print("Setup is required to use PRT chat. Exiting.", style="red")
+                    raise typer.Exit(1) from None
+            else:
+                config = status["config"]
+
+        # Create API instance
+        try:
+            api = PRTAPI(config)
+        except Exception as e:
+            console.print(f"Failed to initialize API: {e}", style="bold red")
+            raise typer.Exit(1) from None
+
+        # Create LLM instance using factory
+        console.print("Starting LLM chat mode...", style="blue")
+        try:
+            from prt_src.llm_factory import create_llm
+
+            llm = create_llm(api=api, model=model)
+
+            # Display model info
+            if model:
+                console.print(f"Using model: {model}", style="cyan")
+            else:
+                console.print("Using default model from config", style="cyan")
+
+            # Start interactive chat with initial prompt if provided
+            start_llm_chat(llm, api, chat_prompt)
+        except Exception as e:
+            console.print(f"Error starting chat mode: {e}", style="red")
+            console.print("\n💡 Troubleshooting:", style="bold blue")
+            console.print(
+                "   • Check available models: python -m prt_src.cli list-models", style="dim"
+            )
+            console.print("   • Use supported model: --model gpt-oss-20b", style="dim")
+            console.print("   • Ensure Ollama is running: brew services start ollama", style="dim")
+            console.print("   • Install a model: ollama pull gpt-oss:20b", style="dim")
+            raise typer.Exit(1) from None
+        # Exit after chat session ends
+        raise typer.Exit(0)
+
     if ctx.invoked_subcommand is None:
-        if classic:
+        if cli:
             run_interactive_cli(
                 debug=debug,
                 regenerate_fixtures=regenerate_fixtures,
@@ -2937,26 +3080,7 @@ def main(
 
 
 @app.command()
-def run(
-    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
-    regenerate_fixtures: bool = typer.Option(
-        False,
-        "--regenerate-fixtures",
-        help="Force regeneration of fixture database (use with --debug)",
-    ),
-):
-    """Run the interactive CLI."""
-    run_interactive_cli(debug=debug, regenerate_fixtures=regenerate_fixtures)
-
-
-@app.command()
-def setup():
-    """Set up PRT configuration and database."""
-    run_setup_wizard()
-
-
-@app.command()
-def test():
+def test_db():
     """Test database connection and credentials."""
     try:
         config = load_config()
@@ -3140,69 +3264,19 @@ def list_models():
         raise typer.Exit(1) from None
 
 
-@app.command()
-def chat(
-    ctx: typer.Context,
-    debug: bool = typer.Option(False, "--debug", "-d", help="Run in debug mode with fixture data"),
-    regenerate_fixtures: bool = typer.Option(
-        False,
-        "--regenerate-fixtures",
-        help="Force regeneration of fixture database (use with --debug)",
-    ),
-):
-    """Start LLM chat mode directly."""
-    # Get LLM settings from context (set in main callback)
-    model = ctx.obj.get("model") if ctx.obj else None
+@app.command(name="prt-debug-info")
+def prt_debug_info():
+    """Display comprehensive system diagnostic information and exit."""
+    from .debug_info import generate_debug_report
 
-    # Handle debug mode
-    if debug:
-        config = setup_debug_mode(regenerate=regenerate_fixtures)
-    else:
-        # Check setup status
-        status = check_setup_status()
-
-        if status["needs_setup"]:
-            console.print(f"PRT needs to be set up: {status['reason']}", style="yellow")
-            console.print()
-
-            if Confirm.ask("Would you like to run the setup wizard now?"):
-                config = run_setup_wizard()
-            else:
-                console.print("Setup is required to use PRT chat. Exiting.", style="red")
-                raise typer.Exit(1) from None
-        else:
-            config = status["config"]
-
-    # Create API instance
     try:
-        api = PRTAPI(config)
+        report = generate_debug_report()
+        console.print(report)
     except Exception as e:
-        console.print(f"Failed to initialize API: {e}", style="bold red")
-        raise typer.Exit(1) from None
-
-    # Create LLM instance using factory
-    console.print("Starting LLM chat mode...", style="blue")
-    try:
-        from prt_src.llm_factory import create_llm
-
-        llm = create_llm(api=api, model=model)
-
-        # Display model info
-        if model:
-            console.print(f"Using model: {model}", style="cyan")
-        else:
-            console.print("Using default model from config", style="cyan")
-
-        # Start interactive chat
-        start_llm_chat(llm, api)
-    except Exception as e:
-        console.print(f"Error starting chat mode: {e}", style="red")
-        console.print("\n💡 Troubleshooting:", style="bold blue")
-        console.print("   • Check available models: python -m prt_src.cli list-models", style="dim")
-        console.print("   • Use supported model: --model gpt-oss-20b", style="dim")
-        console.print("   • Ensure Ollama is running: brew services start ollama", style="dim")
-        console.print("   • Install a model: ollama pull gpt-oss:20b", style="dim")
-        raise typer.Exit(1) from None
+        console.print(f"Error generating debug report: {e}", style="red")
+        raise typer.Exit(1) from e
+    # Exit successfully after displaying report
+    raise typer.Exit(0)
 
 
 # encrypt-db and decrypt-db commands removed as part of Issue #41

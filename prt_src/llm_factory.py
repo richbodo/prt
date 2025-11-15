@@ -133,9 +133,31 @@ def resolve_model_alias(
         logger.info(f"[Model Resolution] Detected .gguf file: {model_alias}")
         return ("llamacpp", model_alias)
 
-    # Last resort - assume it's an Ollama model name
+    # Last resort - validate if it exists as an Ollama model before assuming
+    if ollama_available:
+        model_info = registry.get_model_info(model_alias)
+        if model_info:
+            logger.info(f"[Model Resolution] Direct Ollama model found: {model_alias}")
+            return ("ollama", model_alias)
+        else:
+            # Model doesn't exist - provide helpful error with suggestions
+            available_aliases = list(registry.get_aliases().keys())
+            from difflib import get_close_matches
+
+            suggestions = get_close_matches(model_alias, available_aliases, n=3, cutoff=0.5)
+
+            error_msg = f"Model '{model_alias}' not found in Ollama"
+            if suggestions:
+                error_msg += f". Did you mean: {', '.join(suggestions)}?"
+            else:
+                error_msg += f". Available models: {', '.join(available_aliases[:5])}"
+
+            logger.error(f"[Model Resolution] {error_msg}")
+            raise ValueError(error_msg)
+
+    # Ollama not available - cannot validate model
     logger.warning(
-        f"[Model Resolution] Could not resolve '{model_alias}', " f"assuming Ollama model"
+        f"[Model Resolution] Ollama not available, cannot validate model '{model_alias}'"
     )
     return ("ollama", model_alias)
 

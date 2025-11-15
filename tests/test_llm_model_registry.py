@@ -29,6 +29,7 @@ class TestModelInfoClass:
             ("llama3:8b", "llama3-8b"),
             ("gpt-oss:20b", "gpt-oss-20b"),
             ("mistral:7b:latest", "mistral-7b-latest"),
+            ("mistral:7b-instruct", "mistral-7b-instruct"),
             ("simple", "simple"),
         ]
 
@@ -279,3 +280,82 @@ class TestOllamaModelRegistryLRUCache:
         # Test default model selection
         default = registry.get_default_model()
         assert default == "llama3:8b"
+
+
+class TestFuzzyAliasResolution:
+    """Test the fuzzy alias resolution functionality added to fix model name matching."""
+
+    def test_normalize_alias_function(self):
+        """Test the _normalize_alias helper function."""
+        registry = OllamaModelRegistry()
+
+        test_cases = [
+            ("mistral-7b-instruct", "mistral7binstruct"),
+            ("mistral7b-instruct", "mistral7binstruct"),
+            ("mistral7binstruct", "mistral7binstruct"),
+            ("gpt-oss-20b", "gptoss20b"),
+            ("gptoss20b", "gptoss20b"),
+            ("GPT-OSS-20B", "gptoss20b"),  # Test case sensitivity
+            ("llama3_8b_local", "llama38blocal"),  # Test underscore handling
+        ]
+
+        for input_alias, expected_normalized in test_cases:
+            result = registry._normalize_alias(input_alias)
+            assert (
+                result == expected_normalized
+            ), f"Expected {expected_normalized}, got {result} for input {input_alias}"
+
+    def test_fuzzy_alias_resolution(self):
+        """Test fuzzy alias resolution with missing dashes."""
+        registry = OllamaModelRegistry(max_cache_size=10)
+
+        # Add test models to cache
+        models = [
+            ModelInfo({"name": "mistral:7b-instruct"}),  # friendly_name: "mistral-7b-instruct"
+            ModelInfo({"name": "gpt-oss:20b"}),  # friendly_name: "gpt-oss-20b"
+            ModelInfo({"name": "llama3:8b"}),  # friendly_name: "llama3-8b"
+        ]
+
+        for model in models:
+            registry._model_cache[model.name] = model
+
+        # Set timestamp to make cache valid
+        import datetime
+
+        registry._cache_timestamp = datetime.datetime.now()
+
+        # Test exact matches (should still work)
+        assert registry.resolve_alias("mistral-7b-instruct") == "mistral:7b-instruct"
+        assert registry.resolve_alias("gpt-oss-20b") == "gpt-oss:20b"
+        assert registry.resolve_alias("llama3-8b") == "llama3:8b"
+
+        # Test fuzzy matches (missing dashes) - this is the bug fix
+        assert registry.resolve_alias("mistral7b-instruct") == "mistral:7b-instruct"
+        assert registry.resolve_alias("mistral7binstruct") == "mistral:7b-instruct"
+        assert registry.resolve_alias("gptoss20b") == "gpt-oss:20b"
+        assert registry.resolve_alias("llama38b") == "llama3:8b"
+
+        # Test case insensitive matching
+        assert registry.resolve_alias("MISTRAL7B-INSTRUCT") == "mistral:7b-instruct"
+        assert registry.resolve_alias("Mistral7bInstruct") == "mistral:7b-instruct"
+
+        # Test non-existent models (should return None)
+        assert registry.resolve_alias("nonexistent-model") is None
+        assert registry.resolve_alias("notreal7b") is None
+
+    def test_fuzzy_matching_with_underscores(self):
+        """Test fuzzy matching handles underscores correctly."""
+        registry = OllamaModelRegistry(max_cache_size=5)
+
+        # Add a model that might have underscores in user input
+        model = ModelInfo({"name": "phi3-mini:latest"})  # friendly_name: "phi3-mini"
+        registry._model_cache[model.name] = model
+
+        import datetime
+
+        registry._cache_timestamp = datetime.datetime.now()
+
+        # Test various underscore/dash variations
+        assert registry.resolve_alias("phi3-mini") == "phi3-mini:latest"
+        assert registry.resolve_alias("phi3mini") == "phi3-mini:latest"
+        assert registry.resolve_alias("phi3_mini") == "phi3-mini:latest"

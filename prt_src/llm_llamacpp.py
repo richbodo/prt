@@ -7,10 +7,8 @@ with tool calling capabilities for PRT operations.
 
 import asyncio
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -19,22 +17,14 @@ from llama_cpp import Llama
 
 from .api import PRTAPI
 from .config import LLMConfigManager
+from .llm_base import BaseLLM
+from .llm_tools import Tool
 from .logging_config import get_logger
 
 logger = get_logger(__name__)
 
 
-@dataclass
-class Tool:
-    """Represents a tool that can be called by the LLM."""
-
-    name: str
-    description: str
-    parameters: Dict[str, Any]
-    function: Callable
-
-
-class LlamaCppLLM:
+class LlamaCppLLM(BaseLLM):
     """LlamaCpp LLM client with tool calling support."""
 
     def __init__(
@@ -58,12 +48,12 @@ class LlamaCppLLM:
             timeout: Request timeout in seconds
             config_manager: LLMConfigManager instance. If None, loads config automatically.
         """
-        self.api = api
-
         # Load configuration
         if config_manager is None:
             config_manager = LLMConfigManager()
-        self.config_manager = config_manager
+
+        # Call parent constructor (gets tools automatically from registry)
+        super().__init__(api, config_manager)
 
         # Use config values, falling back to explicit parameters
         self.model_path = model_path or config_manager.llm.model_path
@@ -106,12 +96,10 @@ class LlamaCppLLM:
             logger.error(f"[LLM] Failed to load model: {e}")
             raise RuntimeError(f"Failed to load LlamaCpp model: {e}") from e
 
-        self.tools = self._create_tools()
-        self.conversation_history = []
-
+        # Tools and conversation history are now initialized by parent class
         logger.info(
             f"[LLM] Initialized LlamaCppLLM: model={model_file.name}, "
-            f"n_ctx={self.n_ctx}, timeout={self.timeout}s"
+            f"n_ctx={self.n_ctx}, timeout={self.timeout}s, tools={len(self.tools)}"
         )
 
     async def health_check(self, timeout: float = 2.0) -> bool:
@@ -152,11 +140,12 @@ class LlamaCppLLM:
         logger.info("[LLM] Model already loaded in memory (llama-cpp-python)")
         return True
 
-    def _create_tools(self) -> List[Tool]:
-        """Create the available tools for the LLM.
+    def _get_provider_name(self) -> str:
+        """Get provider name for prompt generation."""
+        return "llamacpp"
 
-        Uses the same tool definitions as OllamaLLM for consistency.
-        """
+    def _create_tools_legacy(self) -> List[Tool]:
+        """Legacy tool creation method (now handled by parent class)."""
         return [
             # ============================================================
             # READ-ONLY TOOLS - Priority 1 (Have API Tests)
@@ -274,6 +263,113 @@ class LlamaCppLLM:
             ),
         ]
 
+    # ============================================================
+    # ABSTRACT METHOD IMPLEMENTATIONS FOR BaseLLM
+    # ============================================================
+
+    def _send_message_with_tools(self, messages: List[Dict], tools: List[Tool]) -> str:
+        """Send message with tools to LlamaCpp model.
+
+        Args:
+            messages: Message history
+            tools: Available tools
+
+        Returns:
+            Model response text
+        """
+        # Build conversation context
+        conversation_text = ""
+        system_prompt = ""
+
+        for msg in messages:
+            if msg["role"] == "system":
+                system_prompt = msg["content"]
+            elif msg["role"] == "user":
+                conversation_text += f"User: {msg['content']}\n"
+            elif msg["role"] == "assistant":
+                conversation_text += f"Assistant: {msg['content']}\n"
+            elif msg["role"] == "tool":
+                conversation_text += f"Tool Result: {msg['content']}\n"
+
+        # Create prompt with tool guidance for LlamaCpp
+        prompt = f"""{system_prompt}
+
+{conversation_text}Assistant: """
+
+        try:
+            result = self.llm.create_completion(
+                prompt=prompt,
+                max_tokens=4000,  # Allow longer responses
+                temperature=self.temperature,
+                stop=["User:"],  # Stop at next user input
+            )
+
+            response_text = result["choices"][0]["text"].strip()
+            logger.debug(f"[LLM] Generated response: {response_text[:200]}...")
+            return response_text
+
+        except Exception as e:
+            logger.error(f"[LLM] Error in LlamaCpp completion: {e}")
+            return f"Error generating response: {e}"
+
+    def _extract_tool_calls(self, response: str) -> List[Dict]:
+        """Extract tool calls from LlamaCpp text response.
+
+        Args:
+            response: Text response from LlamaCpp
+
+        Returns:
+            List of tool call dictionaries
+        """
+        # Look for JSON tool calls in response
+        try:
+            # Extract JSON from code blocks or plain text
+            import re
+
+            json_pattern = r"```json\s*(\{.*?\})\s*```|(\{.*?\})"
+            matches = re.findall(json_pattern, response, re.DOTALL)
+
+            for match in matches:
+                json_str = match[0] if match[0] else match[1]
+                if not json_str:
+                    continue
+
+                parsed = json.loads(json_str)
+                if "tool_calls" in parsed and isinstance(parsed["tool_calls"], list):
+                    # Add IDs for compatibility
+                    for i, tool_call in enumerate(parsed["tool_calls"]):
+                        tool_call["id"] = f"call_{i}"
+                    return parsed["tool_calls"]
+
+        except (json.JSONDecodeError, Exception) as e:
+            logger.debug(f"[LLM] No tool calls found in response: {e}")
+
+        return []
+
+    def _extract_assistant_message(self, response: str) -> str:
+        """Extract assistant message from LlamaCpp response.
+
+        Args:
+            response: LlamaCpp response text
+
+        Returns:
+            Assistant message text
+        """
+        # Remove any JSON tool calls from the response for user display
+        import re
+
+        # Remove JSON code blocks
+        clean_response = re.sub(r"```json.*?```", "", response, flags=re.DOTALL)
+
+        # Remove standalone JSON objects
+        clean_response = re.sub(r'\{[^}]*"tool_calls"[^}]*\}', "", clean_response)
+
+        return clean_response.strip()
+
+    # ============================================================
+    # LEGACY METHODS (to be removed after testing)
+    # ============================================================
+
     def _get_tool_by_name(self, name: str) -> Optional[Tool]:
         """Get a tool by name."""
         for tool in self.tools:
@@ -312,8 +408,12 @@ class LlamaCppLLM:
         except Exception as e:
             return {"error": f"Error calling tool '{tool_name}': {str(e)}"}
 
-    def _create_system_prompt(self) -> str:
-        """Create the system prompt for the LLM."""
+    def _create_system_prompt(self, schema_detail: str = "essential") -> str:
+        """Create the system prompt for the LLM.
+
+        Args:
+            schema_detail: "essential" for concise prompt, "detailed" for full prompt
+        """
         tools_description = "\n".join([f"- {tool.name}: {tool.description}" for tool in self.tools])
         tool_count = len(self.tools)
 

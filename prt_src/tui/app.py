@@ -116,6 +116,7 @@ class PRTApp(App):
         debug: bool = False,
         force_setup: bool = False,
         model: Optional[str] = None,
+        initial_screen: Optional[str] = None,
     ):
         """Initialize the PRT application.
 
@@ -124,6 +125,7 @@ class PRTApp(App):
             debug: If True, shows debug mode indicator in UI.
             force_setup: If True, force setup screen even if DB has data.
             model: Model alias (e.g., 'llama8', 'gpt-oss-20b'). Auto-detects provider. If None, uses config.
+            initial_screen: Screen to show initially ('chat', 'home', 'search', etc.). If None, uses default logic.
         """
         super().__init__()
         self.title = "Personal Relationship Tracker"
@@ -139,6 +141,7 @@ class PRTApp(App):
         self.dark = True  # Use dark theme by default
         self.debug_mode = debug
         self._force_setup = force_setup
+        self._initial_screen = initial_screen
 
         # Initialize mode (use private attribute to avoid property conflict)
         self._app_mode = AppMode.NAVIGATION
@@ -258,6 +261,9 @@ class PRTApp(App):
         if self._force_setup or self._is_database_empty():
             logger.info("Mounting app - showing setup screen")
             self.push_screen(SetupScreen(prt_app=self, **self.services))
+        elif self._initial_screen == "chat":
+            logger.info("Mounting app - pushing chat screen")
+            self.push_screen(ChatScreen(prt_app=self, **self.services))
         else:
             logger.info("Mounting app - pushing home screen")
             self.push_screen(HomeScreen(prt_app=self, **self.services))
