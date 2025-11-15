@@ -348,15 +348,38 @@ class OllamaModelRegistry:
         if alias in self._model_cache:
             return alias
 
-        # Check if it matches any friendly names
+        # Check if it matches any friendly names exactly
         models = self.list_models()
         for model in models:
             if model.friendly_name == alias:
                 return model.name
 
+        # If no exact match, try fuzzy matching for common variations
+        # Normalize the input alias by handling dash variations
+        normalized_alias = self._normalize_alias(alias)
+
+        for model in models:
+            normalized_friendly = self._normalize_alias(model.friendly_name)
+            if normalized_friendly == normalized_alias:
+                logger.info(
+                    f"Found fuzzy match: '{alias}' -> '{model.friendly_name}' -> '{model.name}'"
+                )
+                return model.name
+
         # Not found
         logger.debug(f"Alias '{alias}' not found in registry")
         return None
+
+    def _normalize_alias(self, alias: str) -> str:
+        """Normalize an alias for fuzzy matching.
+
+        Removes dashes and converts to lowercase for comparison.
+        Examples:
+            'mistral-7b-instruct' -> 'mistral7binstruct'
+            'mistral7b-instruct' -> 'mistral7binstruct'
+            'mistral7binstruct' -> 'mistral7binstruct'
+        """
+        return alias.lower().replace("-", "").replace("_", "")
 
     def get_aliases(self) -> Dict[str, str]:
         """Get all available aliases and their full names.
