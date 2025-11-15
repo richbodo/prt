@@ -60,7 +60,16 @@ class OllamaLLM:
         self.model = config_manager.llm.model
         self.keep_alive = keep_alive if keep_alive is not None else config_manager.llm.keep_alive
         self.timeout = timeout if timeout is not None else config_manager.llm.timeout
-        self.temperature = config_manager.llm.temperature
+
+        # Apply Mistral-specific optimizations for tool calling
+        if self._is_mistral_model():
+            # Mistral models perform better with lower temperature for tool calling
+            self.temperature = min(config_manager.llm.temperature, 0.3)
+            logger.info(
+                f"[LLM] Applied Mistral optimization: temperature={self.temperature} (tool calling optimized)"
+            )
+        else:
+            self.temperature = config_manager.llm.temperature
 
         self.disabled_tools = set(config_manager.tools.disabled_tools)
         if self.disabled_tools:
@@ -74,6 +83,17 @@ class OllamaLLM:
         logger.info(
             f"[LLM] Initialized OllamaLLM: model={self.model}, keep_alive={self.keep_alive}, timeout={self.timeout}s"
         )
+
+    def _is_mistral_model(self) -> bool:
+        """Check if the current model is a Mistral model."""
+        return "mistral" in self.model.lower()
+
+    def _generate_mistral_tool_call_id(self) -> str:
+        """Generate a Mistral-compatible tool call ID (9 alphanumeric characters)."""
+        import random
+        import string
+
+        return "".join(random.choices(string.ascii_letters + string.digits, k=9))
 
     def _validate_and_parse_response(
         self, response: requests.Response, operation: str
@@ -1164,6 +1184,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             "tools": self._format_tool_calls(),
             "stream": False,
             "keep_alive": self.keep_alive,
+            "options": {
+                "temperature": self.temperature,
+            },
         }
         url = f"{self.base_url}/api/chat"
         try:
@@ -1247,6 +1270,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                     + self.conversation_history,
                     "stream": False,
                     "keep_alive": self.keep_alive,
+                    "options": {
+                        "temperature": self.temperature,
+                    },
                 }
                 final_response = requests.post(
                     f"{self.base_url}/api/chat", json=final_request, timeout=self.timeout

@@ -118,6 +118,22 @@ class TestSupportedModelsRegistry:
         assert model_info is not None
         assert model_info.model_name == "mistral:7b-instruct"
 
+    def test_mistral_model_tool_calling_support(self):
+        """Test that Mistral model indicates tool calling support."""
+        info = get_model_support_info("mistral:7b-instruct")
+        assert info is not None
+        assert "Tool calling" in info.use_cases
+        assert "Mistral-7B-Instruct-v0.3" in info.description
+
+    def test_mistral_model_updated_specifications(self):
+        """Test that Mistral model has updated specifications."""
+        info = get_model_support_info("mistral:7b-instruct")
+        assert info is not None
+        assert info.display_name == "Mistral 7B Instruct v0.3"
+        assert info.context_size == 32768  # Updated context size
+        assert info.quantization == "Q4_K_M"  # Added quantization info
+        assert "4.4GB" in info.notes  # Model size information
+
     def test_get_hardware_guidance(self):
         """Test hardware guidance generation."""
         info = get_model_support_info("gpt-oss:20b")

@@ -90,8 +90,13 @@ This document describes the configurable LLM settings and safeguards for PRT's c
 | `top_k` | int | 40 | Top-k sampling limit |
 | `repeat_penalty` | float | 1.1 | Penalty for repetition (1.0 = no penalty) |
 
+**Supported Models with Tool Calling:**
+- **`gpt-oss:20b`**: High-quality 20B model, best for complex reasoning
+- **`mistral:7b-instruct`**: Efficient 7B Mistral-v0.3 model, good for moderate hardware
+
 **Developer Notes:**
 - **Temperature**: Use 0.1 for consistent parsing, 0.7+ for creative responses
+- **Mistral Optimization**: Temperature automatically limited to 0.3 for Mistral models (tool calling optimization)
 - **Keep-alive**: "30m" prevents model unloading between queries (13GB model takes 20-40s to load)
 - **Timeout**: Large models may need 120s+ for complex queries
 
