@@ -44,13 +44,15 @@ class TestLLMMemoryValidation:
             # UUID part should be 8 characters
             assert len(parts[3]) == 8
 
-    def test_contact_data_consistency_validation(self, test_db, isolated_memory_context):
+    def test_contact_data_consistency_validation(
+        self, test_db, isolated_memory_context, llm_config
+    ):
         """Test contact data consistency through save/load cycles."""
         db, fixtures = test_db
         config = {"db_path": str(db.path), "db_encrypted": False}
 
         api = PRTAPI(config)
-        llm = OllamaLLM(api=api)
+        llm = OllamaLLM(api=api, config_manager=llm_config)
 
         # Save contacts with images
         result = llm._save_contacts_with_images("validation test contacts")
@@ -86,13 +88,13 @@ class TestLLMMemoryValidation:
             if "has_profile_image" in contact:
                 assert isinstance(contact["has_profile_image"], bool)
 
-    def test_directory_generation_validation(self, test_db, isolated_memory_context):
+    def test_directory_generation_validation(self, test_db, isolated_memory_context, llm_config):
         """Test directory generation with memory ID validation."""
         db, fixtures = test_db
         config = {"db_path": str(db.path), "db_encrypted": False}
 
         api = PRTAPI(config)
-        llm = OllamaLLM(api=api)
+        llm = OllamaLLM(api=api, config_manager=llm_config)
 
         # Test with valid memory ID
         save_result = llm._save_contacts_with_images("directory validation test")
@@ -195,13 +197,13 @@ class TestLLMMemoryValidation:
                 assert memory2.load_result(memory2_id) is not None
                 assert memory2.load_result(memory1_id) is None
 
-    def test_tool_usage_information_accuracy(self, test_db, isolated_memory_context):
+    def test_tool_usage_information_accuracy(self, test_db, isolated_memory_context, llm_config):
         """Test accuracy of tool usage information."""
         db, fixtures = test_db
         config = {"db_path": str(db.path), "db_encrypted": False}
 
         api = PRTAPI(config)
-        llm = OllamaLLM(api=api)
+        llm = OllamaLLM(api=api, config_manager=llm_config)
 
         result = llm._save_contacts_with_images("usage info test")
 
@@ -238,13 +240,13 @@ class TestLLMMemoryValidation:
         assert load_time < 0.01, f"Load took {load_time*1000:.1f}ms, expected < 10ms"
         assert loaded is not None
 
-    def test_list_memory_tool_comprehensive(self, test_db, isolated_memory_context):
+    def test_list_memory_tool_comprehensive(self, test_db, isolated_memory_context, llm_config):
         """Test comprehensive list_memory tool functionality."""
         db, fixtures = test_db
         config = {"db_path": str(db.path), "db_encrypted": False}
 
         api = PRTAPI(config)
-        llm = OllamaLLM(api=api)
+        llm = OllamaLLM(api=api, config_manager=llm_config)
         mock_memory = isolated_memory_context
 
         # Save multiple different types of results

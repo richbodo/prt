@@ -14,21 +14,44 @@ from prt_src.tui.widgets import TopNav
 logger = get_logger(__name__)
 
 
-def get_database_stats_stub() -> dict:
-    """Stub function - returns test database statistics.
-
-    TODO Phase 2B: Replace with real DataService integration.
+def get_database_stats_real() -> dict:
+    """Get real database statistics using debug info orchestration.
 
     Returns:
         Dict with database statistics
     """
-    return {
-        "status": "connected",
-        "contacts": 45,
-        "tags": 12,
-        "relationships": 23,
-        "notes": 8,
-    }
+    try:
+        from prt_src.debug_info import collect_database_info
+
+        db_info = collect_database_info()
+
+        if db_info["status"] == "healthy":
+            stats = db_info["statistics"]
+            return {
+                "status": "connected",
+                "contacts": stats.get("contacts", 0),
+                "tags": stats.get("tags", 0),
+                "relationships": stats.get("relationships", 0),
+                "notes": stats.get("notes", 0),
+            }
+        else:
+            return {
+                "status": "error",
+                "contacts": 0,
+                "tags": 0,
+                "relationships": 0,
+                "notes": 0,
+                "error": db_info.get("error", "Connection failed"),
+            }
+    except Exception as e:
+        return {
+            "status": "error",
+            "contacts": 0,
+            "tags": 0,
+            "relationships": 0,
+            "notes": 0,
+            "error": str(e),
+        }
 
 
 class SettingsScreen(BaseScreen):
@@ -53,12 +76,17 @@ class SettingsScreen(BaseScreen):
         yield self.top_nav
 
         # Database status section
-        stats = get_database_stats_stub()
+        stats = get_database_stats_real()
         status_icon = "🟢" if stats["status"] == "connected" else "🔴"
-        status_text = (
-            f"{status_icon} Connected │ Contacts: {stats['contacts']} │ Tags: {stats['tags']}\n"
-            f"Relationships: {stats['relationships']} │ Notes: {stats['notes']}"
-        )
+
+        if stats["status"] == "connected":
+            status_text = (
+                f"{status_icon} Connected │ Contacts: {stats['contacts']} │ Tags: {stats['tags']}\n"
+                f"Relationships: {stats['relationships']} │ Notes: {stats['notes']}"
+            )
+        else:
+            error_msg = stats.get("error", "Unknown error")
+            status_text = f"{status_icon} Error: {error_msg}"
 
         with Container(id=WidgetIDs.SETTINGS_CONTENT):
             yield Static(status_text, id=WidgetIDs.SETTINGS_DB_STATUS)

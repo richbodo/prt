@@ -28,22 +28,22 @@ class TestTimeoutConfiguration:
             config_manager.llm.timeout == 300
         ), f"Expected timeout of 300s, got {config_manager.llm.timeout}s"
 
-    def test_ollama_llm_uses_300_second_timeout(self, sample_config):
+    def test_ollama_llm_uses_300_second_timeout(self, sample_config, llm_config):
         """Test that OllamaLLM initializes with the 300-second timeout."""
         # Create OllamaLLM instance with default config using proper constructor
         from unittest.mock import MagicMock
 
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
         assert llm.timeout == 300, f"Expected OllamaLLM timeout of 300s, got {llm.timeout}s"
 
-    def test_ollama_llm_respects_custom_timeout(self, sample_config):
+    def test_ollama_llm_respects_custom_timeout(self, sample_config, llm_config):
         """Test that OllamaLLM respects custom timeout values when provided."""
         from unittest.mock import MagicMock
 
         custom_timeout = 600
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api, timeout=custom_timeout)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config, timeout=custom_timeout)
         assert (
             llm.timeout == custom_timeout
         ), f"Expected custom timeout of {custom_timeout}s, got {llm.timeout}s"

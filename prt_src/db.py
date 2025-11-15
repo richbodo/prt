@@ -306,6 +306,16 @@ class Database:
 
         return self.session.query(Relationship).count()
 
+    def count_tags(self) -> int:
+        from .models import Tag
+
+        return self.session.query(Tag).count()
+
+    def count_notes(self) -> int:
+        from .models import Note
+
+        return self.session.query(Note).count()
+
     def insert_contacts(self, contacts: List[Dict[str, str]]):
         """Insert contacts from parsed data (CSV or Google Takeout)."""
         from .models import Contact

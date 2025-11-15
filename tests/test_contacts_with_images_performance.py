@@ -137,13 +137,13 @@ def test_index_usage_verification(test_db):
 
 
 @pytest.mark.performance
-def test_tool_chain_performance(test_db):
+def test_tool_chain_performance(test_db, llm_config):
     """Test performance of the complete tool chain."""
     db, fixtures = test_db
     config = {"db_path": str(db.path), "db_encrypted": False}
 
     api = PRTAPI(config)
-    llm = OllamaLLM(api=api)
+    llm = OllamaLLM(api=api, config_manager=llm_config)
 
     # Test the individual tool performance
     start_time = time.time()

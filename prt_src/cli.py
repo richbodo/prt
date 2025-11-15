@@ -2894,8 +2894,26 @@ def main(
         "-m",
         help="Model alias (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use 'list-models' to see available options with support status.",
     ),
+    prt_debug_info: bool = typer.Option(
+        False,
+        "--prt-debug-info",
+        help="Display comprehensive system diagnostic information and exit",
+    ),
 ):
     """Personal Relationship Toolkit (PRT) - Manage your personal relationships."""
+    # Handle debug info command first (early exit)
+    if prt_debug_info:
+        from .debug_info import generate_debug_report
+
+        try:
+            report = generate_debug_report()
+            console.print(report)
+        except Exception as e:
+            console.print(f"Error generating debug report: {e}", style="red")
+            raise typer.Exit(1) from e
+        # Exit successfully after displaying report
+        raise typer.Exit(0)
+
     # Store LLM settings in context for subcommands
     if ctx.obj is None:
         ctx.obj = {}

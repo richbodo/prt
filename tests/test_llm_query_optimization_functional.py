@@ -158,10 +158,10 @@ class TestOptimizationPerformanceImpact:
 class TestOptimizationLogic:
     """Test optimization logic independently from actual LLM calls."""
 
-    def test_system_prompt_contains_all_optimization_patterns(self):
+    def test_system_prompt_contains_all_optimization_patterns(self, llm_config):
         """Test that system prompt construction includes all optimization patterns."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
 
         system_prompt = llm._create_system_prompt()
 
@@ -177,10 +177,10 @@ class TestOptimizationLogic:
         for pattern in required_patterns:
             assert pattern in system_prompt, f"System prompt missing pattern: {pattern}"
 
-    def test_optimization_patterns_include_performance_context(self):
+    def test_optimization_patterns_include_performance_context(self, llm_config):
         """Test that optimization patterns include performance justification."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
 
         system_prompt = llm._create_system_prompt()
 
@@ -192,10 +192,10 @@ class TestOptimizationLogic:
             len(found_keywords) >= 2
         ), f"Should provide performance context. Found: {found_keywords}"
 
-    def test_optimization_patterns_provide_specific_examples(self):
+    def test_optimization_patterns_provide_specific_examples(self, llm_config):
         """Test that each optimization pattern includes concrete examples."""
         mock_api = MagicMock()
-        llm = OllamaLLM(api=mock_api)
+        llm = OllamaLLM(api=mock_api, config_manager=llm_config)
 
         system_prompt = llm._create_system_prompt()
 
