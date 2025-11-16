@@ -32,8 +32,6 @@ if [ "$OS" = "mac" ]; then
     fi
     echo "Homebrew found at: $(which brew)"
 
-    # SQLCipher installation removed as part of Issue #41
-    echo "SQLCipher dependencies removed - using regular SQLite now"
 elif [ "$OS" = "linux" ]; then
     # Linux installation using apt for Debian-based systems
     if command -v apt-get >/dev/null; then
@@ -48,7 +46,6 @@ elif [ "$OS" = "linux" ]; then
         return 1
     fi
 
-    # SQLCipher flags removed as part of Issue #41
 fi
 
 # Check if virtual environment exists, if not create it

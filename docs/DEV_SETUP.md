@@ -43,8 +43,11 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Intent | Command |
 | --- | --- |
 | Launch TUI | `python -m prt_src` |
+| Use CLI instead of TUI | `python -m prt_src --cli` |
 | Run classic CLI | `python -m prt_src --classic` |
 | Debug TUI with fixtures | `python -m prt_src --debug` |
+| System diagnostic info | `python -m prt_src prt-debug-info` |
+| List available AI models | `python -m prt_src list-models` |
 | **Fast CI tests (recommended)** | `./scripts/run-ci-tests.sh` |
 | **Full local test suite** | `./scripts/run-local-tests.sh` |
 | Unit tests only (< 1 sec) | `./prt_env/bin/pytest -m unit` |
@@ -57,6 +60,27 @@ If your shell still shows `(prt_env)`, run `deactivate` manually.
 | Clean caches/builds | `find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null; find . -type f -name "*.pyc" -delete` |
 | Check outdated packages | `./prt_env/bin/pip list --outdated` |
 | Run pre-commit everywhere | `./prt_env/bin/pre-commit run --all-files` |
+
+### CLI Testing & Debugging Commands
+
+The CLI is excellent for testing and debugging PRT functionality:
+
+| Purpose | Command | Notes |
+| --- | --- | --- |
+| **System Health Check** | `python -m prt_src prt-debug-info` | Shows system status, database stats, LLM connectivity |
+| **Test AI Chat** | `python -m prt_src --cli --chat "count contacts"` | Quick AI functionality test |
+| **Complex AI Queries** | `python -m prt_src --cli --chat "make a directory of contacts with first name Rich"` | Test advanced AI operations |
+| **Model Selection** | `python -m prt_src --model gpt-oss-20b --chat "find friends"` | Test specific AI models |
+| **Interactive Chat** | `python -m prt_src --chat="" --model mistral-7b-instruct` | Enter interactive AI chat mode |
+| **Database Status** | `python -m prt_src db-status` | Check database connectivity and schema |
+| **Connection Test** | `python -m prt_src test-db` | Test database connection and credentials |
+| **Available Models** | `python -m prt_src list-models` | List all available AI models with status |
+
+**Pro Tips for Development:**
+- Use `prt-debug-info` first when debugging issues
+- Test AI functionality with simple queries before complex ones
+- Use `--debug` flag to work with sample data safely
+- CLI chat mode is perfect for testing tool chaining and AI responses
 
 > **Note:** Use the test scripts (`./scripts/run-ci-tests.sh` and `./scripts/run-local-tests.sh`) for daily development. See `docs/RUNNING_TESTS.md` for complete testing guidance.
 
@@ -176,10 +200,27 @@ For persistent issues, check `requirements.txt` for pinned versions and install 
 # Run lint + tests in one go
 ./prt_env/bin/ruff check prt_src/ tests/ && ./prt_env/bin/python -m pytest tests/
 
-# Snapshot database status from the CLI
+### CLI for Troubleshooting
+
+# Quick system health check
+python -m prt_src prt-debug-info
+
+# Test basic database connectivity
 python -m prt_src db-status
 
-# Import Google Takeout export interactively - many things are not in the TUI yet
+# Test AI functionality
+python -m prt_src --cli --chat "how many contacts do I have?"
+
+# Check what models are available
+python -m prt_src list-models
+
+# Test with debug data (safe)
+python -m prt_src --debug prt-debug-info
+
+# Run setup if needed
+python -m prt_src --setup
+
+# Legacy interactive mode for import operations
 python -m prt_src --classic
 ```
 
