@@ -394,30 +394,33 @@ class OllamaModelRegistry:
         """Get a sensible default model.
 
         Priority:
-        1. Model with alias containing "llama" and "8" (llama8)
-        2. First model with "llama" in name
-        3. First model overall
+        1. gpt-oss:20b (preferred default)
+        2. Any officially supported model
+        3. Any available model
 
         Returns:
             Model name, or None if no models available
         """
+        from prt_src.llm_supported_models import get_supported_models
+
         models = self.list_models()
         if not models:
             return None
 
-        # Look for llama8-like model
-        for model in models:
-            alias = model.friendly_name.lower()
-            if "llama" in alias and "8" in alias:
-                logger.debug(f"Found default model: {model.name} (alias: {model.friendly_name})")
-                return model.name
+        model_names = {model.name for model in models}
 
-        # Look for any llama model
-        for model in models:
-            if "llama" in model.name.lower():
-                logger.debug(f"Found llama model: {model.name}")
-                return model.name
+        # Priority 1: Check for gpt-oss:20b specifically
+        if "gpt-oss:20b" in model_names:
+            logger.debug("Found preferred default model: gpt-oss:20b")
+            return "gpt-oss:20b"
 
-        # Return first model
+        # Priority 2: Look for any officially supported model
+        supported_models = get_supported_models()
+        for model_name in supported_models:
+            if model_name in model_names:
+                logger.debug(f"Found supported default model: {model_name}")
+                return model_name
+
+        # Priority 3: Return first available model
         logger.debug(f"Using first available model: {models[0].name}")
         return models[0].name
