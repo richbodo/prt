@@ -17,7 +17,8 @@ from ..bootstrap.launcher import run_interactive_cli
 from ..bootstrap.setup import check_setup_status
 from ..bootstrap.setup import run_setup_wizard
 from ..bootstrap.setup import setup_debug_mode
-from ..help import print_custom_help
+
+# print_custom_help removed - using Typer's built-in help
 from ..services.llm import start_llm_chat
 
 console = Console()
@@ -55,7 +56,7 @@ def main_command(
         "--chat",
         help='Start AI chat mode. Provide query text or use --chat="" for interactive mode. Use AFTER --model flag.',
     ),
-    help_flag: bool = typer.Option(False, "--help", help="Show this message and exit."),
+    # help_flag removed - Typer handles --help automatically
 ):
     """
     Personal Relationship Toolkit (PRT)
@@ -66,10 +67,7 @@ def main_command(
     Default behavior: Launches TUI (Text User Interface)
     First time? Run with --setup to import contacts or --debug to try sample data.
     """
-    # Handle custom help first
-    if help_flag:
-        print_custom_help()
-        raise typer.Exit()
+    # Custom help is now handled by Typer's built-in --help
 
     # Handle debug info flag
     if prt_debug_info:

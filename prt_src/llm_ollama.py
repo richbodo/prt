@@ -7,6 +7,8 @@ with tool calling capabilities for PRT operations.
 
 import asyncio
 import json
+import secrets
+import string
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
@@ -86,10 +88,8 @@ class OllamaLLM(BaseLLM):
 
     def _generate_mistral_tool_call_id(self) -> str:
         """Generate a Mistral-compatible tool call ID (9 alphanumeric characters)."""
-        import random
-        import string
-
-        return "".join(random.choices(string.ascii_letters + string.digits, k=9))
+        alphabet = string.ascii_letters + string.digits
+        return "".join(secrets.choice(alphabet) for _ in range(9))
 
     def _validate_and_parse_response(
         self, response: requests.Response, operation: str
@@ -1027,7 +1027,9 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
                 "temperature": self.temperature,
             },
         }
-        url = f"{self.base_url.replace('/v1', '')}/api/chat"
+        # Remove /v1 suffix only if the URL ends with it to avoid corrupting domains like v1.example.com
+        base = self.base_url.rstrip("/").removesuffix("/v1")
+        url = f"{base}/api/chat"
 
         try:
             response = requests.post(url, json=request_data, timeout=self.timeout)

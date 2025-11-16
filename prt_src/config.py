@@ -50,10 +50,20 @@ def load_config() -> Dict[str, Any]:
             username, password = get_db_credentials()
             config["db_username"] = username
             config["db_password"] = password
-        except Exception:
-            # If credentials can't be loaded, continue with minimal config
-            # Setup will handle credential generation later
-            pass
+        except RuntimeError as e:
+            # Critical error (permissions, disk space, etc.) - user should know
+            import sys
+
+            print(f"Warning: Database credentials setup failed: {e}", file=sys.stderr)
+            print("This may indicate a permissions or disk space issue.", file=sys.stderr)
+            print("Setup wizard will handle credential generation.", file=sys.stderr)
+            # Continue with minimal config - setup will handle it
+        except Exception as e:
+            # Unexpected error - log it but don't crash
+            import sys
+
+            print(f"Unexpected error accessing credentials: {e}", file=sys.stderr)
+            print("Continuing with minimal configuration.", file=sys.stderr)
         return config
     try:
         with path.open("r") as f:
