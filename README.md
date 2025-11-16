@@ -43,6 +43,13 @@ source ./init.sh    # One command setup - installs everything!
 # Quick development cycle
 python -m prt_src                 # Launch TUI
 python -m prt_src --debug         # TUI with debug data
+
+# Testing & Debugging with CLI
+python -m prt_src prt-debug-info  # System diagnostic information
+python -m prt_src --cli --chat "count contacts"  # Test AI functionality
+python -m prt_src list-models     # Check available AI models
+
+# Test suite
 python -m pytest tests/           # Run test suite
 ./prt_env/bin/ruff check --fix prt_src/ tests/   # Lint and auto-fix
 ./prt_env/bin/black prt_src/ tests/              # Format code
@@ -80,50 +87,55 @@ Status: None of the three interfaces are working fully, but all are useful and d
 
 The default UI is the TUI.  Run python -m prt_src and the tui opens up.
 
-PRT provides a CLI interface that automatically handles setup and operations. The main entry point is:
+PRT provides both a modern TUI (Text User Interface) and a CLI interface. The main entry point launches the TUI by default:
 
 ```bash
-python -m prt_src.cli
+python -m prt_src                     # Launch TUI (default)
 ```
 
-The upgrade for that CLI is the TUI, which allows for a few more features but still works in a terminal or over ssh.  
-
-The much more functional LLM chat features are just getting off the ground, but you can use chat as well for some things right now.
+The CLI interface provides direct access to commands and is especially useful for scripting, testing, and AI-powered chat features.
 
 ### Available Commands
 
 ```bash
-# TUI - has a menu item for LLM chat as well
-python -m prt_src
+# TUI Interface (default)
+python -m prt_src                     # Launch modern TUI interface
+python -m prt_src --tui               # Explicitly launch TUI
 
-# CLI
-python -m prt_src.cli                 # Typer CLI - uto-detects setup needs
+# CLI Interface
+python -m prt_src --cli               # Use command-line interface instead of TUI
+python -m prt_src --classic           # Force classic CLI mode (disable TUI attempt)
 
-# Quick access to LLM chat
-python -m prt_src.cli chat            # Start LLM chat directly
+# Setup and Configuration
+python -m prt_src --setup             # First-time setup: import contacts or demo data
+python -m prt_src --debug             # Run with sample data (safe, isolated database)
+python -m prt_src --regenerate-fixtures # Reset sample data (use with --debug)
 
-# Setup and configuration
-python -m prt_src.cli setup           # Manual setup wizard
-python -m prt_src.cli db-status       # Check database status
-python -m prt_src.cli test            # Test database connection
+# System Information
+python -m prt_src prt-debug-info      # Display system diagnostic information
+python -m prt_src list-models         # List available AI models
+python -m prt_src db-status           # Check database status
+python -m prt_src test-db             # Test database connection
 
-# Database operations moved to application-level encryption (Issue #41)
+# AI-Powered Chat (Great for Testing & Development)
+python -m prt_src --model gpt-oss-20b --chat "find friends"
+python -m prt_src --cli --chat "make a directory of all contacts with first name Rich"
+python -m prt_src --chat="" --model mistral-7b-instruct  # Interactive chat mode
 ```
 
-### Interactive Menu
+### User Interfaces
 
-The TUI menu is pretty self explanatory.
+**TUI (Text User Interface)** - The modern, default interface with intuitive navigation:
+- Clean menu-driven interface with keyboard shortcuts
+- Integrated search and contact management
+- Built-in AI chat functionality
+- Real-time visual feedback and progress indicators
 
-The main CLI menu:
-
-- ** Start Chat** - AI-powered chat mode that does anything the cli and tools can do
-- ** View Contacts** - Browse contact information
-- ** Search ** - Search contacts by contact, tag, or note content - export any results list to a directory
-- ** Manage Tags** - Browse and manage contact tags
-- ** Manage Notes** - Browse and manage contact notes
-- ** Manage Database** - Check database stats and backup
-- ** Import Google Takeout** - Import contacts from Google Takeout zip file
-- ** Exit** - Exit the application
+**CLI (Command Line Interface)** - Direct command access for automation and power users:
+- Direct command execution for scripting
+- AI chat mode with natural language queries
+- Perfect for development, testing, and automation
+- Bypass the TUI for headless operations
 
 ## Standalone Tools
 
