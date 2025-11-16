@@ -28,6 +28,10 @@ CLI_OPTIONS: Dict[str, Dict[str, Any]] = {
         "help": "Use command-line interface instead of TUI",
         "flag": "--cli",
     },
+    "classic": {
+        "help": "Force classic CLI mode (disable TUI attempt)",
+        "flag": "--classic",
+    },
     "tui": {
         "help": "Use TUI interface (default)",
         "flag": "--tui",
@@ -66,7 +70,7 @@ def print_custom_help():
     for line in lines:
         # Convert markdown headers to plain text
         if line.startswith("# "):
-            output_lines.append(line[2:].upper())
+            output_lines.append(line[2:])
             output_lines.append("=" * len(line[2:]))
         elif line.startswith("## "):
             output_lines.append("")

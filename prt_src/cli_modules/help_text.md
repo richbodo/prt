@@ -14,7 +14,9 @@ All data stored locally on your machine, no cloud sync.
 - `--regenerate-fixtures` - Reset sample data (use with --debug)
 - `--setup` - First-time setup: import contacts or try demo data
 - `--cli` - Use command-line interface instead of TUI
+- `--classic` - Force classic CLI mode (disable TUI attempt)
 - `--tui` - Use TUI interface (default)
+- `--prt-debug-info` - Display system diagnostic information and exit
 - `--model, -m MODEL` - Choose AI model (e.g. 'gpt-oss-20b', 'mistral-7b-instruct')
   Use 'list-models' to see options. Put this flag BEFORE --chat.
 - `--chat [TEXT]` - Start AI chat mode. Provide query text or use --chat=""
