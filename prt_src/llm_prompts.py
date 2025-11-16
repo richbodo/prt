@@ -145,11 +145,17 @@ EXAMPLES:
 User: "how many contacts?" → CALL get_database_stats() now
 User: "find friends" → CALL search_contacts("friend") now
 User: "show contacts with photos" → CALL appropriate tool now
+User: "show me contact 1" → CALL get_contact_details(contact_id=1) now
+User: "details for contact 3" → CALL get_contact_details(contact_id=3) now
+User: "tell me about John Doe" → CALL search_contacts("John Doe") first, then get_contact_details(contact_id=<found_id>)
+User: "show me all contacts with first name Rich" → CALL search_contacts("Rich") now
+User: "contacts with specific criteria not in tools" → CALL execute_sql(sql="SELECT name, email FROM contacts WHERE name LIKE '%Rich%' LIMIT 10", confirm=true, reason="Find contacts with Rich in name")
 
 WRONG RESPONSES:
 ❌ "To get that information, you can use the search_contacts function..."
 ❌ "Here's how to find contacts: use search_contacts..."
 ❌ "You need to call the get_database_stats function..."
+❌ "You can get details with get_contact_details..."
 
 CORRECT RESPONSES:
 ✅ [Call tool immediately, then show formatted results]
@@ -199,6 +205,9 @@ Best practices:
 • "Find X contacts" → search_contacts or list_all_contacts
 • "Tag X as Y" → add_tag_to_contact (backup auto-created)
 • "Show family" → get_contacts_by_tag
+• "Details for contact X" → get_contact_details(contact_id=X)
+• "Show me contact 1" → get_contact_details(contact_id=1)
+• "Tell me about John" → search_contacts("John") then get_contact_details(contact_id=<result_id>)
 • "Contacts with photos" → SQL with profile_image IS NOT NULL LIMIT 50
 • "Create directory" → generate_directory (executed automatically)
 

@@ -91,13 +91,13 @@ class BaseLLM(ABC):
             # Extract tool calls (protocol-specific)
             tool_calls = self._extract_tool_calls(response)
 
-            # Fallback: Check for tool suggestions in content (for models like Mistral)
+            # Fallback: Check for tool suggestions in user message (for models like Mistral)
             if not tool_calls:
-                assistant_content = self._extract_assistant_message(response)
-                suggested_tools = self._detect_tool_suggestions(assistant_content)
+                # Use the original user message to detect intent, not assistant response
+                suggested_tools = self._detect_tool_suggestions(message)
                 if suggested_tools:
                     logger.info(
-                        f"[LLM] Detected {len(suggested_tools)} tool suggestions in content, executing them"
+                        f"[LLM] Detected {len(suggested_tools)} tool suggestions in user message, executing them"
                     )
                     tool_calls = suggested_tools
 
@@ -285,6 +285,11 @@ class BaseLLM(ABC):
         tool_calls = []
         available_tool_names = {tool.name for tool in self.tools}
 
+        # Log the content being analyzed for debugging
+        logger.debug(
+            f"[LLM] Analyzing content for tool suggestions: '{content[:200]}...'"
+        )  # First 200 chars
+
         # Pattern 1: Look for tool mentions like "use search_contacts" or "call get_database_stats"
         tool_mention_patterns = [
             r"(?:use|call|execute)\s+`?(\w+)`?(?:\s*\(([^)]*)\))?",
@@ -337,18 +342,37 @@ class BaseLLM(ABC):
                 )
                 logger.info("[LLM] Detected count request -> get_database_stats")
 
-            # "Find [term]" -> search_contacts
-            find_match = re.search(r"find\s+(\w+)", content_lower)
-            if find_match and "search_contacts" in available_tool_names:
-                search_term = find_match.group(1)
-                tool_calls.append(
-                    {
-                        "id": "detected_search",
-                        "name": "search_contacts",
-                        "arguments": {"query": search_term},
-                    }
-                )
-                logger.info(f"[LLM] Detected search request -> search_contacts('{search_term}')")
+            # Enhanced search patterns for various queries (order matters - most specific first)
+            search_patterns = [
+                # "show me all contacts with first name [term]" -> search_contacts
+                (r"contacts?\s+with\s+(?:first\s+name|name)\s+(\w+)", r"\1"),
+                # "show me all the contacts with the first name [term]" -> search_contacts
+                (r"all\s+(?:the\s+)?contacts?\s+with\s+(?:the\s+)?first\s+name\s+(\w+)", r"\1"),
+                # "contacts named [term]" -> search_contacts
+                (r"contacts?\s+named\s+(\w+)", r"\1"),
+                # "list contacts with [term]" -> search_contacts
+                (r"list\s+contacts?\s+with\s+(\w+)", r"\1"),
+                # "show [term] contacts" -> search_contacts (avoid "show all contacts")
+                (r"show\s+(\w+)\s+contacts?(?!\s+with)", r"\1"),
+                # "Find [term]" -> search_contacts (keep simple find last to avoid conflicts)
+                (r"find\s+(\w+)(?!\s+contacts)", r"\1"),
+            ]
+
+            for pattern, _replacement in search_patterns:
+                match = re.search(pattern, content_lower)
+                if match and "search_contacts" in available_tool_names:
+                    search_term = match.group(1)
+                    tool_calls.append(
+                        {
+                            "id": f"detected_search_{search_term}",
+                            "name": "search_contacts",
+                            "arguments": {"query": search_term},
+                        }
+                    )
+                    logger.info(
+                        f"[LLM] Detected search request '{pattern}' -> search_contacts('{search_term}')"
+                    )
+                    break  # Only use the first match
 
         return tool_calls
 
