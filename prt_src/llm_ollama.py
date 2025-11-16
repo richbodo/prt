@@ -1028,7 +1028,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
             },
         }
         # Remove /v1 suffix only if the URL ends with it to avoid corrupting domains like v1.example.com
-        base = self.base_url.rstrip("/").rstrip("/v1")
+        base = self.base_url.rstrip("/").removesuffix("/v1")
         url = f"{base}/api/chat"
 
         try:
