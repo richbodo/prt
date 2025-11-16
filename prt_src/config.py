@@ -43,8 +43,18 @@ def config_path() -> Path:
 def load_config() -> Dict[str, Any]:
     path = config_path()
     if not path.exists():
-        # Return default config
-        return {"db_path": str(data_dir() / "prt.db"), "db_encrypted": False}
+        # Return default config with auto-populated credentials if they exist
+        config = {"db_path": str(data_dir() / "prt.db"), "db_encrypted": False}
+        try:
+            # Try to auto-populate credentials from secrets file if they exist
+            username, password = get_db_credentials()
+            config["db_username"] = username
+            config["db_password"] = password
+        except Exception:
+            # If credentials can't be loaded, continue with minimal config
+            # Setup will handle credential generation later
+            pass
+        return config
     try:
         with path.open("r") as f:
             config = json.load(f)

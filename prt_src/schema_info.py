@@ -137,12 +137,54 @@ class SchemaInfoGenerator:
 
         return {"database_type": "SQLite", "tables": tables, "total_tables": len(tables)}
 
-    def format_schema_for_llm(self) -> str:
+    def format_schema_for_llm(self, detail_level: str = "essential") -> str:
         """Format schema information for LLM consumption.
+
+        Args:
+            detail_level: "essential" for concise schema, "detailed" for full schema
 
         Returns:
             Formatted string with schema information for LLM
         """
+        if detail_level == "essential":
+            return self._format_essential_schema()
+        return self._format_detailed_schema()
+
+    def _format_essential_schema(self) -> str:
+        """Format essential schema info for LLM - optimized for performance."""
+        output = []
+
+        output.append("## DATABASE ESSENTIALS")
+        output.append("")
+        output.append("**CORE TABLES**:")
+        output.append("• contacts: id, name, email, phone, profile_image (binary), first/last_name")
+        output.append("• tags/notes: categorical labels and free-form text")
+        output.append("• contact_metadata: links contacts to tags/notes")
+        output.append("• contact_relationships: contact-to-contact links with types")
+        output.append("")
+
+        output.append("**PERFORMANCE RULES**:")
+        output.append("• Always LIMIT large queries (50-100 max)")
+        output.append("• Exclude profile_image from SELECT unless needed (50-500KB each)")
+        output.append("• Use COUNT(*) before large result sets")
+        output.append("• Indexed fields: name, email, created_at")
+        output.append("")
+
+        output.append("**COMMON PATTERNS**:")
+        output.append("```sql")
+        output.append("-- All contacts: SELECT id, name, email FROM contacts LIMIT 50")
+        output.append(
+            "-- With images: SELECT id, name FROM contacts WHERE profile_image IS NOT NULL LIMIT 50"
+        )
+        output.append("-- Count: SELECT COUNT(*) FROM contacts WHERE profile_image IS NOT NULL")
+        output.append("-- By tag: Use get_contacts_by_tag tool instead of SQL")
+        output.append("-- Random: SELECT * FROM contacts ORDER BY RANDOM() LIMIT 10")
+        output.append("```")
+
+        return "\n".join(output)
+
+    def _format_detailed_schema(self) -> str:
+        """Format detailed schema info for LLM - legacy full version."""
         schema = self.get_schema_summary()
 
         output = []
@@ -405,13 +447,16 @@ class SchemaInfoGenerator:
 schema_generator = SchemaInfoGenerator()
 
 
-def get_schema_for_llm() -> str:
+def get_schema_for_llm(detail_level: str = "essential") -> str:
     """Get formatted schema information for LLM.
+
+    Args:
+        detail_level: "essential" for concise schema, "detailed" for full schema
 
     Returns:
         Formatted schema string for LLM consumption
     """
-    return schema_generator.format_schema_for_llm()
+    return schema_generator.format_schema_for_llm(detail_level)
 
 
 def validate_sql_schema(sql: str) -> Dict[str, Any]:
