@@ -1,26 +1,30 @@
 # Architectural Compliance Guide
 
-This document outlines the enforced architectural patterns for PRT and provides guidelines for maintaining API-first design.
+This document defines the architectural rules and patterns that all PRT code must follow to maintain consistency, maintainability, and proper separation of concerns.
 
-## Overview
+## Architectural Rules
 
-PRT follows a strict **API-first architecture** where all data access must go through the PRTAPI layer. This ensures consistency, maintainability, and proper separation of concerns across all interfaces (CLI, TUI, LLM tools).
+PRT enforces a strict **API-first architecture** with the following mandatory rules:
 
-## Compliance Grade: A+ (95%+)
+### Rule 1: API Layer Ownership
+- **All business logic** must be implemented in the PRTAPI layer (`prt_src/api.py`)
+- **All data access** must go through the PRTAPI layer
+- **No interface layer** (CLI, TUI, LLM tools) may bypass the API layer
 
-After the architectural compliance refactoring, PRT has achieved **A+ compliance (95%+)** with zero architectural violations detected in the TUI layer.
+### Rule 2: Database Access Restriction
+- **Only the API layer** may access the database layer (`prt_src/db.py`)
+- **Interface layers** must never use `self.api.db.*` patterns
+- **Session access** from interface layers is prohibited
 
-### Before Refactoring: C+ (75%)
-- Direct database access in TUI DataService
-- Direct core module imports bypassing API layer
-- Code duplication between API and DataService
+### Rule 3: Core Module Isolation
+- **Core modules** (`prt_src/core/`) may only be imported by the API layer
+- **Interface layers** must never import core modules directly
+- **All core functionality** must be exposed through API layer methods
 
-### After Refactoring: A+ (95%+)
-- ✅ Zero direct database access from TUI layer
-- ✅ Zero direct core module imports from TUI layer
-- ✅ All operations use PRTAPI methods exclusively
-- ✅ Consistent behavior between CLI and TUI
-- ✅ Comprehensive architectural compliance tests
+### Rule 4: Consistent Error Handling
+- **All API methods** must return consistent error response formats
+- **Interface layers** must handle errors consistently
+- **Database errors** must be caught and transformed by the API layer
 
 ## Architectural Layers
 
@@ -185,62 +189,107 @@ When refactoring existing code:
 
 ## Benefits
 
-### Achieved Through Compliance
+This architectural approach provides:
 
-- **Reduced maintenance burden**: Single source of truth for business logic
-- **Improved consistency**: All interfaces use same data access patterns
-- **Better testability**: Easier to mock and test individual layers
-- **Clearer separation of concerns**: API layer owns all data operations
-- **Foundation for extensibility**: Clean architecture supports new features
-
-### Performance Impact
-
-- **Zero performance degradation** measured in compliance tests
-- **Potential improvements** through API layer optimizations
-- **Memory efficiency** through consistent object patterns
-- **Connection pooling** maintained through API layer
+- **Single source of truth**: All business logic centralized in API layer
+- **Consistent behavior**: All interfaces use identical data access patterns
+- **Better testability**: Clear separation enables effective mocking and testing
+- **Maintainability**: Changes to business logic only require API layer updates
+- **Extensibility**: New interfaces can be added without duplicating logic
 
 ## Enforcement
 
-### Pre-commit Hooks
+### Automated Validation
 
-Architectural compliance is enforced through pre-commit hooks that:
-- Scan for prohibited import patterns
-- Run architectural compliance tests
-- Prevent commits with architectural violations
+Architectural compliance is enforced through:
 
-### CI Pipeline
+- **Pre-commit hooks**: Scan for prohibited patterns before commits
+- **CI pipeline**: Run compliance tests on all pull requests
+- **Integration tests**: Validate architectural rules in `tests/integration/test_architectural_compliance.py`
 
-The continuous integration pipeline:
-- Runs full architectural compliance test suite
-- Blocks merges with compliance violations
-- Maintains architectural quality gates
+### Code Review Requirements
 
-### Code Review Guidelines
+All code changes must:
 
-Reviewers should check:
-- New code follows API-first patterns
-- No direct database or core module access from interfaces
-- API layer provides needed functionality
-- Tests validate architectural compliance
+1. Follow API-first patterns
+2. Avoid direct database or core module access from interfaces
+3. Add necessary API methods when adding new functionality
+4. Include compliance tests for new architectural components
 
-## Future Considerations
+## Adding New Functionality
 
-### Planned Enhancements
+### Step 1: API Layer First
+```python
+# prt_src/api.py
+def new_feature_method(self, param: str) -> Dict[str, Any]:
+    """New feature implementation."""
+    try:
+        result = self.db.new_feature_operation(param)
+        return {"success": True, "data": result}
+    except Exception as e:
+        self.logger.error(f"Error in new feature: {e}")
+        return {"success": False, "error": str(e)}
+```
 
-1. **Automated compliance scanning** - Pre-commit hooks for instant feedback
-2. **Architecture documentation generation** - Auto-generate compliance reports
-3. **Performance monitoring** - Track API layer performance metrics
-4. **Extended test coverage** - Add compliance tests for new modules
+### Step 2: Interface Layer Integration
+```python
+# prt_src/tui/services/data.py
+async def new_feature(self, param: str) -> Any:
+    """TUI wrapper for new feature."""
+    result = self.api.new_feature_method(param)
+    return result.get("data") if result.get("success") else None
+```
 
-### Migration Opportunities
+### Step 3: Compliance Validation
+- Add tests in `test_architectural_compliance.py`
+- Verify no architectural rule violations
+- Run full compliance test suite
 
-1. **CLI modularization** - Apply same patterns to CLI layer refactoring
-2. **LLM tools compliance** - Ensure AI tools follow architectural patterns
-3. **Plugin architecture** - Extend API-first design to plugin system
+## Extending Architecture
 
-## Conclusion
+### Adding New Interface Types
+1. Create new interface module (e.g., `prt_src/web/`)
+2. Interface must only import from `prt_src.api`
+3. Add compliance tests for new interface
+4. Document interface-specific patterns
 
-The architectural compliance refactoring successfully transformed PRT from C+ (75%) to A+ (95%+) compliance, eliminating all direct database and core module access violations in the TUI layer. The enforced API-first architecture provides a solid foundation for future development while maintaining performance and functionality.
+### Adding New Core Modules
+1. Implement core functionality
+2. Add API layer methods to expose functionality
+3. Update required API method documentation
+4. Add compliance tests
 
-All future development must follow these architectural patterns to maintain the quality and consistency achieved through this refactoring effort.
+### Adding New Rules
+1. Define rule clearly in this document
+2. Add automated validation in compliance tests
+3. Update enforcement tooling
+4. Document rule exceptions (if any)
+
+## Rule Exceptions
+
+### Intentional API Layer Core Imports
+The API layer may import core modules when:
+- The import provides business logic needed by the API
+- The import is documented as intentional architecture
+- Alternative API-only implementation would be impractical
+
+### Model Imports for Type Hints
+Interface layers may import models when:
+- Imports are only used for type annotations
+- No model instances are created or manipulated
+- Import uses `from __future__ import annotations` pattern
+
+## Validation Commands
+
+```bash
+# Check for architectural violations
+grep -r "from prt_src\.core\." prt_src/tui/
+grep -r "\.db\." prt_src/tui/services/data.py
+grep -r "session\." prt_src/tui/services/data.py
+
+# Run compliance test suite
+./prt_env/bin/pytest tests/integration/test_architectural_compliance.py -v
+
+# Validate API completeness
+./prt_env/bin/pytest tests/test_api.py -v
+```

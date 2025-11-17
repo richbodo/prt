@@ -605,6 +605,81 @@ class PRTAPI:
         except ValueError:
             return False
 
+    def get_contact_notes(self, contact_id: int) -> List[Dict[str, Any]]:
+        """Get all notes associated with a specific contact.
+
+        Args:
+            contact_id: The contact ID to get notes for
+
+        Returns:
+            List of note dictionaries associated with the contact
+        """
+        try:
+            from .models import Contact
+
+            contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+            if not contact or not contact.relationship:
+                return []
+
+            # Get notes associated with this contact's relationship
+            notes = contact.relationship.notes if contact.relationship else []
+            return [
+                {
+                    "id": note.id,
+                    "title": note.title,
+                    "content": note.content,
+                    "created_at": note.created_at.isoformat() if note.created_at else None,
+                    "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+                }
+                for note in notes
+            ]
+        except Exception as e:
+            self.logger.error(f"Error getting notes for contact {contact_id}: {e}", exc_info=True)
+            return []
+
+    def associate_note_with_contact(self, note_id: int, contact_id: int) -> bool:
+        """Associate an existing note with a contact.
+
+        Args:
+            note_id: The note ID to associate
+            contact_id: The contact ID to associate with
+
+        Returns:
+            True if association was successful, False otherwise
+        """
+        try:
+            from .models import Contact
+            from .models import Note
+
+            # Verify both note and contact exist
+            note = self.db.session.query(Note).filter(Note.id == note_id).first()
+            contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+
+            if not note or not contact:
+                return False
+
+            # Ensure contact has a relationship metadata object
+            if not contact.relationship:
+                # Create relationship metadata if it doesn't exist
+                from .models import ContactMetadata
+
+                metadata = ContactMetadata(contact_id=contact_id)
+                self.db.session.add(metadata)
+                self.db.session.flush()  # Get the ID
+
+            # Associate note with contact's relationship
+            if note not in contact.relationship.notes:
+                contact.relationship.notes.append(note)
+                self.db.session.commit()
+
+            return True
+        except Exception as e:
+            self.logger.error(
+                f"Error associating note {note_id} with contact {contact_id}: {e}", exc_info=True
+            )
+            self.db.session.rollback()
+            return False
+
     def remove_note_from_contact(self, contact_id: int, note_title: str) -> bool:
         """Remove a note from a contact's relationship."""
         from .models import Contact
@@ -761,6 +836,27 @@ class PRTAPI:
             }
             for c in contacts
         ]
+
+    def get_contacts_paginated(self, page: int, limit: int) -> List[Dict[str, Any]]:
+        """Get contacts with pagination.
+
+        Args:
+            page: Page number (1-based)
+            limit: Number of contacts per page
+
+        Returns:
+            List of contact dictionaries for the requested page
+        """
+        try:
+            # Calculate offset (convert 1-based page to 0-based offset)
+            offset = (page - 1) * limit
+
+            # Get all contacts using existing method, then slice
+            all_contacts = self.list_all_contacts()
+            return all_contacts[offset : offset + limit]
+        except Exception as e:
+            self.logger.error(f"Error getting paginated contacts: {e}", exc_info=True)
+            return []
 
     def get_contacts_with_images(self) -> List[Dict[str, Any]]:
         """Get all contacts that have profile images.
@@ -1098,6 +1194,60 @@ class PRTAPI:
                 "message": f"Failed to remove relationship: {str(e)}",
             }
 
+    def delete_relationship_by_id(self, relationship_id: int) -> Dict[str, Any]:
+        """Delete a relationship by its ID directly.
+
+        Args:
+            relationship_id: The ID of the relationship to delete
+
+        Returns:
+            Dict with success status, message, and relationship details
+        """
+        try:
+            # First, get relationship details for the response
+            relationships = self.db.get_all_relationships()
+            target_relationship = None
+            for rel in relationships:
+                if rel.get("relationship_id") == relationship_id:
+                    target_relationship = rel
+                    break
+
+            if not target_relationship:
+                return {
+                    "success": False,
+                    "error": f"Relationship with ID {relationship_id} not found",
+                    "message": f"No relationship found with ID {relationship_id}",
+                }
+
+            # Delete the relationship using the database layer
+            success = self.db.delete_relationship_by_id(relationship_id)
+
+            if success:
+                return {
+                    "success": True,
+                    "relationship_id": relationship_id,
+                    "from_contact": target_relationship.get("person1"),
+                    "to_contact": target_relationship.get("person2"),
+                    "relationship_type": target_relationship.get("type_key"),
+                    "message": f"Successfully deleted relationship {relationship_id}",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Database deletion failed",
+                    "message": f"Failed to delete relationship {relationship_id} from database",
+                }
+
+        except Exception as e:
+            self.logger.error(
+                f"Error deleting relationship by ID {relationship_id}: {e}", exc_info=True
+            )
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to delete relationship {relationship_id}: {str(e)}",
+            }
+
     def get_contact_relationships(
         self, contact_name: str, type_filter: Optional[str] = None
     ) -> List[Dict[str, Any]]:
@@ -1212,19 +1362,10 @@ class PRTAPI:
         Returns:
             True if successful, False otherwise
         """
-        from .models import Note
-
         try:
-            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
-            if note_obj:
-                note_obj.title = title
-                note_obj.content = content
-                self.db.session.commit()
-                return True
-            return False
+            return self.db.update_note_by_id(note_id, title=title, content=content)
         except Exception as e:
             self.logger.error(f"Error updating note {note_id}: {e}", exc_info=True)
-            self.db.session.rollback()
             return False
 
     def delete_note_by_id(self, note_id: int) -> bool:
@@ -1236,18 +1377,10 @@ class PRTAPI:
         Returns:
             True if successful, False otherwise
         """
-        from .models import Note
-
         try:
-            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
-            if note_obj:
-                self.db.session.delete(note_obj)
-                self.db.session.commit()
-                return True
-            return False
+            return self.db.delete_note_by_id(note_id)
         except Exception as e:
             self.logger.error(f"Error deleting note {note_id}: {e}", exc_info=True)
-            self.db.session.rollback()
             return False
 
     def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
@@ -1259,18 +1392,13 @@ class PRTAPI:
         Returns:
             Note dictionary or None if not found
         """
-        from .models import Note
-
         try:
-            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
-            if note_obj:
-                return {
-                    "id": note_obj.id,
-                    "title": note_obj.title,
-                    "content": note_obj.content,
-                    "contact_count": len(note_obj.relationships),
-                }
-            return None
+            note_data = self.db.get_note_by_id(note_id)
+            if note_data:
+                # Add contact count if needed (keeping API backward compatibility)
+                # Note: We'll need to get this from relationships if required
+                note_data["contact_count"] = 0  # TODO: Implement proper contact count
+            return note_data
         except Exception as e:
             self.logger.error(f"Error getting note {note_id}: {e}", exc_info=True)
             return None

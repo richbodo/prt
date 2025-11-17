@@ -42,9 +42,9 @@ class DataService:
             List of contact dictionaries
         """
         try:
-            # TODO: Add pagination to PRTAPI
-            contacts = self.api.list_all_contacts()
-            return contacts[offset : offset + limit]
+            # Use paginated API method
+            page = (offset // limit) + 1  # Convert offset to 1-based page
+            return self.api.get_contacts_paginated(page, limit)
         except Exception as e:
             logger.error(f"Failed to get contacts: {e}")
             return []
@@ -295,7 +295,7 @@ class DataService:
             return False
 
     async def delete_relationship(self, relationship_id: int) -> bool:
-        """Delete a relationship.
+        """Delete a relationship by ID.
 
         Args:
             relationship_id: Relationship ID
@@ -304,33 +304,8 @@ class DataService:
             True if successful
         """
         try:
-            # Get the relationship details first using API
-            all_relationships = self.api.get_all_relationships()
-            target_relationship = None
-            for rel in all_relationships:
-                if rel.get("relationship_id") == relationship_id:
-                    target_relationship = rel
-                    break
-
-            if not target_relationship:
-                logger.error(f"Relationship with ID {relationship_id} not found")
-                return False
-
-            # Delete using the API method
-            from_contact_id = target_relationship["from_contact_id"]
-            to_contact_id = target_relationship["to_contact_id"]
-            type_key = target_relationship["type_key"]
-
-            # Get contact details for removal
-            from_contact = self.api.get_contact(from_contact_id)
-            to_contact = self.api.get_contact(to_contact_id)
-
-            if from_contact and to_contact:
-                result = self.api.remove_contact_relationship(
-                    from_contact["name"], to_contact["name"], type_key
-                )
-                return result.get("success", False)
-            return False
+            result = self.api.delete_relationship_by_id(relationship_id)
+            return result.get("success", False)
         except Exception as e:
             logger.error(f"Failed to delete relationship: {e}")
             return False
@@ -454,8 +429,7 @@ class DataService:
         """
         try:
             if contact_id:
-                # TODO: Add get_contact_notes to PRTAPI
-                pass
+                return self.api.get_contact_notes(contact_id)
             return self.api.get_all_notes()
         except Exception as e:
             logger.error(f"Failed to get notes: {e}")
@@ -477,8 +451,10 @@ class DataService:
         try:
             note = self.api.add_note(title, content)
             if note and contact_id:
-                # TODO: Add note-contact association to PRTAPI
-                pass
+                # Associate the newly created note with the contact
+                note_id = note.get("id")
+                if note_id:
+                    self.api.associate_note_with_contact(note_id, contact_id)
             return note
         except Exception as e:
             logger.error(f"Failed to create note: {e}")
@@ -564,7 +540,7 @@ class DataService:
                 "contacts": len(self.api.list_all_contacts()),
                 "tags": len(self.api.get_all_tags()),
                 "notes": len(self.api.get_all_notes()),
-                "relationships": 0,  # TODO: Add to PRTAPI
+                "relationships": len(self.api.get_all_relationships()),
             }
         except Exception as e:
             logger.error(f"Failed to get stats: {e}")
