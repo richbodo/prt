@@ -1183,3 +1183,353 @@ class PRTAPI:
             "nodes": [{"id": id, "name": name} for id, name in nodes],
             "edges": edges,
         }
+
+    # ========== Additional API Methods for TUI DataService ==========
+
+    def get_all_relationships(self) -> List[Dict[str, Any]]:
+        """Get all relationships using the database layer method.
+
+        This method provides API access to the database's get_all_relationships
+        functionality for TUI DataService to eliminate direct database access.
+
+        Returns:
+            List of relationship dictionaries
+        """
+        try:
+            return self.db.get_all_relationships()
+        except Exception as e:
+            self.logger.error(f"Error getting all relationships: {e}", exc_info=True)
+            return []
+
+    def update_note_by_id(self, note_id: int, title: str, content: str) -> bool:
+        """Update a note by ID.
+
+        Args:
+            note_id: Note ID to update
+            title: New title
+            content: New content
+
+        Returns:
+            True if successful, False otherwise
+        """
+        from .models import Note
+
+        try:
+            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
+            if note_obj:
+                note_obj.title = title
+                note_obj.content = content
+                self.db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error updating note {note_id}: {e}", exc_info=True)
+            self.db.session.rollback()
+            return False
+
+    def delete_note_by_id(self, note_id: int) -> bool:
+        """Delete a note by ID.
+
+        Args:
+            note_id: Note ID to delete
+
+        Returns:
+            True if successful, False otherwise
+        """
+        from .models import Note
+
+        try:
+            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
+            if note_obj:
+                self.db.session.delete(note_obj)
+                self.db.session.commit()
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error deleting note {note_id}: {e}", exc_info=True)
+            self.db.session.rollback()
+            return False
+
+    def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
+        """Get a note by ID.
+
+        Args:
+            note_id: Note ID to retrieve
+
+        Returns:
+            Note dictionary or None if not found
+        """
+        from .models import Note
+
+        try:
+            note_obj = self.db.session.query(Note).filter(Note.id == note_id).first()
+            if note_obj:
+                return {
+                    "id": note_obj.id,
+                    "title": note_obj.title,
+                    "content": note_obj.content,
+                    "contact_count": len(note_obj.relationships),
+                }
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting note {note_id}: {e}", exc_info=True)
+            return None
+
+    def unified_search(
+        self, query: str, entity_types: Optional[List[str]] = None, limit: int = 100
+    ) -> Dict[str, Any]:
+        """Perform unified search across all entity types through API layer.
+
+        This method provides API access to the unified search functionality,
+        eliminating direct core module imports from TUI layer.
+
+        Args:
+            query: Search query string
+            entity_types: List of entity types to search ('contacts', 'notes', 'tags', 'relationships')
+            limit: Maximum number of results to return
+
+        Returns:
+            Dictionary with search results grouped by entity type
+        """
+        try:
+            from .core.search_unified import EntityType
+            from .core.search_unified import UnifiedSearchAPI
+
+            # Map string types to EntityType enum
+            type_mapping = {
+                "contacts": EntityType.CONTACT,
+                "notes": EntityType.NOTE,
+                "tags": EntityType.TAG,
+                "relationships": EntityType.RELATIONSHIP,
+            }
+
+            # Convert entity_types if provided
+            enum_types = None
+            if entity_types:
+                enum_types = [type_mapping.get(t) for t in entity_types if t in type_mapping]
+                enum_types = [t for t in enum_types if t is not None]
+
+            # Initialize unified search API
+            search_api = UnifiedSearchAPI(self.db, max_results=limit)
+
+            # Perform search
+            results = search_api.search(query=query, entity_types=enum_types, limit=limit)
+
+            return results
+
+        except Exception as e:
+            self.logger.error(f"Failed to perform unified search: {e}")
+            return {
+                "query": query,
+                "results": {},
+                "total": 0,
+                "suggestions": [],
+                "stats": {
+                    "search_time": 0.0,
+                    "cache_used": False,
+                    "fts_used": False,
+                    "sources": [],
+                },
+            }
+
+    def export_relationships_data(self, format: str = "json") -> str:
+        """Export relationships data.
+
+        Args:
+            format: Export format ('json' or 'csv')
+
+        Returns:
+            Exported data as string
+        """
+        try:
+            if format.lower() == "csv":
+                return self.db.export_relationships(format="csv")
+            else:
+                # For JSON, build comprehensive export
+                export_data = {
+                    "contacts": self.list_all_contacts(),
+                    "tags": self.list_all_tags(),
+                    "notes": self.list_all_notes(),
+                    "relationships": self.get_all_relationships(),
+                }
+                import json
+
+                return json.dumps(export_data, indent=2, default=str)
+        except Exception as e:
+            self.logger.error(f"Error exporting relationships: {e}", exc_info=True)
+            return ""
+
+    def vacuum_database(self) -> bool:
+        """Vacuum/optimize the database through API layer.
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.db.session.execute(text("VACUUM"))
+            self.db.session.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to vacuum database: {e}")
+            self.db.session.rollback()
+            return False
+
+    def add_relationship(
+        self, from_contact_id: int, to_contact_id: int, relationship_type: str
+    ) -> bool:
+        """Add a relationship between two contacts by ID.
+
+        Args:
+            from_contact_id: Source contact ID
+            to_contact_id: Target contact ID
+            relationship_type: Type of relationship
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.db.create_contact_relationship(from_contact_id, to_contact_id, relationship_type)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error adding relationship: {e}", exc_info=True)
+            return False
+
+    def tag_contact(self, contact_id: int, tag_name: str) -> bool:
+        """Add a tag to a contact (wrapper for existing method).
+
+        Args:
+            contact_id: Contact ID
+            tag_name: Tag name
+
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.add_tag_to_contact(contact_id, tag_name)
+
+    def get_contact(self, contact_id: int) -> Optional[Dict[str, Any]]:
+        """Get a contact by ID (wrapper for existing method).
+
+        Args:
+            contact_id: Contact ID
+
+        Returns:
+            Contact dictionary or None
+        """
+        return self.get_contact_details(contact_id)
+
+    def add_contact(
+        self, first_name: str, last_name: str, email: str = None, phone: str = None
+    ) -> Optional[Dict[str, Any]]:
+        """Add a new contact.
+
+        Args:
+            first_name: First name
+            last_name: Last name
+            email: Email address
+            phone: Phone number
+
+        Returns:
+            Created contact dictionary or None
+        """
+        from .models import Contact
+
+        try:
+            name = f"{first_name} {last_name}".strip()
+            contact = Contact(name=name, email=email, phone=phone)
+            self.db.session.add(contact)
+            self.db.session.commit()
+
+            return {
+                "id": contact.id,
+                "name": contact.name,
+                "email": contact.email,
+                "phone": contact.phone,
+                "profile_image": contact.profile_image,
+                "profile_image_filename": contact.profile_image_filename,
+                "profile_image_mime_type": contact.profile_image_mime_type,
+                "relationship_info": self.get_relationship_info(contact.id),
+            }
+        except Exception as e:
+            self.logger.error(f"Error adding contact: {e}", exc_info=True)
+            self.db.session.rollback()
+            return None
+
+    def update_contact(self, contact_id: int, **kwargs) -> bool:
+        """Update a contact.
+
+        Args:
+            contact_id: Contact ID
+            **kwargs: Fields to update
+
+        Returns:
+            True if successful, False otherwise
+        """
+        from .models import Contact
+
+        try:
+            contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+            if not contact:
+                return False
+
+            for key, value in kwargs.items():
+                if hasattr(contact, key):
+                    setattr(contact, key, value)
+
+            self.db.session.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error updating contact: {e}", exc_info=True)
+            self.db.session.rollback()
+            return False
+
+    def delete_contact(self, contact_id: int) -> bool:
+        """Delete a contact.
+
+        Args:
+            contact_id: Contact ID
+
+        Returns:
+            True if successful, False otherwise
+        """
+        from .models import Contact
+
+        try:
+            contact = self.db.session.query(Contact).filter(Contact.id == contact_id).first()
+            if not contact:
+                return False
+
+            self.db.session.delete(contact)
+            self.db.session.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error deleting contact: {e}", exc_info=True)
+            self.db.session.rollback()
+            return False
+
+    def add_note(self, title: str, content: str) -> Optional[Dict[str, Any]]:
+        """Add a new note (wrapper for existing method).
+
+        Args:
+            title: Note title
+            content: Note content
+
+        Returns:
+            Created note dictionary or None
+        """
+        return self.create_note(title, content)
+
+    def get_all_notes(self) -> List[Dict[str, Any]]:
+        """Get all notes (wrapper for existing method).
+
+        Returns:
+            List of note dictionaries
+        """
+        return self.list_all_notes()
+
+    def get_all_tags(self) -> List[Dict[str, Any]]:
+        """Get all tags (wrapper for existing method).
+
+        Returns:
+            List of tag dictionaries
+        """
+        return self.list_all_tags()
