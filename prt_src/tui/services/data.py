@@ -42,9 +42,9 @@ class DataService:
             List of contact dictionaries
         """
         try:
-            # TODO: Add pagination to PRTAPI
-            contacts = self.api.list_all_contacts()
-            return contacts[offset : offset + limit]
+            # Use paginated API method
+            page = (offset // limit) + 1  # Convert offset to 1-based page
+            return self.api.get_contacts_paginated(page, limit)
         except Exception as e:
             logger.error(f"Failed to get contacts: {e}")
             return []
@@ -269,8 +269,8 @@ class DataService:
                     return self.api.get_contact_relationships(contact["name"])
                 return []
             else:
-                # Get all relationships
-                return self.api.db.get_all_relationships()
+                # Get all relationships through API
+                return self.api.get_all_relationships()
         except Exception as e:
             logger.error(f"Failed to get relationships: {e}")
             return []
@@ -295,7 +295,7 @@ class DataService:
             return False
 
     async def delete_relationship(self, relationship_id: int) -> bool:
-        """Delete a relationship.
+        """Delete a relationship by ID.
 
         Args:
             relationship_id: Relationship ID
@@ -304,25 +304,8 @@ class DataService:
             True if successful
         """
         try:
-            # Get the relationship details first
-            all_relationships = self.api.db.get_all_relationships()
-            target_relationship = None
-            for rel in all_relationships:
-                if rel.get("relationship_id") == relationship_id:
-                    target_relationship = rel
-                    break
-
-            if not target_relationship:
-                logger.error(f"Relationship with ID {relationship_id} not found")
-                return False
-
-            # Delete using the database method
-            self.api.db.delete_contact_relationship(
-                target_relationship["person1_id"],
-                target_relationship["person2_id"],
-                target_relationship["type_key"],
-            )
-            return True
+            result = self.api.delete_relationship_by_id(relationship_id)
+            return result.get("success", False)
         except Exception as e:
             logger.error(f"Failed to delete relationship: {e}")
             return False
@@ -446,8 +429,7 @@ class DataService:
         """
         try:
             if contact_id:
-                # TODO: Add get_contact_notes to PRTAPI
-                pass
+                return self.api.get_contact_notes(contact_id)
             return self.api.get_all_notes()
         except Exception as e:
             logger.error(f"Failed to get notes: {e}")
@@ -469,8 +451,10 @@ class DataService:
         try:
             note = self.api.add_note(title, content)
             if note and contact_id:
-                # TODO: Add note-contact association to PRTAPI
-                pass
+                # Associate the newly created note with the contact
+                note_id = note.get("id")
+                if note_id:
+                    self.api.associate_note_with_contact(note_id, contact_id)
             return note
         except Exception as e:
             logger.error(f"Failed to create note: {e}")
@@ -488,28 +472,8 @@ class DataService:
             True if successful
         """
         try:
-            # Get the existing note first
-            all_notes = await self.get_notes()
-            target_note = None
-            for note in all_notes:
-                if note.get("id") == note_id:
-                    target_note = note
-                    break
-
-            if not target_note:
-                logger.error(f"Note with ID {note_id} not found")
-                return False
-
-            # Update using direct database access
-            from prt_src.models import Note
-
-            note_obj = self.api.db.session.query(Note).filter(Note.id == note_id).first()
-            if note_obj:
-                note_obj.title = title
-                note_obj.content = content
-                self.api.db.session.commit()
-                return True
-            return False
+            # Update using API method
+            return self.api.update_note_by_id(note_id, title, content)
         except Exception as e:
             logger.error(f"Failed to update note {note_id}: {e}")
             return False
@@ -524,15 +488,8 @@ class DataService:
             True if successful
         """
         try:
-            # Delete using direct database access
-            from prt_src.models import Note
-
-            note_obj = self.api.db.session.query(Note).filter(Note.id == note_id).first()
-            if note_obj:
-                self.api.db.session.delete(note_obj)
-                self.api.db.session.commit()
-                return True
-            return False
+            # Delete using API method
+            return self.api.delete_note_by_id(note_id)
         except Exception as e:
             logger.error(f"Failed to delete note {note_id}: {e}")
             return False
@@ -553,31 +510,8 @@ class DataService:
             Dictionary with search results grouped by entity type
         """
         try:
-            from prt_src.core.search_unified import EntityType
-            from prt_src.core.search_unified import UnifiedSearchAPI
-
-            # Map string types to EntityType enum
-            type_mapping = {
-                "contacts": EntityType.CONTACT,
-                "notes": EntityType.NOTE,
-                "tags": EntityType.TAG,
-                "relationships": EntityType.RELATIONSHIP,
-            }
-
-            # Convert entity_types if provided
-            enum_types = None
-            if entity_types:
-                enum_types = [type_mapping.get(t) for t in entity_types if t in type_mapping]
-                enum_types = [t for t in enum_types if t is not None]
-
-            # Initialize unified search API
-            search_api = UnifiedSearchAPI(self.api.db, max_results=limit)
-
-            # Perform search
-            results = search_api.search(query=query, entity_types=enum_types, limit=limit)
-
-            return results
-
+            # Use API method instead of direct core module access
+            return self.api.unified_search(query, entity_types, limit)
         except Exception as e:
             logger.error(f"Failed to perform unified search: {e}")
             return {
@@ -606,7 +540,7 @@ class DataService:
                 "contacts": len(self.api.list_all_contacts()),
                 "tags": len(self.api.get_all_tags()),
                 "notes": len(self.api.get_all_notes()),
-                "relationships": 0,  # TODO: Add to PRTAPI
+                "relationships": len(self.api.get_all_relationships()),
             }
         except Exception as e:
             logger.error(f"Failed to get stats: {e}")
@@ -641,7 +575,9 @@ class DataService:
         try:
             import os
 
-            db_path = self.api.db.db_path
+            # Get database path through API configuration
+            config = self.api.get_config()
+            db_path = config.get("db_path")
             if db_path and os.path.exists(db_path):
                 return os.path.getsize(db_path)
             return 0
@@ -714,28 +650,13 @@ class DataService:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             if format.lower() == "csv":
-                # Export relationships as CSV
-                data = self.api.db.export_relationships(format="csv")
+                # Export relationships as CSV using API
+                data = self.api.export_relationships_data(format="csv")
                 filename = f"database_export_{timestamp}.csv"
             else:
-                # Export as JSON (default)
-                export_data = {
-                    "export_info": {
-                        "timestamp": datetime.now().isoformat(),
-                        "format": "json",
-                        "source": "PRT Database",
-                    },
-                    "contacts": self.api.list_all_contacts(),
-                    "tags": self.api.list_all_tags(),
-                    "notes": self.api.list_all_notes(),
-                    "relationships": self.api.db.get_all_relationships(),
-                }
-
+                # Export as JSON using API
+                data = self.api.export_relationships_data(format="json")
                 filename = f"database_export_{timestamp}.json"
-
-                import json
-
-                data = json.dumps(export_data, indent=2, default=str)
 
             export_path = export_dir / filename
 
@@ -755,12 +676,8 @@ class DataService:
             True if successful
         """
         try:
-            # Execute VACUUM command on SQLite database
-            from sqlalchemy import text
-
-            self.api.db.session.execute(text("VACUUM"))
-            self.api.db.session.commit()
-            return True
+            # Use API method instead of direct database access
+            return self.api.vacuum_database()
         except Exception as e:
             logger.error(f"Failed to vacuum database: {e}")
             return False
@@ -1088,13 +1005,12 @@ class DataService:
             True if successful
         """
         try:
-            # Convert date strings to date objects if provided
-            start_date_obj = None
+            # Validate date formats if provided
             if start_date:
                 from datetime import datetime
 
                 try:
-                    start_date_obj = datetime.fromisoformat(start_date).date()
+                    datetime.fromisoformat(start_date).date()
                 except ValueError:
                     logger.warning(f"Invalid start_date format: {start_date}")
 
@@ -1102,24 +1018,12 @@ class DataService:
                 from datetime import datetime
 
                 try:
-                    # Convert to date object (currently not used, but may be needed for validation)
                     datetime.fromisoformat(end_date).date()
                 except ValueError:
                     logger.warning(f"Invalid end_date format: {end_date}")
 
-            # Create the relationship using the core operations
-            from prt_src.core.relationships import RelationshipOperations
-
-            rel_ops = RelationshipOperations(self.api)
-
-            result = rel_ops.create_relationship(
-                from_id=from_contact_id,
-                to_id=to_contact_id,
-                type_key=type_key,
-                start_date=start_date_obj,
-            )
-
-            return result.get("success", False)
+            # Create the relationship using API method
+            return self.api.add_relationship(from_contact_id, to_contact_id, type_key)
 
         except Exception as e:
             logger.error(f"Failed to create relationship with details: {e}")

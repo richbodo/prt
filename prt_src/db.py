@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -479,6 +480,108 @@ class Database:
         )
         return [(n.id, n.title, n.content) for n in notes]
 
+    def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
+        """Get a note by its ID.
+
+        Args:
+            note_id: The note ID to retrieve
+
+        Returns:
+            Note dictionary or None if not found
+        """
+        try:
+            from .models import Note
+
+            note = self.session.query(Note).filter(Note.id == note_id).first()
+
+            if not note:
+                return None
+
+            return {
+                "id": note.id,
+                "title": note.title,
+                "content": note.content,
+                "created_at": note.created_at.isoformat() if note.created_at else None,
+                "updated_at": note.updated_at.isoformat() if note.updated_at else None,
+            }
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error getting note {note_id}: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error getting note {note_id}: {e}")
+            return None
+
+    def update_note_by_id(self, note_id: int, **kwargs) -> bool:
+        """Update a note by its ID.
+
+        Args:
+            note_id: The note ID to update
+            **kwargs: Fields to update (title, content)
+
+        Returns:
+            True if updated successfully, False otherwise
+        """
+        try:
+            from .models import Note
+
+            note = self.session.query(Note).filter(Note.id == note_id).first()
+
+            if not note:
+                self.logger.warning(f"Note with ID {note_id} not found")
+                return False
+
+            # Update provided fields
+            for field, value in kwargs.items():
+                if hasattr(note, field):
+                    setattr(note, field, value)
+
+            self.session.commit()
+            self.logger.info(f"Successfully updated note with ID {note_id}")
+            return True
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error updating note {note_id}: {e}")
+            self.session.rollback()
+            return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error updating note {note_id}: {e}")
+            self.session.rollback()
+            return False
+
+    def delete_note_by_id(self, note_id: int) -> bool:
+        """Delete a note by its ID.
+
+        Args:
+            note_id: The note ID to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        try:
+            from .models import Note
+
+            note = self.session.query(Note).filter(Note.id == note_id).first()
+
+            if not note:
+                self.logger.warning(f"Note with ID {note_id} not found")
+                return False
+
+            self.session.delete(note)
+            self.session.commit()
+
+            self.logger.info(f"Successfully deleted note with ID {note_id}")
+            return True
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error deleting note {note_id}: {e}")
+            self.session.rollback()
+            return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error deleting note {note_id}: {e}")
+            self.session.rollback()
+            return False
+
     # ========== New Relationship Type Management Functions ==========
 
     def create_relationship_type(
@@ -761,6 +864,45 @@ class Database:
             ).delete()
 
         self.session.commit()
+
+    def delete_relationship_by_id(self, relationship_id: int) -> bool:
+        """Delete a relationship by its ID.
+
+        Args:
+            relationship_id: The relationship ID to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        try:
+            from .models import ContactRelationship
+
+            # Find the relationship
+            relationship = (
+                self.session.query(ContactRelationship)
+                .filter(ContactRelationship.id == relationship_id)
+                .first()
+            )
+
+            if not relationship:
+                self.logger.warning(f"Relationship with ID {relationship_id} not found")
+                return False
+
+            # Delete the relationship
+            self.session.delete(relationship)
+            self.session.commit()
+
+            self.logger.info(f"Successfully deleted relationship with ID {relationship_id}")
+            return True
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error deleting relationship {relationship_id}: {e}")
+            self.session.rollback()
+            return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error deleting relationship {relationship_id}: {e}")
+            self.session.rollback()
+            return False
 
     # Advanced Relationship Analytics and Queries (Issue #64 Part 3)
 
