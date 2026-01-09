@@ -52,25 +52,44 @@ fi
 if [ ! -d "prt_env" ]; then
     echo "Creating new virtual environment: prt_env"
     python3 -m venv prt_env || { echo "Failed to create virtual environment"; exit 1; }
-    
-    # Activate and install requirements
-    source prt_env/bin/activate || { echo "Failed to activate virtual environment"; return 1; }
-    # Verify we're in the virtual environment before installing
-    if [ "$VIRTUAL_ENV" != "$(pwd)/prt_env" ]; then
-        echo "Error: Virtual environment not properly activated"
-        return 1
+    FRESH_VENV=1
+else
+    FRESH_VENV=0
+fi
+
+# Activate the virtual environment
+source prt_env/bin/activate || { echo "Failed to activate virtual environment"; return 1; }
+
+# Verify we're in the virtual environment
+if [ "$VIRTUAL_ENV" != "$(pwd)/prt_env" ]; then
+    echo "Error: Virtual environment not properly activated"
+    return 1
+fi
+
+# Check if core packages are installed (quick check without importing)
+PACKAGES_MISSING=0
+if ! python -c "import textual" 2>/dev/null || ! python -c "import sqlalchemy" 2>/dev/null || ! python -c "import typer" 2>/dev/null; then
+    PACKAGES_MISSING=1
+fi
+
+# Install packages if this is a fresh venv OR if core packages are missing
+if [ "$FRESH_VENV" = "1" ] || [ "$PACKAGES_MISSING" = "1" ]; then
+    if [ "$FRESH_VENV" = "1" ]; then
+        echo "📦 Setting up new virtual environment..."
+    else
+        echo "📦 Some packages are missing, installing dependencies..."
     fi
+    
     # Upgrade pip first
     pip install --upgrade pip
     
     # Install all requirements (runtime + development)
     echo "📦 Installing all dependencies (runtime + development)..."
-    pip install -v -r requirements.txt || { echo "Failed to install requirements"; return 1; }
+    pip install -r requirements.txt || { echo "Failed to install requirements"; return 1; }
     
     echo "✅ All packages installed successfully"
 else
-    # Just activate if it already exists
-    source prt_env/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
+    echo "📦 Packages already installed"
 fi
 
 # Verify we're in the virtual environment
