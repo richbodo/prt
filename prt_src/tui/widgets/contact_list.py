@@ -5,9 +5,6 @@ and selection support.
 """
 
 import contextlib
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -21,7 +18,7 @@ from prt_src.tui.widgets.base import ModeAwareWidget
 class ContactRow(Static):
     """A single row in the contact list."""
 
-    def __init__(self, contact: Dict):
+    def __init__(self, contact: dict):
         """Initialize the contact row.
 
         Args:
@@ -69,9 +66,9 @@ class ContactListWidget(ModeAwareWidget):
     def __init__(self):
         """Initialize the contact list widget."""
         super().__init__()
-        self.contacts: List[Dict] = []
-        self.contact_rows: List[ContactRow] = []
-        self.selected_contact: Optional[Dict] = None
+        self.contacts: list[dict] = []
+        self.contact_rows: list[ContactRow] = []
+        self.selected_contact: dict | None = None
         self.add_class("contact-list")
 
     def compose(self) -> ComposeResult:
@@ -79,7 +76,7 @@ class ContactListWidget(ModeAwareWidget):
         with VerticalScroll(id="contact-scroll"):
             yield Vertical(id="contact-container")
 
-    def load_contacts(self, contacts: List[Dict]) -> None:
+    def load_contacts(self, contacts: list[dict]) -> None:
         """Load contacts into the list.
 
         Args:

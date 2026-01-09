@@ -7,7 +7,6 @@ but is specifically designed for setup wizard fixture loading.
 """
 
 from typing import Any
-from typing import Dict
 
 from rich.console import Console
 
@@ -18,7 +17,7 @@ console = Console()
 logger = get_logger(__name__)
 
 
-def setup_fixture_mode(regenerate: bool = False, quiet: bool = False) -> Dict[str, Any]:
+def setup_fixture_mode(regenerate: bool = False, quiet: bool = False) -> dict[str, Any]:
     """Set up fixture mode with isolated database.
 
     Creates a separate fixture.db file that doesn't touch the user's real database.
@@ -94,7 +93,7 @@ def setup_fixture_mode(regenerate: bool = False, quiet: bool = False) -> Dict[st
     return config
 
 
-def is_fixture_mode(config: Dict[str, Any]) -> bool:
+def is_fixture_mode(config: dict[str, Any]) -> bool:
     """Check if the given configuration is for fixture mode.
 
     Args:
@@ -115,7 +114,7 @@ def is_fixture_mode(config: Dict[str, Any]) -> bool:
     return config.get("database_mode") == "fixture"
 
 
-def get_database_mode(config: Dict[str, Any]) -> str:
+def get_database_mode(config: dict[str, Any]) -> str:
     """Get the current database mode from configuration.
 
     Args:
@@ -166,7 +165,7 @@ def cleanup_fixture_database() -> bool:
         return False
 
 
-def get_fixture_summary() -> Dict[str, Any]:
+def get_fixture_summary() -> dict[str, Any]:
     """Get summary of fixture data without loading a database.
 
     This provides information about what fixture data contains,

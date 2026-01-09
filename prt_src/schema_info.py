@@ -9,9 +9,6 @@ queries by understanding the actual table structure.
 import inspect
 import re
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Tuple
 
 from sqlalchemy import Column
 from sqlalchemy.sql.sqltypes import TypeEngine
@@ -31,7 +28,7 @@ class SchemaInfoGenerator:
         """Initialize the schema info generator."""
         self.models = [Contact, Tag, Note, ContactMetadata, ContactRelationship, RelationshipType]
 
-    def get_column_info(self, column: Column) -> Dict[str, Any]:
+    def get_column_info(self, column: Column) -> dict[str, Any]:
         """Extract information about a database column.
 
         Args:
@@ -86,7 +83,7 @@ class SchemaInfoGenerator:
 
         return str(column_type).lower()
 
-    def get_table_info(self, model_class) -> Dict[str, Any]:
+    def get_table_info(self, model_class) -> dict[str, Any]:
         """Extract information about a database table from SQLAlchemy model.
 
         Args:
@@ -125,7 +122,7 @@ class SchemaInfoGenerator:
             "relationships": relationships,
         }
 
-    def get_schema_summary(self) -> Dict[str, Any]:
+    def get_schema_summary(self) -> dict[str, Any]:
         """Get a complete summary of the database schema.
 
         Returns:
@@ -335,7 +332,7 @@ class SchemaInfoGenerator:
 
         return "\n".join(output)
 
-    def get_table_names(self) -> List[str]:
+    def get_table_names(self) -> list[str]:
         """Get list of all table names in the schema.
 
         Returns:
@@ -343,7 +340,7 @@ class SchemaInfoGenerator:
         """
         return [model.__tablename__ for model in self.models]
 
-    def get_table_columns(self, table_name: str) -> List[str]:
+    def get_table_columns(self, table_name: str) -> list[str]:
         """Get list of column names for a specific table.
 
         Args:
@@ -370,7 +367,7 @@ class SchemaInfoGenerator:
         columns = self.get_table_columns(table_name)
         return column_name in columns
 
-    def suggest_similar_columns(self, table_name: str, invalid_column: str) -> List[str]:
+    def suggest_similar_columns(self, table_name: str, invalid_column: str) -> list[str]:
         """Suggest similar column names for a table when an invalid column is used.
 
         Args:
@@ -402,7 +399,7 @@ class SchemaInfoGenerator:
 
         return suggestions
 
-    def parse_sql_tables_and_columns(self, sql: str) -> Tuple[List[str], List[str]]:
+    def parse_sql_tables_and_columns(self, sql: str) -> tuple[list[str], list[str]]:
         """Parse SQL to extract referenced tables and columns.
 
         Args:
@@ -459,7 +456,7 @@ def get_schema_for_llm(detail_level: str = "essential") -> str:
     return schema_generator.format_schema_for_llm(detail_level)
 
 
-def validate_sql_schema(sql: str) -> Dict[str, Any]:
+def validate_sql_schema(sql: str) -> dict[str, Any]:
     """Validate SQL query against the database schema.
 
     Args:

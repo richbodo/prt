@@ -4,12 +4,8 @@ Provides a comprehensive settings interface with categories,
 validation, and persistence.
 """
 
+from collections.abc import Callable
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -33,7 +29,7 @@ class SettingItem(Static):
         key: str,
         label: str,
         value: Any,
-        options: Union[List, type] = None,
+        options: list | type = None,
         description: str = "",
     ):
         """Initialize a setting item.
@@ -52,7 +48,7 @@ class SettingItem(Static):
         self.original_value = value
         self.options = options
         self.description = description
-        self.validator: Optional[Callable] = None
+        self.validator: Callable | None = None
         self.add_class("setting-item")
 
     def compose(self) -> ComposeResult:
@@ -141,7 +137,7 @@ class SettingsCategory(Static):
         super().__init__()
         self.category_name = category_name
         self.description = description
-        self.items: List[SettingItem] = []
+        self.items: list[SettingItem] = []
         self.add_class("settings-category")
 
     def compose(self) -> ComposeResult:
@@ -168,7 +164,7 @@ class SettingsCategory(Static):
         except Exception:
             pass
 
-    def get_item(self, key: str) -> Optional[SettingItem]:
+    def get_item(self, key: str) -> SettingItem | None:
         """Get item by key.
 
         Args:
@@ -188,7 +184,7 @@ class SettingsScreen(ModeAwareWidget):
 
     has_unsaved_changes = reactive(False)
 
-    def __init__(self, on_save: Optional[Callable] = None, defaults: Optional[Dict] = None):
+    def __init__(self, on_save: Callable | None = None, defaults: dict | None = None):
         """Initialize the settings screen.
 
         Args:
@@ -196,8 +192,8 @@ class SettingsScreen(ModeAwareWidget):
             defaults: Default settings values
         """
         super().__init__()
-        self.settings: Dict[str, Any] = {}
-        self.categories: List[SettingsCategory] = []
+        self.settings: dict[str, Any] = {}
+        self.categories: list[SettingsCategory] = []
         self.on_save = on_save
         self.defaults = defaults or {}
         self.add_class("settings-screen")
@@ -270,7 +266,7 @@ class SettingsScreen(ModeAwareWidget):
         )
         self.categories.append(database)
 
-    def load_settings(self, settings: Dict[str, Any]) -> None:
+    def load_settings(self, settings: dict[str, Any]) -> None:
         """Load settings values.
 
         Args:

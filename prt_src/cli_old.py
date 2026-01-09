@@ -6,7 +6,6 @@ and provides a unified interface for all operations.
 """
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -115,13 +114,13 @@ def main(
     ),
     cli: bool = typer.Option(False, "--cli", help="Use command-line interface instead of TUI"),
     tui: bool = typer.Option(True, "--tui", help="Use TUI interface (default)"),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",
         help="Choose AI model (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use 'list-models' to see options. Put this flag BEFORE --chat.",
     ),
-    chat: Optional[str] = typer.Option(
+    chat: str | None = typer.Option(
         None,
         "--chat",
         help='Start AI chat mode. Provide query text or use --chat="" for interactive mode. Use AFTER --model flag.',

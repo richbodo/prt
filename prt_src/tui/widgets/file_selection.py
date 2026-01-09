@@ -1,7 +1,6 @@
 """File selection widget for Google Takeout files."""
 
 from pathlib import Path
-from typing import List
 
 from textual import events
 from textual.app import ComposeResult
@@ -47,7 +46,7 @@ class FileSelectionWidget(Container, can_focus=True):
 
     def __init__(
         self,
-        files: List[Path],
+        files: list[Path],
         title: str = "Select Google Takeout File",
         **kwargs,
     ):

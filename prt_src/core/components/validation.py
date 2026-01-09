@@ -9,9 +9,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -27,21 +24,21 @@ class ValidationResult:
     """Result of a validation operation."""
 
     is_valid: bool
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
-    sanitized_data: Optional[Dict[str, Any]] = None
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    sanitized_data: dict[str, Any] | None = None
 
 
 class DataSanitizer:
     """Sanitize and normalize data for validation."""
 
-    def clean_text(self, text: Optional[str]) -> str:
+    def clean_text(self, text: str | None) -> str:
         """Remove leading/trailing whitespace and normalize."""
         if not text:
             return ""
         return text.strip()
 
-    def normalize_phone(self, phone: Optional[str]) -> Optional[str]:
+    def normalize_phone(self, phone: str | None) -> str | None:
         """Normalize phone number to international format.
 
         Args:
@@ -73,7 +70,7 @@ class DataSanitizer:
 
         return None
 
-    def normalize_email(self, email: Optional[str]) -> Optional[str]:
+    def normalize_email(self, email: str | None) -> str | None:
         """Normalize email address (lowercase, trim).
 
         Args:
@@ -101,7 +98,7 @@ class ContactValidator:
         self.sanitizer = DataSanitizer()
         self.email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
-    def validate(self, contact: Dict[str, Any], sanitize: bool = False) -> ValidationResult:
+    def validate(self, contact: dict[str, Any], sanitize: bool = False) -> ValidationResult:
         """Validate a contact entity.
 
         Args:
@@ -167,7 +164,7 @@ class TagValidator:
     def __init__(self):
         self.sanitizer = DataSanitizer()
 
-    def validate(self, tag: Dict[str, Any], sanitize: bool = False) -> ValidationResult:
+    def validate(self, tag: dict[str, Any], sanitize: bool = False) -> ValidationResult:
         """Validate a tag entity.
 
         Args:
@@ -214,7 +211,7 @@ class NoteValidator:
     def __init__(self):
         self.sanitizer = DataSanitizer()
 
-    def validate(self, note: Dict[str, Any], sanitize: bool = False) -> ValidationResult:
+    def validate(self, note: dict[str, Any], sanitize: bool = False) -> ValidationResult:
         """Validate a note entity.
 
         Args:
@@ -253,7 +250,7 @@ class NoteValidator:
 class RelationshipValidator:
     """Validate relationship entities."""
 
-    def validate(self, relationship: Dict[str, Any], sanitize: bool = False) -> ValidationResult:
+    def validate(self, relationship: dict[str, Any], sanitize: bool = False) -> ValidationResult:
         """Validate a relationship entity.
 
         Args:
@@ -322,10 +319,10 @@ class DuplicateDetector:
 
     def find_duplicates(
         self,
-        new_contact: Dict[str, Any],
-        existing_contacts: List[Dict[str, Any]],
+        new_contact: dict[str, Any],
+        existing_contacts: list[dict[str, Any]],
         normalize_phone: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find potential duplicates of a contact.
 
         Args:
@@ -400,7 +397,7 @@ class ValidationSystem:
         }
 
     def validate_entity(
-        self, entity_type: str, entity_data: Dict[str, Any], sanitize: bool = False
+        self, entity_type: str, entity_data: dict[str, Any], sanitize: bool = False
     ) -> ValidationResult:
         """Validate an entity of specified type.
 
@@ -422,8 +419,8 @@ class ValidationSystem:
         return validator.validate(entity_data, sanitize=sanitize)
 
     def validate_batch(
-        self, entities: List[Dict[str, Any]], sanitize: bool = False
-    ) -> List[ValidationResult]:
+        self, entities: list[dict[str, Any]], sanitize: bool = False
+    ) -> list[ValidationResult]:
         """Validate multiple entities in batch.
 
         Args:
@@ -454,8 +451,8 @@ class ValidationSystem:
         return results
 
     def check_duplicates(
-        self, entity_type: str, entity_data: Dict[str, Any], existing_entities: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, entity_type: str, entity_data: dict[str, Any], existing_entities: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Check for duplicates of an entity.
 
         Args:

@@ -5,9 +5,6 @@ This module provides test queries and their expected optimized equivalents
 for validating LLM query optimization behavior.
 """
 
-from typing import Dict
-from typing import List
-
 
 class QueryOptimizationFixtures:
     """Test fixtures for query optimization validation."""
@@ -190,7 +187,7 @@ class QueryOptimizationFixtures:
     }
 
     @classmethod
-    def get_optimization_test_cases(cls) -> List[Dict]:
+    def get_optimization_test_cases(cls) -> list[dict]:
         """Get all optimization test cases for validation."""
         test_cases = []
 
@@ -222,7 +219,7 @@ class QueryOptimizationFixtures:
         return test_cases
 
     @classmethod
-    def get_performance_scenarios(cls) -> List[Dict]:
+    def get_performance_scenarios(cls) -> list[dict]:
         """Get performance test scenarios."""
         scenarios = []
 
@@ -241,7 +238,7 @@ class QueryOptimizationFixtures:
         return scenarios
 
     @classmethod
-    def get_regression_tests(cls) -> List[Dict]:
+    def get_regression_tests(cls) -> list[dict]:
         """Get regression test cases."""
         regressions = []
 
@@ -260,14 +257,14 @@ class QueryOptimizationFixtures:
 
 
 # Convenience functions for test usage
-def get_slow_query_examples() -> Dict[str, str]:
+def get_slow_query_examples() -> dict[str, str]:
     """Get examples of slow queries for testing."""
     return {
         query_id: data["query"] for query_id, data in QueryOptimizationFixtures.SLOW_QUERIES.items()
     }
 
 
-def get_optimized_query_examples() -> Dict[str, str]:
+def get_optimized_query_examples() -> dict[str, str]:
     """Get examples of optimized queries for testing."""
     return {
         query_id: data.get("query", data.get("query_steps", [""])[0])
@@ -275,7 +272,7 @@ def get_optimized_query_examples() -> Dict[str, str]:
     }
 
 
-def get_optimization_patterns() -> List[str]:
+def get_optimization_patterns() -> list[str]:
     """Get list of optimization patterns that should be applied."""
     return [
         "LIMIT clause addition",

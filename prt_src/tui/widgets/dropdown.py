@@ -1,7 +1,6 @@
 """Dropdown menu widget."""
 
-from typing import Callable
-from typing import Optional
+from collections.abc import Callable
 
 from textual.app import ComposeResult
 from textual.containers import Container
@@ -54,7 +53,7 @@ class DropdownMenu(Container):
         else:
             self.show()
 
-    def get_action(self, key: str) -> Optional[Callable]:
+    def get_action(self, key: str) -> Callable | None:
         """Get action for a key press.
 
         Args:

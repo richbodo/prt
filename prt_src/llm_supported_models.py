@@ -7,10 +7,6 @@ functions to validate model support and generate user guidance.
 """
 
 from dataclasses import dataclass
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from .logging_config import get_logger
 
@@ -41,16 +37,16 @@ class SupportedModelInfo:
 
     # User guidance
     description: str  # Brief description for users
-    use_cases: List[str]  # Recommended use cases
+    use_cases: list[str]  # Recommended use cases
 
     # Optional fields (must come last)
-    min_vram_gb: Optional[int] = None  # Minimum VRAM if GPU required
-    quantization: Optional[str] = None  # e.g., "Q4_K_M", "Q8_0"
-    notes: Optional[str] = None  # Additional notes or warnings
+    min_vram_gb: int | None = None  # Minimum VRAM if GPU required
+    quantization: str | None = None  # e.g., "Q4_K_M", "Q8_0"
+    notes: str | None = None  # Additional notes or warnings
 
 
 # Registry of officially supported models
-SUPPORTED_MODELS: Dict[str, SupportedModelInfo] = {
+SUPPORTED_MODELS: dict[str, SupportedModelInfo] = {
     "gpt-oss:20b": SupportedModelInfo(
         model_name="gpt-oss:20b",
         friendly_name="gpt-oss-20b",
@@ -217,7 +213,7 @@ SUPPORTED_MODELS: Dict[str, SupportedModelInfo] = {
 }
 
 
-def get_supported_models() -> Dict[str, SupportedModelInfo]:
+def get_supported_models() -> dict[str, SupportedModelInfo]:
     """Get the registry of supported models.
 
     Returns:
@@ -243,7 +239,7 @@ def is_model_supported(model_name: str) -> bool:
     return any(model_info.friendly_name == model_name for model_info in SUPPORTED_MODELS.values())
 
 
-def get_model_support_info(model_name: str) -> Optional[SupportedModelInfo]:
+def get_model_support_info(model_name: str) -> SupportedModelInfo | None:
     """Get support information for a model.
 
     Args:
@@ -264,7 +260,7 @@ def get_model_support_info(model_name: str) -> Optional[SupportedModelInfo]:
     return None
 
 
-def get_models_by_status(status: str) -> List[SupportedModelInfo]:
+def get_models_by_status(status: str) -> list[SupportedModelInfo]:
     """Get all models with a specific support status.
 
     Args:
@@ -294,7 +290,7 @@ def get_recommended_model() -> SupportedModelInfo:
     raise RuntimeError("No supported models defined")
 
 
-def validate_model_selection(model_name: str) -> Tuple[bool, str, Optional[SupportedModelInfo]]:
+def validate_model_selection(model_name: str) -> tuple[bool, str, SupportedModelInfo | None]:
     """Validate a user's model selection and provide guidance.
 
     Args:
@@ -379,8 +375,8 @@ def get_hardware_guidance(model_info: SupportedModelInfo) -> str:
 
 
 def suggest_models_for_hardware(
-    available_ram_gb: Optional[int] = None, has_gpu: bool = False, gpu_vram_gb: Optional[int] = None
-) -> List[SupportedModelInfo]:
+    available_ram_gb: int | None = None, has_gpu: bool = False, gpu_vram_gb: int | None = None
+) -> list[SupportedModelInfo]:
     """Suggest appropriate models based on hardware specs.
 
     Args:

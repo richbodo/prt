@@ -8,11 +8,6 @@ import time
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
 
 from prt_src.core.search_cache.contact_cache import ContactSearchCache
 from prt_src.core.search_index.indexer import EntityType
@@ -38,13 +33,13 @@ class UnifiedSearchResult:
     entity_type: EntityType
     entity_id: int
     title: str
-    subtitle: Optional[str] = None
-    snippet: Optional[str] = None
+    subtitle: str | None = None
+    snippet: str | None = None
     relevance_score: float = 0.0
     priority: SearchPriority = SearchPriority.PARTIAL_MATCH
-    matched_fields: List[str] = None
-    metadata: Dict[str, Any] = None
-    suggestions: List[str] = None
+    matched_fields: list[str] = None
+    metadata: dict[str, Any] = None
+    suggestions: list[str] = None
 
     def __post_init__(self):
         """Initialize default values."""
@@ -100,8 +95,8 @@ class UnifiedSearchAPI:
         self.contact_cache = ContactSearchCache() if enable_cache else None
 
         # Search history for suggestions
-        self._search_history: List[Tuple[str, float]] = []
-        self._popular_searches: Dict[str, int] = {}
+        self._search_history: list[tuple[str, float]] = []
+        self._popular_searches: dict[str, int] = {}
 
         # Memory management constants
         self.MAX_POPULAR_SEARCHES = 1000
@@ -118,11 +113,11 @@ class UnifiedSearchAPI:
     def search(
         self,
         query: str,
-        entity_types: Optional[List[EntityType]] = None,
-        limit: Optional[int] = None,
+        entity_types: list[EntityType] | None = None,
+        limit: int | None = None,
         include_suggestions: bool = True,
         use_cache_first: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform a unified search across all entities.
 
         Args:
@@ -205,7 +200,7 @@ class UnifiedSearchAPI:
 
     def autocomplete(
         self, prefix: str, field: str = "name", limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get autocomplete suggestions for a prefix.
 
         Args:
@@ -253,7 +248,7 @@ class UnifiedSearchAPI:
 
         return suggestions[:limit]
 
-    def get_suggestions(self, query: str, context: Optional[List[int]] = None) -> List[str]:
+    def get_suggestions(self, query: str, context: list[int] | None = None) -> list[str]:
         """Get search suggestions based on query and context.
 
         Args:
@@ -292,7 +287,7 @@ class UnifiedSearchAPI:
 
         return unique[:5]
 
-    def warm_cache(self, contacts: List[Dict[str, Any]]) -> None:
+    def warm_cache(self, contacts: list[dict[str, Any]]) -> None:
         """Warm the contact cache with initial data.
 
         Args:
@@ -317,7 +312,7 @@ class UnifiedSearchAPI:
         """
         return self.indexer.optimize_index()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get search statistics and metrics.
 
         Returns:
@@ -342,7 +337,7 @@ class UnifiedSearchAPI:
         if self.contact_cache:
             self.contact_cache.clear_cache()
 
-    def _search_cache(self, query: str, limit: int) -> List[UnifiedSearchResult]:
+    def _search_cache(self, query: str, limit: int) -> list[UnifiedSearchResult]:
         """Search the contact cache.
 
         Args:
@@ -383,8 +378,8 @@ class UnifiedSearchAPI:
         return results
 
     def _search_fts(
-        self, query: str, entity_types: Optional[List[EntityType]], limit: int
-    ) -> List[UnifiedSearchResult]:
+        self, query: str, entity_types: list[EntityType] | None, limit: int
+    ) -> list[UnifiedSearchResult]:
         """Search using FTS5 indexer.
 
         Args:
@@ -422,8 +417,8 @@ class UnifiedSearchAPI:
         return results
 
     def _merge_results(
-        self, cache_results: List[UnifiedSearchResult], fts_results: List[UnifiedSearchResult]
-    ) -> List[UnifiedSearchResult]:
+        self, cache_results: list[UnifiedSearchResult], fts_results: list[UnifiedSearchResult]
+    ) -> list[UnifiedSearchResult]:
         """Merge and deduplicate results from different sources.
 
         Args:
@@ -434,7 +429,7 @@ class UnifiedSearchAPI:
             Merged and deduplicated results
         """
         # Track seen entities to avoid duplicates
-        seen: Set[Tuple[EntityType, int]] = set()
+        seen: set[tuple[EntityType, int]] = set()
         merged = []
 
         # Add cache results first (usually more relevant)
@@ -454,8 +449,8 @@ class UnifiedSearchAPI:
         return merged
 
     def _rank_results(
-        self, results: List[UnifiedSearchResult], query: str
-    ) -> List[UnifiedSearchResult]:
+        self, results: list[UnifiedSearchResult], query: str
+    ) -> list[UnifiedSearchResult]:
         """Rank results by relevance and priority.
 
         Args:
@@ -490,8 +485,8 @@ class UnifiedSearchAPI:
         return results
 
     def _group_results(
-        self, results: List[UnifiedSearchResult]
-    ) -> Dict[str, List[UnifiedSearchResult]]:
+        self, results: list[UnifiedSearchResult]
+    ) -> dict[str, list[UnifiedSearchResult]]:
         """Group results by entity type.
 
         Args:
@@ -520,7 +515,7 @@ class UnifiedSearchAPI:
         # Remove empty groups
         return {k: v for k, v in grouped.items() if v}
 
-    def _generate_suggestions(self, query: str, results: List[UnifiedSearchResult]) -> List[str]:
+    def _generate_suggestions(self, query: str, results: list[UnifiedSearchResult]) -> list[str]:
         """Generate search suggestions based on query and results.
 
         Args:
@@ -643,8 +638,8 @@ class UnifiedSearchAPI:
         self._metrics["avg_search_time"] = new_avg
 
     def _get_sources_used(
-        self, cache_results: List[UnifiedSearchResult], fts_results: List[UnifiedSearchResult]
-    ) -> List[str]:
+        self, cache_results: list[UnifiedSearchResult], fts_results: list[UnifiedSearchResult]
+    ) -> list[str]:
         """Get list of sources used in search.
 
         Args:
@@ -661,7 +656,7 @@ class UnifiedSearchAPI:
             sources.append("fts")
         return sources
 
-    def _empty_result(self) -> Dict[str, Any]:
+    def _empty_result(self) -> dict[str, Any]:
         """Return empty search result structure.
 
         Returns:

@@ -5,7 +5,6 @@ Provides toast notifications and dialog management.
 
 import contextlib
 from enum import Enum
-from typing import Optional
 
 from textual.app import App
 from textual.timer import Timer
@@ -29,14 +28,14 @@ class NotificationType(Enum):
 class NotificationService:
     """Service for managing notifications and dialogs."""
 
-    def __init__(self, app: Optional[App] = None):
+    def __init__(self, app: App | None = None):
         """Initialize notification service.
 
         Args:
             app: Textual app instance
         """
         self.app = app
-        self._toast_timer: Optional[Timer] = None
+        self._toast_timer: Timer | None = None
 
     def set_app(self, app: App) -> None:
         """Set the app instance.

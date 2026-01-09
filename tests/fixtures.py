@@ -17,7 +17,6 @@ Last Updated: 2025-10-13 (Phase 1: Quick fix for schema v6 compatibility)
 import base64
 from pathlib import Path
 from typing import Any
-from typing import Dict
 
 
 def _generate_profile_images():
@@ -442,7 +441,7 @@ def setup_test_database(db):
     }
 
 
-def get_sample_image_data(image_key: str) -> Dict[str, Any]:
+def get_sample_image_data(image_key: str) -> dict[str, Any]:
     """Get sample image data for testing."""
     if image_key in SAMPLE_IMAGES:
         image_info = SAMPLE_IMAGES[image_key]

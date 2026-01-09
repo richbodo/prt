@@ -6,10 +6,6 @@ Provides async interface for Google Takeout contact import functionality.
 import asyncio
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from prt_src.google_takeout import GoogleTakeoutParser
 from prt_src.google_takeout import find_takeout_files
@@ -31,7 +27,7 @@ class GoogleTakeoutService:
         self.api = api
         self.logger = get_logger(__name__)
 
-    async def find_takeout_files(self) -> List[Path]:
+    async def find_takeout_files(self) -> list[Path]:
         """Find Google Takeout files in common locations.
 
         Searches in:
@@ -88,7 +84,7 @@ class GoogleTakeoutService:
         )
         return unique_files
 
-    async def validate_file(self, file_path: Path) -> Tuple[bool, str]:
+    async def validate_file(self, file_path: Path) -> tuple[bool, str]:
         """Validate that a file is a valid Google Takeout zip.
 
         Args:
@@ -130,7 +126,7 @@ class GoogleTakeoutService:
             )
             return False, f"Error validating file: {e}"
 
-    async def get_preview(self, file_path: Path) -> Dict[str, Any]:
+    async def get_preview(self, file_path: Path) -> dict[str, Any]:
         """Get preview information about a takeout file.
 
         Args:
@@ -184,7 +180,7 @@ class GoogleTakeoutService:
                 "sample_contacts": [],
             }
 
-    async def import_contacts(self, file_path: Path) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    async def import_contacts(self, file_path: Path) -> tuple[bool, str, dict[str, Any] | None]:
         """Import contacts from a Google Takeout file.
 
         Args:

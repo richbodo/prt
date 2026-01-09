@@ -5,8 +5,6 @@ This module contains the main entry point command that handles application start
 mode selection (TUI vs CLI vs Chat), and configuration management.
 """
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.prompt import Confirm
@@ -45,13 +43,13 @@ def main_command(
     prt_debug_info: bool = typer.Option(
         False, "--prt-debug-info", help="Display system diagnostic information and exit"
     ),
-    model: Optional[str] = typer.Option(
+    model: str | None = typer.Option(
         None,
         "--model",
         "-m",
         help="Choose AI model (e.g., 'gpt-oss-20b', 'mistral-7b-instruct'). Use 'list-models' to see options. Put this flag BEFORE --chat.",
     ),
-    chat: Optional[str] = typer.Option(
+    chat: str | None = typer.Option(
         None,
         "--chat",
         help='Start AI chat mode. Provide query text or use --chat="" for interactive mode. Use AFTER --model flag.',

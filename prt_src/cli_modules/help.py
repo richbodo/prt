@@ -7,10 +7,9 @@ to ensure consistency across all CLI commands and help displays.
 
 from pathlib import Path
 from typing import Any
-from typing import Dict
 
 # CLI option definitions - single source of truth
-CLI_OPTIONS: Dict[str, Dict[str, Any]] = {
+CLI_OPTIONS: dict[str, dict[str, Any]] = {
     "debug": {
         "help": "Run with sample data (safe, isolated database)",
         "flag": "--debug",

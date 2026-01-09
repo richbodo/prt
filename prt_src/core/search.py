@@ -1,8 +1,6 @@
 """Search operations across all entities."""
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 
 class SearchOperations:
@@ -16,7 +14,7 @@ class SearchOperations:
         """
         self.api = api
 
-    def unified_search(self, query: str) -> Dict[str, Any]:
+    def unified_search(self, query: str) -> dict[str, Any]:
         """Searches contacts, tags, notes simultaneously.
 
         Args:
@@ -49,7 +47,7 @@ class SearchOperations:
         except Exception as e:
             return {"error": str(e), "contacts": [], "tags": [], "notes": [], "total": 0}
 
-    def search_by_tag(self, tag_name: str) -> List[Dict[str, Any]]:
+    def search_by_tag(self, tag_name: str) -> list[dict[str, Any]]:
         """Returns contacts associated with tag.
 
         Args:
@@ -94,7 +92,7 @@ class SearchOperations:
         except Exception:
             return []
 
-    def search_by_note(self, query: str) -> List[Dict[str, Any]]:
+    def search_by_note(self, query: str) -> list[dict[str, Any]]:
         """Searches note content and titles.
 
         Args:
@@ -144,7 +142,7 @@ class SearchOperations:
 
     def search_by_relationship_type(
         self, type_key: str, from_user: bool = True
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Returns contacts with specific relationship type.
 
         Args:
@@ -194,7 +192,7 @@ class SearchOperations:
         except Exception:
             return []
 
-    def get_recent_searches(self, limit: int = 10) -> List[str]:
+    def get_recent_searches(self, limit: int = 10) -> list[str]:
         """Get recently used search queries.
 
         Args:
@@ -207,7 +205,7 @@ class SearchOperations:
         # For now, return empty list
         return []
 
-    def get_search_suggestions(self, partial: str) -> List[str]:
+    def get_search_suggestions(self, partial: str) -> list[str]:
         """Get search suggestions based on partial input.
 
         Args:

@@ -1,0 +1,2 @@
+{"id": 1, "data": {"metrics": [{"name": "cpu", "value": 80}, {"name": "memory", "value": 60}]}, "timestamp": "2024-01-01"}
+{"id": 2, "data": {"metrics": [{"name": "cpu", "value": 90}], "extra": {"field": "value"}}, "timestamp": "2024-01-02"}

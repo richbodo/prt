@@ -194,9 +194,12 @@ class TestLLMContactsWithImagesMocked:
             }
 
             # Mock the file operations that happen in the directory creation
-            with patch("tempfile.TemporaryDirectory") as mock_tempdir, patch(
-                "builtins.open", mock_open()
-            ), patch("json.dump"), patch("pathlib.Path") as mock_path_class:
+            with (
+                patch("tempfile.TemporaryDirectory") as mock_tempdir,
+                patch("builtins.open", mock_open()),
+                patch("json.dump"),
+                patch("pathlib.Path") as mock_path_class,
+            ):
 
                 mock_tempdir_instance = MagicMock()
                 mock_tempdir_instance.__enter__.return_value = "/tmp/mock_dir"

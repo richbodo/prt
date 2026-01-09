@@ -9,10 +9,6 @@ import mimetypes
 import zipfile
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import vobject
 
@@ -29,7 +25,7 @@ class GoogleTakeoutParser:
         self.contacts = []
         self.images = {}  # filename -> binary data mapping
 
-    def validate_takeout_file(self) -> Tuple[bool, str]:
+    def validate_takeout_file(self) -> tuple[bool, str]:
         """Validate that this is a Google Takeout file with contacts."""
         try:
             with zipfile.ZipFile(self.zip_path, "r") as zip_ref:
@@ -62,7 +58,7 @@ class GoogleTakeoutParser:
         except Exception as e:
             return False, f"Error reading zip file: {e}"
 
-    def extract_contacts_and_images(self) -> Tuple[List[Dict[str, Any]], Dict[str, bytes]]:
+    def extract_contacts_and_images(self) -> tuple[list[dict[str, Any]], dict[str, bytes]]:
         """Extract contacts and images from the Google Takeout zip file."""
         contacts = []
         images = {}
@@ -112,7 +108,7 @@ class GoogleTakeoutParser:
 
         return contacts, images
 
-    def _parse_vcard_file(self, vcf_data: str, filename: str) -> List[Dict[str, Any]]:
+    def _parse_vcard_file(self, vcf_data: str, filename: str) -> list[dict[str, Any]]:
         """Parse a VCard file that may contain multiple contacts."""
         contacts = []
 
@@ -142,7 +138,7 @@ class GoogleTakeoutParser:
 
         return contacts
 
-    def _parse_single_vcard(self, vcf_data: str) -> Optional[Dict[str, Any]]:
+    def _parse_single_vcard(self, vcf_data: str) -> dict[str, Any] | None:
         """Parse a VCard string and extract contact information."""
         try:
             vcard = vobject.readOne(vcf_data)
@@ -236,7 +232,7 @@ class GoogleTakeoutParser:
             self.logger.error(f"Error parsing VCard: {e}", exc_info=True)
             return None
 
-    def _match_images_to_contacts(self, contacts: List[Dict[str, Any]], images: Dict[str, bytes]):
+    def _match_images_to_contacts(self, contacts: list[dict[str, Any]], images: dict[str, bytes]):
         """Match profile images to contacts based on naming patterns."""
         # Google Takeout typically names profile images based on contact names
         # This is a heuristic approach since exact matching rules may vary
@@ -284,7 +280,7 @@ class GoogleTakeoutParser:
                     )
                     break
 
-    def get_preview_info(self) -> Dict[str, Any]:
+    def get_preview_info(self) -> dict[str, Any]:
         """Get preview information about the takeout file."""
         is_valid, message = self.validate_takeout_file()
 
@@ -319,7 +315,7 @@ class GoogleTakeoutParser:
         }
 
 
-def find_takeout_files(data_dir: Path) -> List[Path]:
+def find_takeout_files(data_dir: Path) -> list[Path]:
     """Find Google Takeout zip files in the data directory."""
     zip_files = list(data_dir.glob("*.zip"))
 
@@ -339,7 +335,7 @@ def find_takeout_files(data_dir: Path) -> List[Path]:
     return takeout_files
 
 
-def parse_takeout_contacts(zip_path: Path) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+def parse_takeout_contacts(zip_path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Parse contacts from a Google Takeout zip file."""
     parser = GoogleTakeoutParser(zip_path)
 
@@ -367,7 +363,7 @@ def parse_takeout_contacts(zip_path: Path) -> Tuple[List[Dict[str, Any]], Dict[s
     return deduplicated_contacts, info
 
 
-def deduplicate_contacts(contacts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def deduplicate_contacts(contacts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Naive de-duplication algorithm:
     If contacts have the same email or phone, merge them instead of creating duplicates.
@@ -426,7 +422,7 @@ def deduplicate_contacts(contacts: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return deduplicated
 
 
-def merge_contacts(existing: Dict[str, Any], new: Dict[str, Any]) -> Dict[str, Any]:
+def merge_contacts(existing: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
     """
     Merge two contacts, preserving all useful information.
     Priority: take non-empty values from either contact.

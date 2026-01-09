@@ -1,0 +1,3 @@
+{"id": 1, "user": {"name": "Alice", "profile": {"age": 30, "city": "NYC"}}, "status": "active"}
+{"id": 2, "user": {"name": "Bob", "profile": {"age": 25, "city": "LA"}}, "status": "inactive"}
+{"id": 3, "user": {"name": "Charlie"}, "status": "active"}

@@ -4,11 +4,7 @@ Provides widgets for viewing, editing, and visualizing relationships
 between contacts.
 """
 
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
+from collections.abc import Callable
 
 from textual import on
 from textual.app import ComposeResult
@@ -26,14 +22,14 @@ from prt_src.tui.widgets.base import ModeAwareWidget
 class RelationshipEditor(Static):
     """Editor for creating and modifying relationships."""
 
-    def __init__(self, on_save: Optional[Callable] = None):
+    def __init__(self, on_save: Callable | None = None):
         """Initialize the relationship editor.
 
         Args:
             on_save: Callback when relationship is saved
         """
         super().__init__()
-        self.relationship: Optional[Dict] = None
+        self.relationship: dict | None = None
         self.on_save = on_save
         self.add_class("relationship-editor")
 
@@ -72,7 +68,7 @@ class RelationshipEditor(Static):
                 yield Button("Save", id="save-rel", classes="action-button")
                 yield Button("Cancel", id="cancel-rel", classes="action-button")
 
-    def set_relationship(self, relationship: Dict) -> None:
+    def set_relationship(self, relationship: dict) -> None:
         """Set the relationship to edit.
 
         Args:
@@ -106,7 +102,7 @@ class RelationshipEditor(Static):
             return self.relationship.get(field_name)
         return None
 
-    def validate_relationship(self, relationship: Dict) -> bool:
+    def validate_relationship(self, relationship: dict) -> bool:
         """Validate a relationship has required fields.
 
         Args:
@@ -180,9 +176,9 @@ class RelationshipList(ModeAwareWidget):
     def __init__(self):
         """Initialize the relationship list."""
         super().__init__()
-        self.relationships: List[Dict] = []
-        self.filtered_relationships: List[Dict] = []
-        self.current_contact: Optional[str] = None
+        self.relationships: list[dict] = []
+        self.filtered_relationships: list[dict] = []
+        self.current_contact: str | None = None
         self.add_class("relationship-list")
 
     def compose(self) -> ComposeResult:
@@ -230,7 +226,7 @@ class RelationshipList(ModeAwareWidget):
         # This would typically open a dialog or switch to edit mode
         # For now, just a placeholder
 
-    def load_relationships(self, relationships: List[Dict]) -> None:
+    def load_relationships(self, relationships: list[dict]) -> None:
         """Load relationships into the list.
 
         Args:
@@ -254,7 +250,7 @@ class RelationshipList(ModeAwareWidget):
         ]
         self._update_display()
 
-    def group_by_type(self) -> Dict[str, List[Dict]]:
+    def group_by_type(self) -> dict[str, list[dict]]:
         """Group relationships by type.
 
         Returns:
@@ -302,8 +298,8 @@ class RelationshipGraph(Static):
     def __init__(self):
         """Initialize the relationship graph."""
         super().__init__()
-        self.nodes: Set[str] = set()
-        self.edges: List[Dict] = []
+        self.nodes: set[str] = set()
+        self.edges: list[dict] = []
         self.add_class("relationship-graph")
 
     def compose(self) -> ComposeResult:
@@ -337,7 +333,7 @@ class RelationshipGraph(Static):
         self.edges.append({"from": from_node, "to": to_node, "type": edge_type})
         self._update_display()
 
-    def from_relationships(self, relationships: List[Dict]) -> None:
+    def from_relationships(self, relationships: list[dict]) -> None:
         """Build graph from list of relationships.
 
         Args:

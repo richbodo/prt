@@ -5,8 +5,6 @@ Provides fast, deterministic fixtures for testing components without database or
 
 from datetime import datetime
 from datetime import timedelta
-from typing import List
-from typing import Optional
 
 import pytest
 
@@ -16,13 +14,13 @@ import pytest
 
 
 def fixture_contact(
-    id: Optional[int] = None,
+    id: int | None = None,
     name: str = "Test User",
     email: str = "test@example.com",
-    location: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    phone: Optional[str] = None,
-    company: Optional[str] = None,
+    location: str | None = None,
+    tags: list[str] | None = None,
+    phone: str | None = None,
+    company: str | None = None,
 ) -> dict:
     """Create a test contact fixture.
 
@@ -62,7 +60,7 @@ def fixture_contact(
     return contact
 
 
-def fixture_contacts_batch(count: int = 10, **kwargs) -> List[dict]:
+def fixture_contacts_batch(count: int = 10, **kwargs) -> list[dict]:
     """Create a batch of test contacts.
 
     Args:
@@ -107,12 +105,12 @@ def fixture_contacts_batch(count: int = 10, **kwargs) -> List[dict]:
 
 
 def fixture_relationship(
-    id: Optional[int] = None,
+    id: int | None = None,
     from_contact: str = "Alice Chen",
     to_contact: str = "Bob Martinez",
     relationship_type: str = "colleague",
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
 ) -> dict:
     """Create a test relationship fixture.
 
@@ -154,11 +152,11 @@ def fixture_relationship(
 
 
 def fixture_note(
-    id: Optional[int] = None,
+    id: int | None = None,
     title: str = "Meeting Notes",
     content: str = "Discussed project timeline and deliverables.",
-    date: Optional[datetime] = None,
-    contact_id: Optional[int] = None,
+    date: datetime | None = None,
+    contact_id: int | None = None,
 ) -> dict:
     """Create a test note fixture.
 
@@ -197,7 +195,7 @@ def fixture_note(
 # ============================================================================
 
 
-def fixture_tag(id: Optional[int] = None, name: str = "tech", label: Optional[str] = None) -> dict:
+def fixture_tag(id: int | None = None, name: str = "tech", label: str | None = None) -> dict:
     """Create a test tag fixture.
 
     Args:

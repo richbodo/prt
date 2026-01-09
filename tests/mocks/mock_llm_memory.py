@@ -18,9 +18,6 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -87,7 +84,7 @@ class MockLLMMemory:
 
         return result_id
 
-    def load_result(self, result_id: str) -> Optional[Dict[str, Any]]:
+    def load_result(self, result_id: str) -> dict[str, Any] | None:
         """Load result with test isolation."""
         logger.debug(f"[MOCK_MEMORY_LOAD] Loading {result_id} for test {self.test_name}")
 
@@ -114,7 +111,7 @@ class MockLLMMemory:
                 logger.warning("[MOCK_MEMORY_LOAD] Not found in memory store")
             return result
 
-    def list_results(self, result_type: str = None) -> List[Dict[str, Any]]:
+    def list_results(self, result_type: str = None) -> list[dict[str, Any]]:
         """List results with test isolation."""
         results = []
 
@@ -188,7 +185,7 @@ class MockLLMMemory:
                 return True
             return False
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics for test memory system."""
         results = self.list_results()
 

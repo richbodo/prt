@@ -5,7 +5,6 @@ first-run detection, and global keybindings.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from textual import events
 from textual.app import App
@@ -38,7 +37,7 @@ class FirstRunHandler:
             db: Database instance for checking/creating contacts
         """
         self.db = db
-        self._you_contact_id: Optional[int] = None
+        self._you_contact_id: int | None = None
 
     def is_first_run(self) -> bool:
         """Check if this is the first run (no 'You' contact exists).
@@ -56,7 +55,7 @@ class FirstRunHandler:
             logger.error(f"Error checking for 'You' contact: {e}")
             return True
 
-    def create_you_contact(self, name: Optional[str] = None) -> dict:
+    def create_you_contact(self, name: str | None = None) -> dict:
         """Create the 'You' contact.
 
         Args:
@@ -90,7 +89,7 @@ class FirstRunHandler:
             raise RuntimeError(f"Failed to create 'You' contact: {e}") from e
 
     @property
-    def you_contact_id(self) -> Optional[int]:
+    def you_contact_id(self) -> int | None:
         """Get the ID of the 'You' contact."""
         return self._you_contact_id
 
@@ -112,11 +111,11 @@ class PRTApp(App):
 
     def __init__(
         self,
-        config: Optional[dict] = None,
+        config: dict | None = None,
         debug: bool = False,
         force_setup: bool = False,
-        model: Optional[str] = None,
-        initial_screen: Optional[str] = None,
+        model: str | None = None,
+        initial_screen: str | None = None,
     ):
         """Initialize the PRT application.
 
@@ -147,7 +146,7 @@ class PRTApp(App):
         self._app_mode = AppMode.NAVIGATION
 
         # Track current container for proper cleanup
-        self.current_container_id: Optional[str] = None
+        self.current_container_id: str | None = None
 
         # Store the provided config for later use with PRTAPI
         provided_config = config
@@ -613,7 +612,7 @@ class PRTApp(App):
             logger.error(f"[APP] pop_screen() FAILED with exception: {e}")
             raise
 
-    def navigate_to(self, screen_name: str, params: Optional[dict] = None) -> None:
+    def navigate_to(self, screen_name: str, params: dict | None = None) -> None:
         """Navigate to a screen using Textual's push_screen.
 
         Args:

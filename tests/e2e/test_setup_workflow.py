@@ -321,9 +321,10 @@ class TestSetupWorkflowErrorHandling:
                 self.push_screen(SetupScreen(prt_app=self, data_service=self.data_service))
 
         # Mock the actual function used in setup.py
-        with patch("prt_src.fixture_manager.setup_fixture_mode") as mock_setup_fixture, patch(
-            "prt_src.fixture_manager.get_fixture_summary"
-        ) as mock_summary:
+        with (
+            patch("prt_src.fixture_manager.setup_fixture_mode") as mock_setup_fixture,
+            patch("prt_src.fixture_manager.get_fixture_summary") as mock_summary,
+        ):
             mock_summary.return_value = {"contacts": 7, "tags": 8, "notes": 6}
             mock_setup_fixture.return_value = None  # Return None to trigger failure
 

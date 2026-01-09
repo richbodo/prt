@@ -10,7 +10,6 @@ by the CLI when needed.
 import sys
 from pathlib import Path
 from typing import Any
-from typing import Dict
 
 import typer
 from rich.console import Console
@@ -27,7 +26,7 @@ app = typer.Typer(help="PRT Database Setup Utility")
 console = Console()
 
 
-def setup_database(force: bool = False, quiet: bool = False) -> Dict[str, Any]:
+def setup_database(force: bool = False, quiet: bool = False) -> dict[str, Any]:
     """
     Set up database configuration and initialize database if needed.
 
@@ -91,7 +90,7 @@ def setup_database(force: bool = False, quiet: bool = False) -> Dict[str, Any]:
     return config
 
 
-def initialize_database(config: Dict[str, Any], quiet: bool = False) -> bool:
+def initialize_database(config: dict[str, Any], quiet: bool = False) -> bool:
     """
     Initialize the database with schema if it doesn't exist or is corrupt.
 

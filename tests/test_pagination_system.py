@@ -5,8 +5,6 @@ Tests cover pagination, alphabetical jumping, position memory, and lazy loading.
 """
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 # These imports will fail initially - that's expected in TDD
 from prt_src.core.components.pagination import AlphabeticalIndex
@@ -14,7 +12,7 @@ from prt_src.core.components.pagination import PaginationSystem
 from prt_src.core.components.pagination import PositionMemory
 
 
-def create_test_contacts(count: int = 100) -> List[Dict[str, Any]]:
+def create_test_contacts(count: int = 100) -> list[dict[str, Any]]:
     """Create test contacts for pagination testing."""
     contacts = []
     names = [

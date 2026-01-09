@@ -72,10 +72,7 @@ if __name__ == "__main__":
     # Default to test fixture database
     default_db = Path(__file__).parent.parent / "tests" / "prt_data" / "test_fixtures.db"
 
-    if len(sys.argv) > 1:
-        db_path = Path(sys.argv[1])
-    else:
-        db_path = default_db
+    db_path = Path(sys.argv[1]) if len(sys.argv) > 1 else default_db
 
     if not db_path.exists():
         print(f"Database not found: {db_path}")

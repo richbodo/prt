@@ -5,9 +5,7 @@ field-level editing and validation support.
 """
 
 import contextlib
-from typing import Callable
-from typing import Dict
-from typing import Optional
+from collections.abc import Callable
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -41,7 +39,7 @@ class FieldEditor(Static):
         self.label = label or field_name.replace("_", " ").title()
         self.is_editable = False
         self.has_changed = False
-        self.validator: Optional[Callable] = None
+        self.validator: Callable | None = None
         self.add_class("field-editor")
 
     @property
@@ -116,18 +114,18 @@ class ContactDetailView(ModeAwareWidget):
 
     is_editing = reactive(False)
 
-    def __init__(self, on_save: Optional[Callable] = None):
+    def __init__(self, on_save: Callable | None = None):
         """Initialize the contact detail view.
 
         Args:
             on_save: Callback when contact is saved
         """
         super().__init__()
-        self.contact: Optional[Dict] = None
-        self.field_editors: Dict[str, FieldEditor] = {}
+        self.contact: dict | None = None
+        self.field_editors: dict[str, FieldEditor] = {}
         self.has_unsaved_changes = False
         self.on_save = on_save
-        self.selected_field: Optional[str] = None
+        self.selected_field: str | None = None
         self.add_class("contact-detail")
 
     def compose(self) -> ComposeResult:
@@ -144,7 +142,7 @@ class ContactDetailView(ModeAwareWidget):
             # Fields container
             yield Vertical(id="fields-container")
 
-    def load_contact(self, contact: Dict) -> None:
+    def load_contact(self, contact: dict) -> None:
         """Load a contact for display/editing.
 
         Args:

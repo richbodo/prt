@@ -5,13 +5,8 @@ with vim-style keybindings.
 """
 
 import contextlib
+from collections.abc import Callable
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -30,7 +25,7 @@ from prt_src.tui.widgets.base import ModeAwareWidget
 class SearchBar(Static):
     """Search bar widget with vim-style activation."""
 
-    def __init__(self, on_search: Optional[Callable] = None, placeholder: str = "Search..."):
+    def __init__(self, on_search: Callable | None = None, placeholder: str = "Search..."):
         """Initialize the search bar.
 
         Args:
@@ -94,14 +89,14 @@ class SearchBar(Static):
 class FilterPanel(Static):
     """Filter panel for managing active filters."""
 
-    def __init__(self, on_filter_change: Optional[Callable] = None):
+    def __init__(self, on_filter_change: Callable | None = None):
         """Initialize the filter panel.
 
         Args:
             on_filter_change: Callback when filters change
         """
         super().__init__()
-        self.filters: Dict[str, Set[str]] = {}
+        self.filters: dict[str, set[str]] = {}
         self.on_filter_change = on_filter_change
         self.add_class("filter-panel")
 
@@ -153,7 +148,7 @@ class FilterPanel(Static):
         if self.on_filter_change:
             self.on_filter_change([])
 
-    def get_active_filters(self) -> List[Tuple[str, str]]:
+    def get_active_filters(self) -> list[tuple[str, str]]:
         """Get list of active filters.
 
         Returns:
@@ -187,10 +182,10 @@ class SearchableList(ModeAwareWidget):
     def __init__(self):
         """Initialize the searchable list."""
         super().__init__()
-        self.items: List[Dict] = []
-        self.filtered_items: List[Dict] = []
+        self.items: list[dict] = []
+        self.filtered_items: list[dict] = []
         self.search_query = ""
-        self.active_filters: List[Tuple[str, str]] = []
+        self.active_filters: list[tuple[str, str]] = []
         self.add_class("searchable-list")
 
     def compose(self) -> ComposeResult:
@@ -211,7 +206,7 @@ class SearchableList(ModeAwareWidget):
             # Status bar at bottom
             yield Static("", id="search-status", classes="search-status")
 
-    def load_items(self, items: List[Dict]) -> None:
+    def load_items(self, items: list[dict]) -> None:
         """Load items into the list.
 
         Args:
@@ -230,7 +225,7 @@ class SearchableList(ModeAwareWidget):
         self.search_query = query.lower()
         self._apply_filters_and_search()
 
-    def apply_filters(self, filters: List[Tuple[str, str]]) -> None:
+    def apply_filters(self, filters: list[tuple[str, str]]) -> None:
         """Apply filters to items.
 
         Args:
@@ -263,7 +258,7 @@ class SearchableList(ModeAwareWidget):
         self._update_display()
         self._update_status()
 
-    def _item_matches_search(self, item: Dict, query: str) -> bool:
+    def _item_matches_search(self, item: dict, query: str) -> bool:
         """Check if an item matches the search query.
 
         Args:
@@ -284,7 +279,7 @@ class SearchableList(ModeAwareWidget):
         # Search in other text fields
         return any(isinstance(value, str) and query in value.lower() for key, value in item.items())
 
-    def _item_matches_filter(self, item: Dict, category: str, value: str) -> bool:
+    def _item_matches_filter(self, item: dict, category: str, value: str) -> bool:
         """Check if an item matches a filter.
 
         Args:
@@ -346,7 +341,7 @@ class SearchableList(ModeAwareWidget):
 class SearchScopeFilter(Static):
     """Filter widget for search scope selection."""
 
-    def __init__(self, on_scope_change: Optional[Callable] = None):
+    def __init__(self, on_scope_change: Callable | None = None):
         """Initialize search scope filter.
 
         Args:
@@ -375,7 +370,7 @@ class SearchScopeFilter(Static):
                 "Metadata (Notes/Tags)", value=False, id="scope_metadata", classes="scope-checkbox"
             )
 
-    def get_selected_scopes(self) -> List[str]:
+    def get_selected_scopes(self) -> list[str]:
         """Get list of selected scope types.
 
         Returns:
@@ -432,7 +427,7 @@ class SearchScopeFilter(Static):
 class SearchResultList(Static):
     """Widget for displaying search results."""
 
-    def __init__(self, on_result_select: Optional[Callable] = None):
+    def __init__(self, on_result_select: Callable | None = None):
         """Initialize search result list.
 
         Args:
@@ -452,7 +447,7 @@ class SearchResultList(Static):
                 yield Vertical(id="results-content", classes="results-content")
             yield Static("", id="result-status", classes="result-status")
 
-    def update_results(self, search_data: Dict[str, Any]) -> None:
+    def update_results(self, search_data: dict[str, Any]) -> None:
         """Update the displayed results.
 
         Args:
@@ -642,7 +637,7 @@ class SearchResultList(Static):
         except Exception:
             pass
 
-    def get_selected_result(self) -> Optional[Tuple[str, Any]]:
+    def get_selected_result(self) -> tuple[str, Any] | None:
         """Get the currently selected result.
 
         Returns:

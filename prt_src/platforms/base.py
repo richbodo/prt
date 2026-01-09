@@ -5,10 +5,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 
 @dataclass
@@ -47,8 +43,8 @@ class Platform(ABC):
     def get_input(
         self,
         prompt: str,
-        choices: Optional[List[str]] = None,
-        default: Optional[str] = None,
+        choices: list[str] | None = None,
+        default: str | None = None,
         password: bool = False,
     ) -> str:
         """Get input from user.
@@ -64,9 +60,7 @@ class Platform(ABC):
         """
 
     @abstractmethod
-    def display_output(
-        self, content: Any, style: Optional[str] = None, format: str = "text"
-    ) -> None:
+    def display_output(self, content: Any, style: str | None = None, format: str = "text") -> None:
         """Display output to user.
 
         Args:
@@ -79,9 +73,9 @@ class Platform(ABC):
     def get_file_path(
         self,
         title: str = "Select File",
-        file_types: Optional[List[Tuple[str, str]]] = None,
+        file_types: list[tuple[str, str]] | None = None,
         save: bool = False,
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Get file path from user.
 
         Args:
@@ -94,7 +88,7 @@ class Platform(ABC):
         """
 
     @abstractmethod
-    def get_export_path(self, default_name: str, extension: str = ".json") -> Optional[Path]:
+    def get_export_path(self, default_name: str, extension: str = ".json") -> Path | None:
         """Get path for exporting data.
 
         Args:
@@ -163,7 +157,7 @@ class Platform(ABC):
     def clear_screen(self) -> None:
         """Clear the display/screen."""
 
-    def get_clipboard_text(self) -> Optional[str]:
+    def get_clipboard_text(self) -> str | None:
         """Get text from clipboard.
 
         Returns:
@@ -186,7 +180,7 @@ class Platform(ABC):
             return False
         return self._set_clipboard_text_impl(text)
 
-    def _get_clipboard_text_impl(self) -> Optional[str]:
+    def _get_clipboard_text_impl(self) -> str | None:
         """Platform-specific clipboard get implementation."""
         return None
 
@@ -211,7 +205,7 @@ class Platform(ABC):
         """Platform-specific URL opening implementation."""
         return False
 
-    def show_notification(self, title: str, message: str, icon: Optional[str] = None) -> bool:
+    def show_notification(self, title: str, message: str, icon: str | None = None) -> bool:
         """Show system notification.
 
         Args:
@@ -226,7 +220,7 @@ class Platform(ABC):
             return False
         return self._show_notification_impl(title, message, icon)
 
-    def _show_notification_impl(self, title: str, message: str, icon: Optional[str] = None) -> bool:
+    def _show_notification_impl(self, title: str, message: str, icon: str | None = None) -> bool:
         """Platform-specific notification implementation."""
         return False
 
@@ -242,7 +236,7 @@ class Platform(ABC):
         return Path.home() / ".prt" / filename
 
     def format_table(
-        self, headers: List[str], rows: List[List[Any]], max_width: Optional[int] = None
+        self, headers: list[str], rows: list[list[Any]], max_width: int | None = None
     ) -> str:
         """Format data as table.
 
@@ -270,7 +264,9 @@ class Platform(ABC):
         lines = []
 
         # Header
-        header_line = " | ".join(str(h)[:w].ljust(w) for h, w in zip(headers, col_widths))
+        header_line = " | ".join(
+            str(h)[:w].ljust(w) for h, w in zip(headers, col_widths, strict=False)
+        )
         lines.append(header_line)
         lines.append("-" * len(header_line))
 
@@ -284,8 +280,8 @@ class Platform(ABC):
         return "\n".join(lines)
 
     def paginate(
-        self, items: List[Any], page: int = 0, page_size: int = 10
-    ) -> Tuple[List[Any], Dict[str, Any]]:
+        self, items: list[Any], page: int = 0, page_size: int = 10
+    ) -> tuple[list[Any], dict[str, Any]]:
         """Paginate a list of items.
 
         Args:

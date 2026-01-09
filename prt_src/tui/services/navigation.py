@@ -7,11 +7,6 @@ and navigation history tracking.
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
-from typing import Deque
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 from prt_src.logging_config import get_logger
 
@@ -24,7 +19,7 @@ class NavEntry:
 
     screen_name: str
     title: str
-    params: Dict[str, Any]
+    params: dict[str, Any]
     has_unsaved: bool = False
 
 
@@ -43,11 +38,11 @@ class NavigationService:
             max_stack_depth: Maximum depth of navigation stack
         """
         # Navigation stack (current navigation path)
-        self._stack: List[NavEntry] = []
+        self._stack: list[NavEntry] = []
         self._max_stack_depth = max_stack_depth
 
         # Navigation history ring buffer
-        self._history: Deque[NavEntry] = deque(maxlen=max_history)
+        self._history: deque[NavEntry] = deque(maxlen=max_history)
 
         # Current screen reference
         self._current_screen = None
@@ -55,7 +50,7 @@ class NavigationService:
         # Home screen name
         self._home_screen = "home"
 
-    def push(self, screen_name: str, params: Optional[Dict[str, Any]] = None) -> None:
+    def push(self, screen_name: str, params: dict[str, Any] | None = None) -> None:
         """Push a new screen onto the navigation stack.
 
         Args:
@@ -90,7 +85,7 @@ class NavigationService:
 
         logger.info(f"Navigated to {screen_name} (stack depth: {len(self._stack)})")
 
-    def pop(self) -> Optional[str]:
+    def pop(self) -> str | None:
         """Pop the current screen and return to previous.
 
         Returns:
@@ -125,7 +120,7 @@ class NavigationService:
             )
         ]
 
-    def replace(self, screen_name: str, params: Optional[Dict[str, Any]] = None) -> None:
+    def replace(self, screen_name: str, params: dict[str, Any] | None = None) -> None:
         """Replace current screen with a new one (no back navigation).
 
         Args:
@@ -142,7 +137,7 @@ class NavigationService:
         # Push new screen
         self.push(screen_name, params)
 
-    def get_stack(self) -> List[str]:
+    def get_stack(self) -> list[str]:
         """Get the current navigation stack.
 
         Returns:
@@ -158,7 +153,7 @@ class NavigationService:
         """
         return len(self._stack) > 1
 
-    def get_breadcrumb(self) -> List[str]:
+    def get_breadcrumb(self) -> list[str]:
         """Get breadcrumb trail for current navigation.
 
         Returns:
@@ -166,7 +161,7 @@ class NavigationService:
         """
         return [entry.title for entry in self._stack]
 
-    def get_history(self) -> List[NavEntry]:
+    def get_history(self) -> list[NavEntry]:
         """Get navigation history.
 
         Returns:
@@ -174,7 +169,7 @@ class NavigationService:
         """
         return list(reversed(self._history))
 
-    def mark_unsaved(self, screen_name: Optional[str] = None) -> None:
+    def mark_unsaved(self, screen_name: str | None = None) -> None:
         """Mark a screen as having unsaved changes.
 
         Args:
@@ -194,7 +189,7 @@ class NavigationService:
             if entry.screen_name == screen_name:
                 entry.has_unsaved = True
 
-    def clear_unsaved(self, screen_name: Optional[str] = None) -> None:
+    def clear_unsaved(self, screen_name: str | None = None) -> None:
         """Clear unsaved changes marker for a screen.
 
         Args:
@@ -214,7 +209,7 @@ class NavigationService:
             if entry.screen_name == screen_name:
                 entry.has_unsaved = False
 
-    def get_current_screen(self) -> Optional[str]:
+    def get_current_screen(self) -> str | None:
         """Get the name of the current screen.
 
         Returns:
@@ -224,7 +219,7 @@ class NavigationService:
             return self._stack[-1].screen_name
         return None
 
-    def get_current_params(self) -> Dict[str, Any]:
+    def get_current_params(self) -> dict[str, Any]:
         """Get parameters for the current screen.
 
         Returns:
@@ -255,7 +250,7 @@ class NavigationService:
         # Convert snake_case to Title Case
         return screen_name.replace("_", " ").title()
 
-    def get_history_with_unsaved(self) -> List[Tuple[str, bool]]:
+    def get_history_with_unsaved(self) -> list[tuple[str, bool]]:
         """Get history with unsaved markers for breadcrumb dropdown.
 
         Returns:

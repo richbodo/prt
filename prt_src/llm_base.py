@@ -4,8 +4,6 @@ import json
 from abc import ABC
 from abc import abstractmethod
 from typing import Any
-from typing import Dict
-from typing import List
 
 from .api import PRTAPI
 from .config import LLMConfigManager
@@ -40,7 +38,7 @@ class BaseLLM(ABC):
         self.conversation_history = []
 
     @abstractmethod
-    def _send_message_with_tools(self, messages: List[Dict], tools: List[Tool]) -> Any:
+    def _send_message_with_tools(self, messages: list[dict], tools: list[Tool]) -> Any:
         """Send message with tools to provider (protocol-specific implementation).
 
         Args:
@@ -52,7 +50,7 @@ class BaseLLM(ABC):
         """
 
     @abstractmethod
-    def _extract_tool_calls(self, response: Any) -> List[Dict]:
+    def _extract_tool_calls(self, response: Any) -> list[dict]:
         """Extract tool calls from provider response.
 
         Args:
@@ -173,7 +171,7 @@ class BaseLLM(ABC):
             Assistant message text
         """
 
-    def _add_tool_results_to_history(self, tool_calls: List[Dict], tool_results: List[Dict]):
+    def _add_tool_results_to_history(self, tool_calls: list[dict], tool_results: list[dict]):
         """Add tool calls and results to conversation history.
 
         Args:
@@ -271,7 +269,7 @@ class BaseLLM(ABC):
             logger.error(f"[LLM] Error in safe write operation {tool_name}: {e}")
             return {"error": f"Error in {tool_name}: {str(e)}"}
 
-    def _detect_tool_suggestions(self, content: str) -> List[Dict]:
+    def _detect_tool_suggestions(self, content: str) -> list[dict]:
         """Detect tool suggestions in assistant content (fallback for models like Mistral).
 
         Args:
@@ -376,7 +374,7 @@ class BaseLLM(ABC):
 
         return tool_calls
 
-    def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    def _call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Call a tool with the given arguments using shared logic.
 
         Args:

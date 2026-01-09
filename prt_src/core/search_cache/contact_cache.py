@@ -8,11 +8,6 @@ import time
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
 
 import pygtrie
 from lru import LRU
@@ -26,18 +21,18 @@ class CachedContact:
 
     id: int
     name: str
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    tags: List[str] = field(default_factory=list)
+    email: str | None = None
+    phone: str | None = None
+    tags: list[str] = field(default_factory=list)
     last_accessed: float = field(default_factory=time.time)
-    search_keywords: Set[str] = field(default_factory=set)
+    search_keywords: set[str] = field(default_factory=set)
 
     def __post_init__(self):
         """Generate search keywords from contact data."""
         if not self.search_keywords:
             self.search_keywords = self._generate_keywords()
 
-    def _generate_keywords(self) -> Set[str]:
+    def _generate_keywords(self) -> set[str]:
         """Generate searchable keywords from contact fields."""
         keywords = set()
 
@@ -105,7 +100,7 @@ class ContactSearchCache:
         self._phone_trie = pygtrie.CharTrie()
 
         # All contacts for full search
-        self._all_contacts: Dict[int, CachedContact] = {}
+        self._all_contacts: dict[int, CachedContact] = {}
 
         # Cache statistics
         self._stats = {
@@ -167,7 +162,7 @@ class ContactSearchCache:
             if normalized:
                 self._phone_trie[normalized] = contact.id
 
-    def get_contact(self, contact_id: int) -> Optional[CachedContact]:
+    def get_contact(self, contact_id: int) -> CachedContact | None:
         """Get a contact by ID from cache.
 
         Args:
@@ -198,7 +193,7 @@ class ContactSearchCache:
 
         return None
 
-    def search(self, query: str, limit: int = 50) -> List[CachedContact]:
+    def search(self, query: str, limit: int = 50) -> list[CachedContact]:
         """Search for contacts matching query.
 
         Args:
@@ -257,7 +252,7 @@ class ContactSearchCache:
 
         return results[:limit]
 
-    def autocomplete(self, prefix: str, search_field: str = "name") -> List[Tuple[str, int]]:
+    def autocomplete(self, prefix: str, search_field: str = "name") -> list[tuple[str, int]]:
         """Get autocomplete suggestions for a prefix.
 
         Args:
@@ -327,7 +322,7 @@ class ContactSearchCache:
 
         return unique_suggestions[: self.max_autocomplete_results]
 
-    def warm_cache(self, contacts: List[Dict[str, Any]]) -> None:
+    def warm_cache(self, contacts: list[dict[str, Any]]) -> None:
         """Warm the cache with initial contact data.
 
         Args:
@@ -371,7 +366,7 @@ class ContactSearchCache:
             "last_warm": None,
         }
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -394,7 +389,7 @@ class ContactSearchCache:
             "phone_trie_size": len(self._phone_trie),
         }
 
-    def get_most_accessed(self, limit: int = 10) -> List[CachedContact]:
+    def get_most_accessed(self, limit: int = 10) -> list[CachedContact]:
         """Get the most recently accessed contacts.
 
         Args:

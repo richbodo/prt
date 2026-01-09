@@ -9,9 +9,6 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from llama_cpp import Llama
 
@@ -30,12 +27,12 @@ class LlamaCppLLM(BaseLLM):
     def __init__(
         self,
         api: PRTAPI,
-        model_path: Optional[str] = None,
+        model_path: str | None = None,
         n_ctx: int = 4096,
         n_gpu_layers: int = 0,
-        n_threads: Optional[int] = None,
-        timeout: Optional[int] = None,
-        config_manager: Optional[LLMConfigManager] = None,
+        n_threads: int | None = None,
+        timeout: int | None = None,
+        config_manager: LLMConfigManager | None = None,
     ):
         """Initialize LlamaCpp LLM client.
 
@@ -144,7 +141,7 @@ class LlamaCppLLM(BaseLLM):
         """Get provider name for prompt generation."""
         return "llamacpp"
 
-    def _create_tools_legacy(self) -> List[Tool]:
+    def _create_tools_legacy(self) -> list[Tool]:
         """Legacy tool creation method (now handled by parent class)."""
         return [
             # ============================================================
@@ -267,7 +264,7 @@ class LlamaCppLLM(BaseLLM):
     # ABSTRACT METHOD IMPLEMENTATIONS FOR BaseLLM
     # ============================================================
 
-    def _send_message_with_tools(self, messages: List[Dict], tools: List[Tool]) -> str:
+    def _send_message_with_tools(self, messages: list[dict], tools: list[Tool]) -> str:
         """Send message with tools to LlamaCpp model.
 
         Args:
@@ -312,7 +309,7 @@ class LlamaCppLLM(BaseLLM):
             logger.error(f"[LLM] Error in LlamaCpp completion: {e}")
             return f"Error generating response: {e}"
 
-    def _extract_tool_calls(self, response: str) -> List[Dict]:
+    def _extract_tool_calls(self, response: str) -> list[dict]:
         """Extract tool calls from LlamaCpp text response.
 
         Args:
@@ -370,14 +367,14 @@ class LlamaCppLLM(BaseLLM):
     # LEGACY METHODS (to be removed after testing)
     # ============================================================
 
-    def _get_tool_by_name(self, name: str) -> Optional[Tool]:
+    def _get_tool_by_name(self, name: str) -> Tool | None:
         """Get a tool by name."""
         for tool in self.tools:
             if tool.name == name:
                 return tool
         return None
 
-    def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    def _call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Call a tool with the given arguments."""
         tool = self._get_tool_by_name(tool_name)
         if not tool:
@@ -499,7 +496,7 @@ After receiving tool results, provide a natural language response to the user ba
 
 Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, respect privacy, and never presume to create visualizations without permission."""
 
-    def _format_messages_for_llama(self, messages: List[Dict[str, Any]]) -> str:
+    def _format_messages_for_llama(self, messages: list[dict[str, Any]]) -> str:
         """Format conversation messages into a prompt for llama.cpp.
 
         Args:
@@ -528,7 +525,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
         return prompt
 
-    def _parse_tool_calls(self, response: str) -> Optional[List[Dict[str, Any]]]:
+    def _parse_tool_calls(self, response: str) -> list[dict[str, Any]] | None:
         """Parse tool calls from model response.
 
         Args:

@@ -3,9 +3,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 CONFIG_FILE = "prt_config.json"
 DATA_DIR_NAME = "prt_data"
@@ -40,7 +37,7 @@ def config_path() -> Path:
     return data_dir() / CONFIG_FILE
 
 
-def load_config() -> Dict[str, Any]:
+def load_config() -> dict[str, Any]:
     path = config_path()
     if not path.exists():
         # Return default config with auto-populated credentials if they exist
@@ -76,7 +73,7 @@ def load_config() -> Dict[str, Any]:
         raise ValueError("Config file is corrupt") from e
 
 
-def save_config(cfg: Dict[str, Any]) -> None:
+def save_config(cfg: dict[str, Any]) -> None:
     try:
         with config_path().open("w") as f:
             json.dump(cfg, f, indent=2)
@@ -145,7 +142,7 @@ def get_db_credentials() -> tuple[str, str]:
 # These will be replaced with application-level encryption in Issue #42
 
 
-def get_database_url(config: Dict[str, Any]) -> str:
+def get_database_url(config: dict[str, Any]) -> str:
     """Get the database URL."""
     db_path = config.get("db_path", "prt_data/prt.db")
     return f"sqlite:///{db_path}"
@@ -164,7 +161,7 @@ def get_current_database_mode() -> str:
         return "unknown"
 
 
-def get_database_mode_from_config(config: Dict[str, Any]) -> str:
+def get_database_mode_from_config(config: dict[str, Any]) -> str:
     """Get the database mode from a configuration dictionary.
 
     Args:
@@ -223,20 +220,18 @@ class LLMConfig:
     model: str = "gpt-oss:20b"
 
     # Model discovery and defaults
-    default_model: Optional[str] = None  # Model alias to use by default (e.g., "llama8")
-    fallback_models: Optional[Dict[str, Dict[str, str]]] = (
-        None  # Fallback configs when Ollama offline
-    )
+    default_model: str | None = None  # Model alias to use by default (e.g., "llama8")
+    fallback_models: dict[str, dict[str, str]] | None = None  # Fallback configs when Ollama offline
 
     # Ollama-specific settings
     base_url: str = "http://localhost:11434"  # Native API (not /v1 OpenAI-compatible)
     keep_alive: str = "30m"
 
     # llama-cpp-python specific settings
-    model_path: Optional[str] = None  # Path to .gguf file (required for llamacpp provider)
+    model_path: str | None = None  # Path to .gguf file (required for llamacpp provider)
     n_ctx: int = 4096  # Context window size
     n_gpu_layers: int = 0  # Number of layers to offload to GPU (0 = CPU only)
-    n_threads: Optional[int] = None  # Number of CPU threads (None = auto-detect)
+    n_threads: int | None = None  # Number of CPU threads (None = auto-detect)
 
     # Common settings
     timeout: int = 300  # Increased from 120s to handle large datasets (1800+ contacts)
@@ -260,9 +255,9 @@ class LLMPermissions:
 class LLMPrompts:
     """LLM system prompt configuration."""
 
-    override_system_prompt: Optional[str] = None
+    override_system_prompt: str | None = None
     use_file: bool = False
-    file_path: Optional[str] = None
+    file_path: str | None = None
 
 
 @dataclass
@@ -288,13 +283,13 @@ class LLMDeveloper:
 class LLMToolsConfig:
     """LLM tool availability and feature toggles."""
 
-    disabled_tools: List[str] = field(default_factory=list)
+    disabled_tools: list[str] = field(default_factory=list)
 
 
 class LLMConfigManager:
     """Manager for LLM configuration with validation and defaults."""
 
-    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_dict: dict[str, Any] | None = None):
         """Initialize LLM config manager.
 
         Args:
@@ -310,7 +305,7 @@ class LLMConfigManager:
         self.developer = self._load_developer_config(config_dict.get("llm_developer", {}))
         self.tools = self._load_tools_config(config_dict.get("llm_tools", {}))
 
-    def _load_llm_config(self, llm_dict: Dict[str, Any]) -> LLMConfig:
+    def _load_llm_config(self, llm_dict: dict[str, Any]) -> LLMConfig:
         """Load LLM connection configuration with validation."""
         return LLMConfig(
             provider=llm_dict.get("provider", "ollama"),
@@ -333,7 +328,7 @@ class LLMConfigManager:
             temperature=llm_dict.get("temperature", 0.1),
         )
 
-    def _load_permissions_config(self, perm_dict: Dict[str, Any]) -> LLMPermissions:
+    def _load_permissions_config(self, perm_dict: dict[str, Any]) -> LLMPermissions:
         """Load LLM permissions configuration with validation."""
         require_confirmation = perm_dict.get("require_confirmation", {})
 
@@ -347,7 +342,7 @@ class LLMConfigManager:
             read_only_mode=perm_dict.get("read_only_mode", False),
         )
 
-    def _load_prompts_config(self, prompts_dict: Dict[str, Any]) -> LLMPrompts:
+    def _load_prompts_config(self, prompts_dict: dict[str, Any]) -> LLMPrompts:
         """Load LLM prompts configuration with validation."""
         return LLMPrompts(
             override_system_prompt=prompts_dict.get("override_system_prompt"),
@@ -355,7 +350,7 @@ class LLMConfigManager:
             file_path=prompts_dict.get("file_path"),
         )
 
-    def _load_context_config(self, context_dict: Dict[str, Any]) -> LLMContext:
+    def _load_context_config(self, context_dict: dict[str, Any]) -> LLMContext:
         """Load LLM context configuration with validation."""
         mode = context_dict.get("mode", "adaptive")
         if mode not in ["minimal", "detailed", "adaptive"]:
@@ -370,7 +365,7 @@ class LLMConfigManager:
             max_context_tokens=context_dict.get("max_context_tokens", 4000),
         )
 
-    def _load_developer_config(self, dev_dict: Dict[str, Any]) -> LLMDeveloper:
+    def _load_developer_config(self, dev_dict: dict[str, Any]) -> LLMDeveloper:
         """Load LLM developer tools configuration."""
         return LLMDeveloper(
             debug_mode=dev_dict.get("debug_mode", False),
@@ -379,7 +374,7 @@ class LLMConfigManager:
             log_timing=dev_dict.get("log_timing", False),
         )
 
-    def _load_tools_config(self, tools_dict: Dict[str, Any]) -> LLMToolsConfig:
+    def _load_tools_config(self, tools_dict: dict[str, Any]) -> LLMToolsConfig:
         """Load LLM tool enable/disable configuration."""
 
         disabled = tools_dict.get("disabled")
@@ -396,7 +391,7 @@ class LLMConfigManager:
 
         return LLMToolsConfig(disabled_tools=normalized)
 
-    def get_system_prompt(self) -> Optional[str]:
+    def get_system_prompt(self) -> str | None:
         """Get the system prompt from configuration.
 
         Returns:
@@ -486,7 +481,7 @@ class LLMConfigManager:
 
         return True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary for saving.
 
         Returns:

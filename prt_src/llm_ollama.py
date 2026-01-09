@@ -9,12 +9,9 @@ import asyncio
 import json
 import secrets
 import string
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
 
 import requests
 
@@ -39,7 +36,7 @@ class Tool:
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     function: Callable
 
 
@@ -49,10 +46,10 @@ class OllamaLLM(BaseLLM):
     def __init__(
         self,
         api: PRTAPI,
-        base_url: Optional[str] = None,
-        keep_alive: Optional[str] = None,
-        timeout: Optional[int] = None,
-        config_manager: Optional[LLMConfigManager] = None,
+        base_url: str | None = None,
+        keep_alive: str | None = None,
+        timeout: int | None = None,
+        config_manager: LLMConfigManager | None = None,
     ):
         """Initialize Ollama LLM client."""
         if config_manager is None:
@@ -93,7 +90,7 @@ class OllamaLLM(BaseLLM):
 
     def _validate_and_parse_response(
         self, response: requests.Response, operation: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Validate HTTP response and safely parse JSON."""
         content_type = response.headers.get("Content-Type", "").lower()
         is_valid_content_type = any(
@@ -156,7 +153,7 @@ class OllamaLLM(BaseLLM):
             return False
 
     # Tool creation is now handled by BaseLLM parent class through LLMToolRegistry
-    def _create_tools_legacy(self) -> List[Tool]:
+    def _create_tools_legacy(self) -> list[Tool]:
         """Legacy tool creation method (replaced by BaseLLM)."""
         # For now, keep the existing tool definitions for compatibility
         # TODO: Migrate to shared tool registry in future PR
@@ -495,7 +492,7 @@ class OllamaLLM(BaseLLM):
         ]
         return tool_name in write_tools
 
-    def _validate_sql_safety(self, sql: str) -> Dict[str, Any]:
+    def _validate_sql_safety(self, sql: str) -> dict[str, Any]:
         """Validate SQL query for safety."""
         import re
 
@@ -527,7 +524,7 @@ class OllamaLLM(BaseLLM):
 
         return {"success": True}
 
-    def _execute_sql_safe(self, sql: str, confirm: bool, reason: str = None) -> Dict[str, Any]:
+    def _execute_sql_safe(self, sql: str, confirm: bool, reason: str = None) -> dict[str, Any]:
         """Execute SQL with safety checks."""
         validation_result = self._validate_sql_safety(sql)
         if not validation_result["success"]:
@@ -571,7 +568,7 @@ class OllamaLLM(BaseLLM):
             from unittest.mock import MagicMock
             from unittest.mock import Mock
 
-            if isinstance(data, (Mock, MagicMock)):
+            if isinstance(data, Mock | MagicMock):
                 # For mocks, try to get a reasonable default or configured value
                 if hasattr(data, "_mock_return_value") and data._mock_return_value is not None:
                     try:
@@ -582,7 +579,7 @@ class OllamaLLM(BaseLLM):
                     return 2  # Default for test scenarios
         return 0
 
-    def _get_contacts_with_images(self) -> Dict[str, Any]:
+    def _get_contacts_with_images(self) -> dict[str, Any]:
         """Get all contacts that have profile images."""
         try:
             contacts = self.api.get_contacts_with_images()
@@ -596,7 +593,7 @@ class OllamaLLM(BaseLLM):
         except Exception as e:
             return {"success": False, "error": str(e), "contacts": [], "count": 0}
 
-    def _save_contacts_with_images(self, description: str = None) -> Dict[str, Any]:
+    def _save_contacts_with_images(self, description: str = None) -> dict[str, Any]:
         """Save contacts with images to memory."""
         import copy
 
@@ -625,7 +622,7 @@ class OllamaLLM(BaseLLM):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def _list_memory(self, result_type: str = None) -> Dict[str, Any]:
+    def _list_memory(self, result_type: str = None) -> dict[str, Any]:
         """List saved results in memory."""
         try:
             results = llm_memory.list_results(result_type=result_type)
@@ -641,7 +638,7 @@ class OllamaLLM(BaseLLM):
 
     def _create_directory_from_contacts_with_images(
         self, output_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create an interactive directory for contacts with images."""
         import json
         import sys
@@ -727,7 +724,7 @@ class OllamaLLM(BaseLLM):
 
     def _generate_directory(
         self, search_query: str = None, memory_id: str = None, output_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate an interactive D3.js visualization of contacts."""
         import json
         import sys
@@ -824,7 +821,7 @@ class OllamaLLM(BaseLLM):
 
     def _safe_write_wrapper(
         self, tool_name: str, tool_function: Callable, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Wrapper for write operations that creates automatic backup."""
         try:
             backup_info = self.api.auto_backup_before_operation(tool_name)
@@ -871,7 +868,7 @@ class OllamaLLM(BaseLLM):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    def _call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
         """Call a tool with the given arguments."""
         tool = self._get_tool_by_name(tool_name)
         if not tool:
@@ -981,7 +978,7 @@ WORKFLOW:
 
 Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, respect privacy."""
 
-    def _format_tool_calls(self) -> List[Dict[str, Any]]:
+    def _format_tool_calls(self) -> list[dict[str, Any]]:
         """Format tools for Ollama native API."""
         return [
             {
@@ -1007,7 +1004,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         """Get model name for model-specific prompt customizations."""
         return self.model
 
-    def _send_message_with_tools(self, messages: List[Dict], tools: List[Tool]) -> Dict:
+    def _send_message_with_tools(self, messages: list[dict], tools: list[Tool]) -> dict:
         """Send message with tools to Ollama API.
 
         Args:
@@ -1040,7 +1037,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Error communicating with Ollama: {e}") from e
 
-    def _extract_tool_calls(self, response: Dict) -> List[Dict]:
+    def _extract_tool_calls(self, response: dict) -> list[dict]:
         """Extract tool calls from Ollama response.
 
         Args:
@@ -1092,7 +1089,7 @@ Remember: PRT is a "safe space" for relationship data. Be helpful, be safe, resp
 
         return standardized_calls
 
-    def _extract_assistant_message(self, response: Dict) -> str:
+    def _extract_assistant_message(self, response: dict) -> str:
         """Extract assistant message from Ollama response.
 
         Args:

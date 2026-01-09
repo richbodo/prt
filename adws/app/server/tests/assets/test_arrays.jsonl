@@ -1,0 +1,3 @@
+{"id": 1, "name": "Item A", "tags": ["python", "data", "ml"], "prices": [10.5, 20.0]}
+{"id": 2, "name": "Item B", "tags": ["javascript", "web"], "prices": [15.0]}
+{"id": 3, "name": "Item C", "tags": ["rust"], "prices": []}

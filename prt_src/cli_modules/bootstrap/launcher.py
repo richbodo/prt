@@ -5,8 +5,6 @@ Functions for launching the interactive CLI and TUI with proper fallback handlin
 These functions manage the main application startup process.
 """
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -24,7 +22,7 @@ from .setup import setup_debug_mode
 def run_interactive_cli(
     debug: bool = False,
     regenerate_fixtures: bool = False,
-    model: Optional[str] = None,
+    model: str | None = None,
 ):
     """Run the main interactive CLI."""
     console = Console()
@@ -152,8 +150,8 @@ def _launch_tui_with_fallback(
     debug: bool = False,
     regenerate_fixtures: bool = False,
     force_setup: bool = False,
-    model: Optional[str] = None,
-    initial_screen: Optional[str] = None,
+    model: str | None = None,
+    initial_screen: str | None = None,
 ) -> None:
     """Launch TUI with fallback to classic CLI on failure."""
     console = Console()

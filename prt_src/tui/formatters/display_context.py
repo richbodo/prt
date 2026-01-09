@@ -9,9 +9,6 @@ This dataclass encapsulates all display-related state including:
 
 from dataclasses import dataclass
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 
 @dataclass
@@ -25,10 +22,10 @@ class DisplayContext:
         pagination_info: Optional dict with 'total', 'showing', 'offset' keys
     """
 
-    current_results: Optional[List[Dict[str, Any]]] = None
+    current_results: list[dict[str, Any]] | None = None
     result_type: str = "contacts"
     display_mode: str = "numbered_list"
-    pagination_info: Optional[Dict[str, int]] = None
+    pagination_info: dict[str, int] | None = None
 
     def __post_init__(self):
         """Validate field values after initialization."""
@@ -72,7 +69,7 @@ class DisplayContext:
         self.pagination_info = None
 
     def update_results(
-        self, new_results: List[Dict[str, Any]], pagination: Optional[Dict[str, int]] = None
+        self, new_results: list[dict[str, Any]], pagination: dict[str, int] | None = None
     ) -> None:
         """Update results and optionally pagination info.
 

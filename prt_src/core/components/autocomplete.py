@@ -9,9 +9,6 @@ from dataclasses import field
 from difflib import SequenceMatcher
 from enum import Enum
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -31,12 +28,12 @@ class SuggestionSource(Enum):
 class AutocompleteContext:
     """Context for autocomplete suggestions."""
 
-    entity_type: Optional[str] = None
-    current_field: Optional[str] = None
+    entity_type: str | None = None
+    current_field: str | None = None
     include_history: bool = True
     include_popular: bool = True
-    exclude_ids: Optional[List[int]] = None
-    current_selections: Optional[List[str]] = None
+    exclude_ids: list[int] | None = None
+    current_selections: list[str] | None = None
 
 
 @dataclass
@@ -46,8 +43,8 @@ class Suggestion:
     text: str
     source: SuggestionSource
     score: float = 1.0
-    entity_id: Optional[int] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    entity_id: int | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -69,11 +66,11 @@ class AutocompleteEngine:
         self,
         search_api=None,
         contact_cache=None,
-        config: Optional[AutocompleteConfig] = None,
-        min_query_length: Optional[int] = None,
-        max_suggestions: Optional[int] = None,
-        enable_fuzzy: Optional[bool] = None,
-        fuzzy_threshold: Optional[float] = None,
+        config: AutocompleteConfig | None = None,
+        min_query_length: int | None = None,
+        max_suggestions: int | None = None,
+        enable_fuzzy: bool | None = None,
+        fuzzy_threshold: float | None = None,
     ):
         """Initialize autocomplete engine.
 
@@ -114,10 +111,10 @@ class AutocompleteEngine:
 
         self.search_api = search_api
         self.contact_cache = contact_cache
-        self._items: List[Dict[str, Any]] = []
+        self._items: list[dict[str, Any]] = []
         self._last_query_time = 0
 
-    def set_items(self, items: List[Dict[str, Any]]):
+    def set_items(self, items: list[dict[str, Any]]):
         """Set items for autocomplete.
 
         Args:
@@ -126,8 +123,8 @@ class AutocompleteEngine:
         self._items = items
 
     def get_suggestions(
-        self, query: str, context: Optional[AutocompleteContext] = None
-    ) -> List[Suggestion]:
+        self, query: str, context: AutocompleteContext | None = None
+    ) -> list[Suggestion]:
         """Get autocomplete suggestions for query.
 
         Args:
@@ -173,8 +170,8 @@ class AutocompleteEngine:
         return suggestions[: self.max_suggestions]
 
     def _get_cache_suggestions(
-        self, query: str, context: Optional[AutocompleteContext]
-    ) -> List[Suggestion]:
+        self, query: str, context: AutocompleteContext | None
+    ) -> list[Suggestion]:
         """Get suggestions from contact cache.
 
         Args:
@@ -203,7 +200,7 @@ class AutocompleteEngine:
 
     def _get_history_suggestions(
         self, query: str, context: AutocompleteContext
-    ) -> List[Suggestion]:
+    ) -> list[Suggestion]:
         """Get suggestions from search history.
 
         Args:
@@ -230,7 +227,7 @@ class AutocompleteEngine:
 
     def _get_popular_suggestions(
         self, query: str, context: AutocompleteContext
-    ) -> List[Suggestion]:
+    ) -> list[Suggestion]:
         """Get suggestions from popular searches.
 
         Args:
@@ -260,8 +257,8 @@ class AutocompleteEngine:
         return suggestions
 
     def _get_item_suggestions(
-        self, query: str, context: Optional[AutocompleteContext]
-    ) -> List[Suggestion]:
+        self, query: str, context: AutocompleteContext | None
+    ) -> list[Suggestion]:
         """Get suggestions from stored items.
 
         Args:
@@ -385,8 +382,8 @@ class AutocompleteEngine:
         return ratio
 
     def filter_suggestions(
-        self, suggestions: List[Suggestion], context: AutocompleteContext
-    ) -> List[Suggestion]:
+        self, suggestions: list[Suggestion], context: AutocompleteContext
+    ) -> list[Suggestion]:
         """Filter suggestions based on context.
 
         Args:
@@ -416,7 +413,7 @@ class AutocompleteEngine:
 
         return filtered
 
-    def rank_suggestions(self, suggestions: List[Suggestion]) -> List[Suggestion]:
+    def rank_suggestions(self, suggestions: list[Suggestion]) -> list[Suggestion]:
         """Rank suggestions by score and source priority.
 
         Args:

@@ -1,9 +1,6 @@
 """Contact-related business operations."""
 
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 
 class ContactOperations:
@@ -17,7 +14,7 @@ class ContactOperations:
         """
         self.api = api
 
-    def list_contacts(self, page: int = 0, page_size: int = 20) -> Dict[str, Any]:
+    def list_contacts(self, page: int = 0, page_size: int = 20) -> dict[str, Any]:
         """Returns paginated contact list with metadata.
 
         Args:
@@ -51,7 +48,7 @@ class ContactOperations:
         except Exception as e:
             return {"success": False, "error": str(e), "contacts": [], "total": 0}
 
-    def get_contact_details(self, contact_id: int) -> Optional[Dict[str, Any]]:
+    def get_contact_details(self, contact_id: int) -> dict[str, Any] | None:
         """Returns full contact info including relationships, tags, notes.
 
         Args:
@@ -88,7 +85,7 @@ class ContactOperations:
         except Exception as e:
             return {"error": str(e)}
 
-    def search_contacts(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def search_contacts(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
         """Full-text search across name, email, phone.
 
         Args:
@@ -136,7 +133,7 @@ class ContactOperations:
         except Exception:
             return []
 
-    def get_contacts_by_letter(self, letter: str) -> List[Dict[str, Any]]:
+    def get_contacts_by_letter(self, letter: str) -> list[dict[str, Any]]:
         """Returns contacts whose name starts with given letter.
 
         Args:
@@ -165,7 +162,7 @@ class ContactOperations:
         except Exception:
             return []
 
-    def get_contact_metadata(self, contact_id: int) -> Optional[Dict[str, Any]]:
+    def get_contact_metadata(self, contact_id: int) -> dict[str, Any] | None:
         """Helper method to get contact metadata.
 
         Args:

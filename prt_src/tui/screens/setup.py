@@ -85,14 +85,14 @@ class SetupScreen(BaseScreen):
         """Initialize Setup screen."""
         super().__init__(**kwargs)
         self.screen_title = "SETUP"
-        self._api: Optional[PRTAPI] = None
-        self._takeout_service: Optional[GoogleTakeoutService] = None
-        self._fixture_service: Optional[FixtureService] = None
-        self._status_widget: Optional[Static] = None
-        self._error_widget: Optional[Static] = None
+        self._api: PRTAPI | None = None
+        self._takeout_service: GoogleTakeoutService | None = None
+        self._fixture_service: FixtureService | None = None
+        self._status_widget: Static | None = None
+        self._error_widget: Static | None = None
         self._wait_for_keypress: bool = False
         self._navigation_pending: str = ""
-        self._file_selection_widget: Optional[FileSelectionWidget] = None
+        self._file_selection_widget: FileSelectionWidget | None = None
         self._pending_files: list = []  # Files waiting for user selection
 
     def compose(self) -> ComposeResult:
@@ -455,7 +455,7 @@ class SetupScreen(BaseScreen):
         return "\n".join(lines)
 
     def _build_detailed_error(
-        self, error: str, file_path: Optional["Path"] = None, exception: Optional[Exception] = None
+        self, error: str, file_path: Optional["Path"] = None, exception: Exception | None = None
     ) -> str:
         """Build detailed error message with debug info.
 
@@ -517,7 +517,7 @@ class SetupScreen(BaseScreen):
 
         return "\n".join(lines)
 
-    def _get_troubleshooting_tips(self, error: str, exception: Optional[Exception] = None) -> list:
+    def _get_troubleshooting_tips(self, error: str, exception: Exception | None = None) -> list:
         """Get context-specific troubleshooting tips.
 
         Args:

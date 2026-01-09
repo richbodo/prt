@@ -7,7 +7,6 @@ Supports both Ollama and llama-cpp-python providers.
 
 import threading
 from typing import TYPE_CHECKING
-from typing import Optional
 from typing import Union
 
 from .api import PRTAPI
@@ -28,7 +27,7 @@ logger = get_logger(__name__)
 DEFAULT_LEGACY_MODEL_ALIAS = "llama8"
 
 # Global registry instance (cached) with thread-safe initialization
-_registry: Optional[OllamaModelRegistry] = None
+_registry: OllamaModelRegistry | None = None
 _registry_lock = threading.Lock()
 
 
@@ -54,7 +53,7 @@ def get_registry() -> OllamaModelRegistry:
 
 
 def resolve_model_alias(
-    model_alias: Optional[str] = None, config_manager: Optional[LLMConfigManager] = None
+    model_alias: str | None = None, config_manager: LLMConfigManager | None = None
 ) -> tuple[str, str]:
     """Resolve a model alias to (provider, model_name).
 
@@ -163,10 +162,10 @@ def resolve_model_alias(
 
 
 def create_llm(
-    provider: Optional[str] = None,
-    api: Optional[PRTAPI] = None,
-    model: Optional[str] = None,
-    config_manager: Optional[LLMConfigManager] = None,
+    provider: str | None = None,
+    api: PRTAPI | None = None,
+    model: str | None = None,
+    config_manager: LLMConfigManager | None = None,
     **kwargs,
 ) -> Union["OllamaLLM", "LlamaCppLLM"]:
     """Create an LLM instance based on provider type.
@@ -227,8 +226,8 @@ def create_llm(
 
 def _create_ollama_llm(
     api: PRTAPI,
-    model: Optional[str] = None,
-    config_manager: Optional[LLMConfigManager] = None,
+    model: str | None = None,
+    config_manager: LLMConfigManager | None = None,
     **kwargs,
 ) -> "OllamaLLM":
     """Create an Ollama LLM instance.
@@ -269,8 +268,8 @@ def _create_ollama_llm(
 
 def _create_llamacpp_llm(
     api: PRTAPI,
-    model: Optional[str] = None,
-    config_manager: Optional[LLMConfigManager] = None,
+    model: str | None = None,
+    config_manager: LLMConfigManager | None = None,
     **kwargs,
 ) -> "LlamaCppLLM":
     """Create a LlamaCpp LLM instance.

@@ -5,13 +5,9 @@ This module provides a centralized registry eliminating tool definition duplicat
 across different LLM providers (Ollama, LlamaCpp, etc).
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
 
 from prt_src.api import PRTAPI
 from prt_src.logging_config import get_logger
@@ -25,14 +21,14 @@ class Tool:
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     function: Callable
 
 
 class LLMToolRegistry:
     """Centralized registry eliminating tool definition duplication."""
 
-    def __init__(self, api: PRTAPI, disabled_tools: Optional[Set[str]] = None):
+    def __init__(self, api: PRTAPI, disabled_tools: set[str] | None = None):
         """Initialize the tool registry.
 
         Args:
@@ -42,7 +38,7 @@ class LLMToolRegistry:
         self.api = api
         self.disabled_tools = disabled_tools or set()
 
-    def get_all_tools(self) -> List[Tool]:
+    def get_all_tools(self) -> list[Tool]:
         """Return all tools with consistent definitions."""
         tools = [
             *self._create_read_tools(),  # 11 search/info tools
@@ -62,7 +58,7 @@ class LLMToolRegistry:
 
         return tools
 
-    def _create_read_tools(self) -> List[Tool]:
+    def _create_read_tools(self) -> list[Tool]:
         """Create read-only tools (search, info, list operations)."""
         return [
             Tool(
@@ -164,7 +160,7 @@ class LLMToolRegistry:
             ),
         ]
 
-    def _create_write_tools(self) -> List[Tool]:
+    def _create_write_tools(self) -> list[Tool]:
         """Create write operations tools (CRUD with backups)."""
         return [
             # Tag operations
@@ -321,7 +317,7 @@ class LLMToolRegistry:
         ]
 
     @staticmethod
-    def get_write_tool_names() -> Set[str]:
+    def get_write_tool_names() -> set[str]:
         """Get set of tool names that perform write operations."""
         return {
             "add_tag_to_contact",
@@ -338,7 +334,7 @@ class LLMToolRegistry:
             "execute_sql",  # Provider-specific implementation
         }
 
-    def get_tool_by_name(self, tool_name: str) -> Optional[Tool]:
+    def get_tool_by_name(self, tool_name: str) -> Tool | None:
         """Get tool by name from registry.
 
         Args:

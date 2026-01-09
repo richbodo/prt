@@ -5,8 +5,6 @@ Tests cover dual selection for relationships and multi-selection for bulk operat
 """
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 # These imports will fail initially - that's expected in TDD
 from prt_src.core.components.selection import SelectionFilter
@@ -15,7 +13,7 @@ from prt_src.core.components.selection import SelectionSystem
 from prt_src.core.components.selection import SortOrder
 
 
-def create_test_items(count: int = 50) -> List[Dict[str, Any]]:
+def create_test_items(count: int = 50) -> list[dict[str, Any]]:
     """Create test items for selection testing."""
     items = []
     for i in range(count):

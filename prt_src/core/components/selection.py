@@ -11,9 +11,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from enum import Enum
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -50,17 +47,17 @@ class SelectionState:
     count: int
     is_complete: bool
     can_proceed: bool
-    selected_items: List[Dict[str, Any]] = field(default_factory=list)
+    selected_items: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
 class SelectionFilter:
     """Filter configuration for selections."""
 
-    category: Optional[str] = None
-    tags: Optional[List[str]] = None
-    min_relationships: Optional[int] = None
-    max_relationships: Optional[int] = None
+    category: str | None = None
+    tags: list[str] | None = None
+    min_relationships: int | None = None
+    max_relationships: int | None = None
 
 
 @dataclass
@@ -75,8 +72,8 @@ class ValidationResult:
 class DualSelection:
     """Container for dual selection state."""
 
-    first: Optional[Dict[str, Any]] = None
-    second: Optional[Dict[str, Any]] = None
+    first: dict[str, Any] | None = None
+    second: dict[str, Any] | None = None
 
     def is_complete(self) -> bool:
         """Check if both selections are made."""
@@ -92,10 +89,10 @@ class DualSelection:
 class MultiSelection:
     """Container for multi-selection state."""
 
-    items: Dict[int, Dict[str, Any]] = field(default_factory=dict)
-    max_selections: Optional[int] = None
+    items: dict[int, dict[str, Any]] = field(default_factory=dict)
+    max_selections: int | None = None
 
-    def add(self, item: Dict[str, Any]) -> bool:
+    def add(self, item: dict[str, Any]) -> bool:
         """Add an item to selection.
 
         Args:
@@ -113,7 +110,7 @@ class MultiSelection:
             return True
         return False
 
-    def remove(self, item: Dict[str, Any]) -> bool:
+    def remove(self, item: dict[str, Any]) -> bool:
         """Remove an item from selection.
 
         Args:
@@ -128,7 +125,7 @@ class MultiSelection:
             return True
         return False
 
-    def contains(self, item: Dict[str, Any]) -> bool:
+    def contains(self, item: dict[str, Any]) -> bool:
         """Check if item is selected.
 
         Args:
@@ -144,7 +141,7 @@ class MultiSelection:
         """Clear all selections."""
         self.items.clear()
 
-    def get_all(self) -> List[Dict[str, Any]]:
+    def get_all(self) -> list[dict[str, Any]]:
         """Get all selected items."""
         return list(self.items.values())
 
@@ -153,7 +150,7 @@ class SelectionSystem:
     """Main selection system supporting dual and multi modes."""
 
     def __init__(
-        self, mode: SelectionMode = SelectionMode.MULTI, max_selections: Optional[int] = None
+        self, mode: SelectionMode = SelectionMode.MULTI, max_selections: int | None = None
     ):
         """Initialize selection system.
 
@@ -171,9 +168,9 @@ class SelectionSystem:
             self.max_selections = max_selections
 
         # Track selection sources for dual mode
-        self._selection_sources: Dict[int, str] = {}
+        self._selection_sources: dict[int, str] = {}
 
-    def select_item(self, item: Dict[str, Any]) -> SelectionResult:
+    def select_item(self, item: dict[str, Any]) -> SelectionResult:
         """Select an item.
 
         Args:
@@ -187,7 +184,7 @@ class SelectionSystem:
         else:
             return self._select_multi(item)
 
-    def _select_dual(self, item: Dict[str, Any]) -> SelectionResult:
+    def _select_dual(self, item: dict[str, Any]) -> SelectionResult:
         """Handle dual mode selection.
 
         Args:
@@ -209,7 +206,7 @@ class SelectionSystem:
                 success=False, message="Maximum of 2 items can be selected in dual mode"
             )
 
-    def _select_multi(self, item: Dict[str, Any]) -> SelectionResult:
+    def _select_multi(self, item: dict[str, Any]) -> SelectionResult:
         """Handle multi mode selection.
 
         Args:
@@ -225,7 +222,7 @@ class SelectionSystem:
                 success=False, message=f"Maximum of {self.max_selections} items can be selected"
             )
 
-    def deselect_item(self, item: Dict[str, Any]) -> SelectionResult:
+    def deselect_item(self, item: dict[str, Any]) -> SelectionResult:
         """Deselect an item.
 
         Args:
@@ -248,7 +245,7 @@ class SelectionSystem:
                 return SelectionResult(success=True)
             return SelectionResult(success=False, message="Item not selected")
 
-    def toggle_item(self, item: Dict[str, Any]) -> SelectionResult:
+    def toggle_item(self, item: dict[str, Any]) -> SelectionResult:
         """Toggle item selection.
 
         Args:
@@ -262,7 +259,7 @@ class SelectionSystem:
         else:
             return self.select_item(item)
 
-    def is_selected(self, item: Dict[str, Any]) -> bool:
+    def is_selected(self, item: dict[str, Any]) -> bool:
         """Check if an item is selected.
 
         Args:
@@ -280,7 +277,7 @@ class SelectionSystem:
         else:
             return self.selection.contains(item)
 
-    def select_all(self, items: List[Dict[str, Any]]) -> SelectionResult:
+    def select_all(self, items: list[dict[str, Any]]) -> SelectionResult:
         """Select all provided items (MULTI mode only).
 
         Args:
@@ -300,7 +297,7 @@ class SelectionSystem:
 
         return SelectionResult(success=True)
 
-    def select_page(self, items: List[Dict[str, Any]]) -> SelectionResult:
+    def select_page(self, items: list[dict[str, Any]]) -> SelectionResult:
         """Select all items on current page (MULTI mode only).
 
         Args:
@@ -332,7 +329,7 @@ class SelectionSystem:
         else:
             return len(self.selection.items)
 
-    def get_selected_items(self) -> List[Dict[str, Any]]:
+    def get_selected_items(self) -> list[dict[str, Any]]:
         """Get all selected items.
 
         Returns:
@@ -349,7 +346,7 @@ class SelectionSystem:
         else:
             return self.selection.get_all()
 
-    def get_selected_ids(self) -> List[int]:
+    def get_selected_ids(self) -> list[int]:
         """Get IDs of selected items.
 
         Returns:
@@ -358,7 +355,7 @@ class SelectionSystem:
         items = self.get_selected_items()
         return [item["id"] for item in items if "id" in item]
 
-    def replace_selection(self, index: int, new_item: Dict[str, Any]) -> SelectionResult:
+    def replace_selection(self, index: int, new_item: dict[str, Any]) -> SelectionResult:
         """Replace a selection at index (DUAL mode only).
 
         Args:
@@ -381,7 +378,7 @@ class SelectionSystem:
         else:
             return SelectionResult(success=False, message="Invalid index for dual selection")
 
-    def select_from_search(self, item: Dict[str, Any], source: str = "search") -> SelectionResult:
+    def select_from_search(self, item: dict[str, Any], source: str = "search") -> SelectionResult:
         """Select an item from search results.
 
         Args:
@@ -419,7 +416,7 @@ class SelectionSystem:
             selected_items=self.get_selected_items(),
         )
 
-    def get_filtered_selections(self, filter_config: SelectionFilter) -> List[Dict[str, Any]]:
+    def get_filtered_selections(self, filter_config: SelectionFilter) -> list[dict[str, Any]]:
         """Get filtered selected items.
 
         Args:
@@ -462,7 +459,7 @@ class SelectionSystem:
 
     def get_sorted_selections(
         self, key: str = "name", order: SortOrder = SortOrder.ASCENDING
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get sorted selected items.
 
         Args:
@@ -476,8 +473,8 @@ class SelectionSystem:
         return self.sort_items(items, key, order)
 
     def sort_items(
-        self, items: List[Dict[str, Any]], key: str = "name", order: SortOrder = SortOrder.ASCENDING
-    ) -> List[Dict[str, Any]]:
+        self, items: list[dict[str, Any]], key: str = "name", order: SortOrder = SortOrder.ASCENDING
+    ) -> list[dict[str, Any]]:
         """Sort a list of items.
 
         Args:
@@ -491,7 +488,7 @@ class SelectionSystem:
         reverse = order == SortOrder.DESCENDING
         return sorted(items, key=lambda x: x.get(key, ""), reverse=reverse)
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get selection summary for UI display.
 
         Returns:
@@ -543,7 +540,7 @@ class SelectionSystem:
 
         return ValidationResult(is_valid=True)
 
-    def export_state(self) -> Dict[str, Any]:
+    def export_state(self) -> dict[str, Any]:
         """Export selection state for persistence.
 
         Returns:
@@ -555,7 +552,7 @@ class SelectionSystem:
             "count": self.get_selected_count(),
         }
 
-    def import_state(self, state: Dict[str, Any], items: List[Dict[str, Any]]):
+    def import_state(self, state: dict[str, Any], items: list[dict[str, Any]]):
         """Import selection state.
 
         Args:

@@ -2,9 +2,6 @@
 
 from datetime import date
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 
 class RelationshipOperations:
@@ -18,7 +15,7 @@ class RelationshipOperations:
         """
         self.api = api
 
-    def list_relationship_types(self) -> List[Dict[str, Any]]:
+    def list_relationship_types(self) -> list[dict[str, Any]]:
         """Returns all relationship types with descriptions.
 
         Returns:
@@ -35,8 +32,8 @@ class RelationshipOperations:
             return []
 
     def create_relationship(
-        self, from_id: int, to_id: int, type_key: str, start_date: Optional[date] = None
-    ) -> Dict[str, Any]:
+        self, from_id: int, to_id: int, type_key: str, start_date: date | None = None
+    ) -> dict[str, Any]:
         """Creates relationship, returns success/error status.
 
         Args:
@@ -84,7 +81,7 @@ class RelationshipOperations:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def get_contact_relationships(self, contact_id: int) -> List[Dict[str, Any]]:
+    def get_contact_relationships(self, contact_id: int) -> list[dict[str, Any]]:
         """Returns all relationships for a contact.
 
         Args:
@@ -121,7 +118,7 @@ class RelationshipOperations:
         except Exception:
             return []
 
-    def delete_relationship(self, from_id: int, to_id: int, type_key: str) -> Dict[str, Any]:
+    def delete_relationship(self, from_id: int, to_id: int, type_key: str) -> dict[str, Any]:
         """Deletes specific relationship.
 
         Args:
@@ -150,7 +147,7 @@ class RelationshipOperations:
 
     def find_relationships_between(
         self, contact1_id: int, contact2_id: int
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Returns all relationships between two contacts.
 
         Args:
@@ -184,7 +181,7 @@ class RelationshipOperations:
         except Exception:
             return []
 
-    def get_relationship_type_info(self, type_key: str) -> Optional[Dict[str, Any]]:
+    def get_relationship_type_info(self, type_key: str) -> dict[str, Any] | None:
         """Get detailed info about a relationship type.
 
         Args:

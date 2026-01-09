@@ -1,8 +1,8 @@
 """Timeout protection utilities for contract tests."""
 
 import signal
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import pytest
 

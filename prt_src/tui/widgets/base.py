@@ -5,9 +5,7 @@ status display, notifications, and confirmations.
 """
 
 import contextlib
-from typing import Callable
-from typing import Optional
-from typing import Set
+from collections.abc import Callable
 
 from textual import events
 from textual import on
@@ -40,7 +38,7 @@ class ModeAwareWidget(Static):
     def __init__(self, *args, **kwargs):
         """Initialize the mode-aware widget."""
         super().__init__(*args, **kwargs)
-        self.on_mode_toggle: Optional[Callable] = None
+        self.on_mode_toggle: Callable | None = None
         self._update_mode_classes()
 
     def set_mode(self, mode: AppMode) -> None:
@@ -78,7 +76,7 @@ class ModeAwareWidget(Static):
         return False
 
     @property
-    def classes(self) -> Set[str]:
+    def classes(self) -> set[str]:
         """Get the current CSS classes."""
         # Use Textual's built-in classes property
         return super().classes
@@ -199,7 +197,7 @@ class ToastNotification(Static):
         self.message = message
         self.toast_type = toast_type
         self.duration = duration
-        self._timer: Optional[Timer] = None
+        self._timer: Timer | None = None
 
         # Add appropriate class for styling
         self.add_class("toast", toast_type)
@@ -245,8 +243,8 @@ class ConfirmDialog(Container):
         confirm_label: str = "Confirm",
         cancel_label: str = "Cancel",
         dangerous: bool = False,
-        on_confirm: Optional[Callable] = None,
-        on_cancel: Optional[Callable] = None,
+        on_confirm: Callable | None = None,
+        on_cancel: Callable | None = None,
     ):
         """Initialize the confirmation dialog.
 

@@ -9,9 +9,6 @@ Tracks which items are currently selected by ID, supporting:
 """
 
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Set
 
 
 class SelectionService:
@@ -23,7 +20,7 @@ class SelectionService:
 
     def __init__(self):
         """Initialize selection service with empty selection."""
-        self.selected_ids: Set[int] = set()
+        self.selected_ids: set[int] = set()
 
     def select(self, id: int) -> None:
         """Select an item by ID.
@@ -93,7 +90,7 @@ class SelectionService:
         """
         return len(self.selected_ids)
 
-    def get_selected_ids(self) -> Set[int]:
+    def get_selected_ids(self) -> set[int]:
         """Get copy of selected IDs.
 
         Returns:
@@ -101,7 +98,7 @@ class SelectionService:
         """
         return self.selected_ids.copy()
 
-    def select_all(self, ids: List[int]) -> None:
+    def select_all(self, ids: list[int]) -> None:
         """Select all IDs from a list.
 
         Args:
@@ -110,7 +107,7 @@ class SelectionService:
         for id in ids:
             self.selected_ids.add(id)
 
-    def select_all_from_results(self, results: List[Dict[str, Any]]) -> None:
+    def select_all_from_results(self, results: list[dict[str, Any]]) -> None:
         """Select all items from result list.
 
         Args:

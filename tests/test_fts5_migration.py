@@ -76,8 +76,9 @@ class TestFTS5Migration:
 
     def test_migration_file_not_found(self, schema_manager, mock_db):
         """Verify proper error when migration file is missing."""
-        with patch("pathlib.Path.exists", return_value=False), pytest.raises(
-            RuntimeError, match="Migration file not found"
+        with (
+            patch("pathlib.Path.exists", return_value=False),
+            pytest.raises(RuntimeError, match="Migration file not found"),
         ):
             schema_manager.apply_migration_v4_to_v5()
 

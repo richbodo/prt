@@ -7,9 +7,8 @@ with caching and background updates to minimize performance impact.
 import asyncio
 import contextlib
 import time
+from collections.abc import Callable
 from enum import Enum
-from typing import Callable
-from typing import Optional
 
 from prt_src.llm_ollama import OllamaLLM
 from prt_src.logging_config import get_logger
@@ -29,7 +28,7 @@ class LLMStatus(Enum):
 class LLMStatusChecker:
     """Service for checking and monitoring LLM availability."""
 
-    def __init__(self, ollama_llm: Optional[OllamaLLM] = None, check_interval: float = 30.0):
+    def __init__(self, ollama_llm: OllamaLLM | None = None, check_interval: float = 30.0):
         """Initialize the LLM status checker.
 
         Args:
@@ -128,7 +127,7 @@ class LLMStatusChecker:
             self._notify_status_change(LLMStatus.ERROR)
             return LLMStatus.ERROR
 
-    def get_status_display(self, status: Optional[LLMStatus] = None) -> tuple[str, str]:
+    def get_status_display(self, status: LLMStatus | None = None) -> tuple[str, str]:
         """Get display text and CSS class for status.
 
         Args:

@@ -7,10 +7,6 @@ Handles:
 - Preparing messages for LLM API calls
 """
 
-from typing import Dict
-from typing import List
-from typing import Optional
-
 
 class ChatContextManager:
     """Manages conversation history and context for LLM chat.
@@ -27,7 +23,7 @@ class ChatContextManager:
             max_history: Maximum number of messages to keep in history
         """
         self.max_history = max_history
-        self.messages: List[Dict[str, str]] = []
+        self.messages: list[dict[str, str]] = []
 
     def add_user_message(self, content: str) -> None:
         """Add a user message to history.
@@ -56,7 +52,7 @@ class ChatContextManager:
         self.messages.append({"role": "system", "content": content})
         self._prune_if_needed()
 
-    def get_messages_for_llm(self, system_prompt: Optional[str] = None) -> List[Dict[str, str]]:
+    def get_messages_for_llm(self, system_prompt: str | None = None) -> list[dict[str, str]]:
         """Get messages formatted for LLM API call.
 
         Args:
@@ -73,7 +69,7 @@ class ChatContextManager:
         """Clear all messages from history."""
         self.messages = []
 
-    def get_last_user_message(self) -> Optional[Dict[str, str]]:
+    def get_last_user_message(self) -> dict[str, str] | None:
         """Get the last user message from history.
 
         Returns:

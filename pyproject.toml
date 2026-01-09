@@ -19,8 +19,6 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -28,7 +26,7 @@ classifiers = [
     "Topic :: Office/Business :: Groupware",
     "Topic :: Terminals",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "typer>=0.12.0",
     "textual>=0.47.0", 
@@ -91,7 +89,7 @@ exclude = ["tests*", "migrations*", "prt_env*", "tools*", "utils*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -111,7 +109,7 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 100
-target-version = "py38"
+target-version = "py310"
 exclude = [
     ".eggs",
     ".git", 
@@ -124,6 +122,9 @@ exclude = [
     "build",
     "dist",
     "prt_env",
+    "tools/",        # Utility scripts
+    "utils/",        # Helper scripts  
+    "EXTERNAL_DOCS/", # Vendored documentation
 ]
 
 [tool.ruff.lint]
@@ -140,12 +141,14 @@ select = [
 ]
 ignore = [
     "E501",   # Line too long (handled by black)
-    "B008",   # Do not perform function calls in argument defaults
-    "UP007",  # Use X | Y for union types (Python 3.8 compatibility)
+    "B008",   # Do not perform function calls in argument defaults (Typer pattern)
+    "B904",   # raise-without-from-inside-except (nice but noisy)
+    "SIM117", # multiple-with-statements (stylistic preference)
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101"]  # Allow assert in tests
+"tests/**/*.py" = ["S101", "B017"]  # Allow assert and broad exception testing
+"**/tests/**/*.py" = ["S101", "B017"]  # Also cover nested test directories
 
 [tool.ruff.lint.isort]
 known-first-party = ["prt_src"]

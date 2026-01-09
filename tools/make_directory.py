@@ -2,7 +2,7 @@
 """
 make_directory.py - PRT Contact Directory Generator
 
-Creates interactive single-page websites from PRT JSON exports showing 
+Creates interactive single-page websites from PRT JSON exports showing
 contact relationships as navigable 2D graphs.
 
 Usage:
@@ -15,8 +15,6 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
 from typing import Optional
 
 import typer
@@ -102,7 +100,7 @@ class DirectoryGenerator:
             console.print(f"❌ Error loading export data: {e}", style="red")
             return False
 
-    def extract_contacts(self) -> List[Dict[str, Any]]:
+    def extract_contacts(self) -> list[dict[str, Any]]:
         """Extract contact data from different search result types."""
         contacts = []
         search_type = self.export_data["export_info"]["search_type"]
@@ -138,9 +136,9 @@ class DirectoryGenerator:
 
         return self.contact_data
 
-    def build_nodes(self) -> List[Dict[str, Any]]:
+    def build_nodes(self) -> list[dict[str, Any]]:
         """Transform contact data into node dictionaries."""
-        nodes: List[Dict[str, Any]] = []
+        nodes: list[dict[str, Any]] = []
         for contact in self.contact_data:
             node = {
                 "id": contact["id"],
@@ -210,7 +208,7 @@ class DirectoryGenerator:
             # Create links based on shared tags (simple relationship detection)
             for i, contact1 in enumerate(self.contact_data):
                 tags1 = set(contact1.get("relationship_info", {}).get("tags", []))
-                for j, contact2 in enumerate(self.contact_data[i + 1 :], i + 1):
+                for _j, contact2 in enumerate(self.contact_data[i + 1 :], i + 1):
                     tags2 = set(contact2.get("relationship_info", {}).get("tags", []))
                     shared_tags = tags1.intersection(tags2)
 
@@ -273,14 +271,14 @@ class DirectoryGenerator:
             padding: 0;
             box-sizing: border-box;
         }}
-        
+
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #333;
             overflow: hidden;
         }}
-        
+
         .header {{
             position: fixed;
             top: 0;
@@ -295,24 +293,24 @@ class DirectoryGenerator:
             justify-content: space-between;
             align-items: center;
         }}
-        
+
         .header h1 {{
             font-size: 1.5em;
             font-weight: 600;
             color: #333;
         }}
-        
+
         .header .search-info {{
             font-size: 0.9em;
             color: #666;
         }}
-        
+
         .controls {{
             display: flex;
             gap: 10px;
             align-items: center;
         }}
-        
+
         .btn {{
             background: #667eea;
             color: white;
@@ -323,19 +321,19 @@ class DirectoryGenerator:
             font-size: 0.85em;
             transition: background 0.2s;
         }}
-        
+
         .btn:hover {{
             background: #5a6fd8;
         }}
-        
+
         .btn.secondary {{
             background: #6c757d;
         }}
-        
+
         .btn.secondary:hover {{
             background: #545b62;
         }}
-        
+
         #graph {{
             position: fixed;
             top: 70px;
@@ -344,22 +342,22 @@ class DirectoryGenerator:
             bottom: 0;
             background: #f8f9fa;
         }}
-        
+
         .node {{
             cursor: pointer;
             stroke: #fff;
             stroke-width: 2px;
         }}
-        
+
         .node:hover {{
             stroke: #667eea;
             stroke-width: 3px;
         }}
-        
+
         .node-image {{
             clip-path: circle(50%);
         }}
-        
+
         .node-text {{
             font-size: 12px;
             font-weight: 600;
@@ -368,19 +366,19 @@ class DirectoryGenerator:
             fill: #333;
             text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
         }}
-        
+
         .link {{
             stroke: #999;
             stroke-opacity: 0.6;
             stroke-width: 2px;
         }}
-        
+
         .link.strong {{
             stroke: #667eea;
             stroke-width: 3px;
             stroke-opacity: 0.8;
         }}
-        
+
         .tooltip {{
             position: absolute;
             background: rgba(0, 0, 0, 0.9);
@@ -394,20 +392,20 @@ class DirectoryGenerator:
             max-width: 250px;
             z-index: 1001;
         }}
-        
+
         .tooltip .name {{
             font-weight: bold;
             margin-bottom: 5px;
         }}
-        
+
         .tooltip .detail {{
             margin-bottom: 3px;
         }}
-        
+
         .tags {{
             margin-top: 8px;
         }}
-        
+
         .tag {{
             display: inline-block;
             background: #667eea;
@@ -417,7 +415,7 @@ class DirectoryGenerator:
             font-size: 0.75em;
             margin: 1px;
         }}
-        
+
         .legend {{
             position: fixed;
             bottom: 20px;
@@ -429,47 +427,47 @@ class DirectoryGenerator:
             font-size: 0.85em;
             border: 1px solid rgba(0, 0, 0, 0.1);
         }}
-        
+
         .legend h3 {{
             margin-bottom: 8px;
             font-size: 0.9em;
         }}
-        
+
         .legend-item {{
             margin-bottom: 5px;
             display: flex;
             align-items: center;
             gap: 8px;
         }}
-        
+
         .legend-color {{
             width: 12px;
             height: 12px;
             border-radius: 50%;
         }}
-        
+
         @media (max-width: 768px) {{
             .header {{
                 flex-direction: column;
                 gap: 10px;
                 padding: 10px;
             }}
-            
+
             .header h1 {{
                 font-size: 1.2em;
             }}
-            
+
             .controls {{
                 flex-wrap: wrap;
             }}
-            
+
             .btn {{
                 font-size: 0.8em;
                 padding: 8px 16px;
                 min-height: 44px; /* Touch-friendly size */
                 min-width: 80px;
             }}
-            
+
             .legend {{
                 bottom: 10px;
                 right: 10px;
@@ -477,31 +475,31 @@ class DirectoryGenerator:
                 max-width: none;
                 font-size: 0.8em;
             }}
-            
+
             #graph {{
                 top: 100px; /* More space for mobile header */
             }}
-            
+
             .node {{
                 stroke-width: 3px; /* Thicker stroke for touch */
             }}
-            
+
             .node-text {{
                 font-size: 13px; /* Larger text for mobile */
             }}
-            
+
             .tooltip {{
                 font-size: 0.85em;
                 max-width: 200px;
                 padding: 12px;
             }}
         }}
-        
+
         /* Touch-specific improvements */
         .node, .node-image {{
             touch-action: none; /* Prevent scrolling when dragging nodes */
         }}
-        
+
         #graph {{
             touch-action: none; /* Enable touch gestures for zoom/pan */
         }}
@@ -520,10 +518,10 @@ class DirectoryGenerator:
             <button class="btn secondary" onclick="toggleMode()">Grid View</button>
         </div>
     </div>
-    
+
     <div id="graph"></div>
     <div class="tooltip" id="tooltip"></div>
-    
+
     <div class="legend">
         <h3>Legend</h3>
         <div class="legend-item">
@@ -539,14 +537,14 @@ class DirectoryGenerator:
             <span>Relationship connection</span>
         </div>
     </div>
-    
+
     <script src="data.js"></script>
     <script>
         // Global variables
         let svg, simulation, node, link, tooltip;
         let width, height;
         let isGridMode = false;
-        
+
         // Initialize the visualization
         function initGraph() {{
             // Set up dimensions
@@ -555,7 +553,7 @@ class DirectoryGenerator:
             const rect = containerNode.getBoundingClientRect();
             width = rect.width;
             height = rect.height;
-            
+
             // Create SVG with mobile-optimized zoom
             svg = container.append("svg")
                 .attr("width", width)
@@ -569,16 +567,16 @@ class DirectoryGenerator:
                     .on("zoom", (event) => {{
                         svg.select("g").attr("transform", event.transform);
                     }}));
-            
+
             const g = svg.append("g");
-            
+
             // Create tooltip
             tooltip = d3.select("#tooltip");
-            
+
             // Prepare data with central "YOU" node
             const originalNodes = contactData.nodes.map(d => ({{...d}}));
             const originalLinks = contactData.links.map(d => ({{...d}}));
-            
+
             // Add central "YOU" node
             const centerNode = {{
                 id: "you",
@@ -589,10 +587,10 @@ class DirectoryGenerator:
                 fx: width / 2, // Fix position at center
                 fy: height / 2
             }};
-            
+
             // Create user-centric nodes array
             const nodes = [centerNode, ...originalNodes];
-            
+
             // Create links from center to all contacts
             const userLinks = originalNodes.map(node => ({{
                 source: "you",
@@ -600,10 +598,10 @@ class DirectoryGenerator:
                 strength: 1,
                 isUserLink: true
             }}));
-            
+
             // Combine with existing relationship links
             const links = [...userLinks, ...originalLinks];
-            
+
             // Set up simulation with user-centric layout
             simulation = d3.forceSimulation(nodes)
                 .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.isUserLink ? 120 : 80))
@@ -611,7 +609,7 @@ class DirectoryGenerator:
                 .force("collision", d3.forceCollide().radius(d => d.isCenter ? 50 : 35))
                 .alphaDecay(0.05) // Slower decay for smoother animation
                 .velocityDecay(0.8); // Better mobile performance
-            
+
             // Create links
             link = g.selectAll(".link")
                 .data(links)
@@ -623,7 +621,7 @@ class DirectoryGenerator:
                 .attr("stroke", d => d.isUserLink ? "#007bff" : null)
                 .attr("stroke-width", d => d.isUserLink ? 2 : Math.max(1, d.strength * 2))
                 .attr("stroke-dasharray", d => d.isUserLink ? "5,5" : null);
-            
+
             // Create nodes
             const nodeGroup = g.selectAll(".node-group")
                 .data(nodes)
@@ -633,7 +631,7 @@ class DirectoryGenerator:
                     .on("start", dragstarted)
                     .on("drag", dragged)
                     .on("end", dragended));
-            
+
             // Add circles for nodes - different styling for center node
             node = nodeGroup.append("circle")
                 .attr("class", d => d.isCenter ? "node center-node" : "node")
@@ -648,7 +646,7 @@ class DirectoryGenerator:
                 .on("mousemove", moveTooltip)
                 .on("mouseout", hideTooltip)
                 .on("click", handleNodeClick);
-            
+
             // Add images for contact nodes with profile pictures
             nodeGroup.filter(d => d.has_image && !d.isCenter)
                 .append("image")
@@ -663,7 +661,7 @@ class DirectoryGenerator:
                 .on("mousemove", moveTooltip)
                 .on("mouseout", hideTooltip)
                 .on("click", handleNodeClick);
-            
+
             // Add text labels
             nodeGroup.append("text")
                 .attr("class", d => d.isCenter ? "node-text center-text" : "node-text")
@@ -676,7 +674,7 @@ class DirectoryGenerator:
                 .style("font-weight", d => d.isCenter ? "bold" : "normal")
                 .style("fill", d => d.isCenter ? "#ffffff" : "#333")
                 .style("text-anchor", "middle");
-            
+
             // Update positions on simulation tick
             simulation.on("tick", () => {{
                 link
@@ -684,14 +682,14 @@ class DirectoryGenerator:
                     .attr("y1", d => d.source.y)
                     .attr("x2", d => d.target.x)
                     .attr("y2", d => d.target.y);
-                
+
                 nodeGroup
                     .attr("transform", d => `translate(${{d.x}},${{d.y}})`);
             }});
-            
+
             console.log("Graph initialized with", nodes.length, "nodes and", links.length, "links");
         }}
-        
+
         // Drag functions
         function dragstarted(event, d) {{
             if (d.isCenter) return; // Don't allow dragging center node
@@ -699,20 +697,20 @@ class DirectoryGenerator:
             d.fx = d.x;
             d.fy = d.y;
         }}
-        
+
         function dragged(event, d) {{
             if (d.isCenter) return; // Don't allow dragging center node
             d.fx = event.x;
             d.fy = event.y;
         }}
-        
+
         function dragended(event, d) {{
             if (d.isCenter) return; // Don't allow dragging center node
             if (!event.active) simulation.alphaTarget(0);
             d.fx = null;
             d.fy = null;
         }}
-        
+
         // Tooltip functions
         function showTooltip(event, d) {{
             if (d.isCenter) {{
@@ -721,7 +719,7 @@ class DirectoryGenerator:
                     <div class="name">You</div>
                     <div class="detail">Center of your contact network</div>
                 `;
-                
+
                 tooltip
                     .html(tooltipContent)
                     .style("opacity", 1);
@@ -737,31 +735,31 @@ class DirectoryGenerator:
                         </div>
                     ` : ''}}
                 `;
-                
+
                 tooltip
                     .html(tooltipContent)
                     .style("opacity", 1);
             }}
-                
+
             moveTooltip(event);
         }}
-        
+
         function moveTooltip(event) {{
             tooltip
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 10) + "px");
         }}
-        
+
         function hideTooltip() {{
             tooltip.style("opacity", 0);
         }}
-        
+
         // Node click handler
         function handleNodeClick(event, d) {{
             console.log("Contact clicked:", d);
             // Future: Open detailed modal
         }}
-        
+
         // Control functions
         function resetView() {{
             svg.transition()
@@ -771,11 +769,11 @@ class DirectoryGenerator:
                     d3.zoomIdentity
                 );
         }}
-        
+
         function toggleMode() {{
             isGridMode = !isGridMode;
             const button = event.target;
-            
+
             if (isGridMode) {{
                 // Switch to grid layout
                 button.textContent = "Graph View";
@@ -787,7 +785,7 @@ class DirectoryGenerator:
                 simulation.alpha(1).restart();
             }}
         }}
-        
+
         // Responsive handling
         function handleResize() {{
             const container = d3.select("#graph");
@@ -795,30 +793,30 @@ class DirectoryGenerator:
             const rect = containerNode.getBoundingClientRect();
             const newWidth = rect.width;
             const newHeight = rect.height;
-            
+
             if (newWidth !== width || newHeight !== height) {{
                 width = newWidth;
                 height = newHeight;
-                
+
                 svg
                     .attr("width", width)
                     .attr("height", height);
-                    
+
                 simulation
                     .force("center", d3.forceCenter(width / 2, height / 2))
                     .alpha(1)
                     .restart();
             }}
         }}
-        
+
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', () => {{
             initGraph();
-            
+
             // Handle window resize
             window.addEventListener('resize', handleResize);
         }});
-        
+
         // Log data for debugging
         console.log('Contact Data:', contactData);
     </script>
@@ -964,9 +962,8 @@ class DirectoryGenerator:
         self.copy_profile_images()
 
         # Step 6: Generate data file (only for graph layout)
-        if self.layout != "work":
-            if not self.generate_data_js():
-                return False
+        if self.layout != "work" and not self.generate_data_js():
+            return False
 
         # Step 7: Generate HTML
         if not self.generate_html():

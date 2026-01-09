@@ -7,8 +7,6 @@ and interactive menu hierarchy as a tree.
 
 import inspect
 from typing import Any
-from typing import Dict
-from typing import List
 
 import typer
 from rich.console import Console
@@ -27,7 +25,7 @@ class CLIMapper:
         self.commands = {}
         self.interactive_menu = {}
 
-    def discover_commands(self) -> Dict[str, Any]:
+    def discover_commands(self) -> dict[str, Any]:
         """Discover all Typer commands and their metadata."""
         commands = {}
 
@@ -88,7 +86,7 @@ class CLIMapper:
             return lines[0] if lines else ""
         return "No description available"
 
-    def _extract_parameters(self, func) -> List[Dict[str, str]]:
+    def _extract_parameters(self, func) -> list[dict[str, str]]:
         """Extract parameter information from function signature."""
         params = []
         try:
@@ -106,7 +104,7 @@ class CLIMapper:
             pass  # If signature inspection fails, just return empty list
         return params
 
-    def define_interactive_menu(self) -> Dict[str, Any]:
+    def define_interactive_menu(self) -> dict[str, Any]:
         """Define the interactive menu structure manually."""
         # This represents your current interactive menu structure
         menu_structure = {

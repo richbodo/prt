@@ -1,8 +1,6 @@
 """Database and backup operations."""
 
 from typing import Any
-from typing import Dict
-from typing import Optional
 
 
 class DatabaseOperations:
@@ -16,7 +14,7 @@ class DatabaseOperations:
         """
         self.api = api
 
-    def get_database_status(self) -> Dict[str, Any]:
+    def get_database_status(self) -> dict[str, Any]:
         """Returns health, table counts, file size.
 
         Combines status, test, and stats for Issue #71.
@@ -100,7 +98,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"healthy": False, "error": str(e), "counts": {}}
 
-    def list_backups(self, limit: int = 10, offset: int = 0) -> Dict[str, Any]:
+    def list_backups(self, limit: int = 10, offset: int = 0) -> dict[str, Any]:
         """Returns paginated backup list with metadata.
 
         Game save-style listing for Issue #71.
@@ -151,7 +149,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"success": False, "error": str(e), "backups": [], "total": 0}
 
-    def create_backup(self, comment: str = "") -> Dict[str, Any]:
+    def create_backup(self, comment: str = "") -> dict[str, Any]:
         """Creates backup with user comment.
 
         Args:
@@ -181,7 +179,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def restore_backup(self, backup_id: int) -> Dict[str, Any]:
+    def restore_backup(self, backup_id: int) -> dict[str, Any]:
         """Restores from specific backup.
 
         Args:
@@ -213,7 +211,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def get_backup_details(self, backup_id: int) -> Optional[Dict[str, Any]]:
+    def get_backup_details(self, backup_id: int) -> dict[str, Any] | None:
         """Returns full backup metadata.
 
         Args:
@@ -247,7 +245,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"error": str(e)}
 
-    def cleanup_auto_backups(self, keep_count: int = 5) -> Dict[str, Any]:
+    def cleanup_auto_backups(self, keep_count: int = 5) -> dict[str, Any]:
         """Clean up old automatic backups.
 
         Args:
@@ -278,7 +276,7 @@ class DatabaseOperations:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get detailed database information.
 
         Returns:

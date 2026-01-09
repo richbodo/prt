@@ -18,9 +18,6 @@ from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from .logging_config import get_logger
 
@@ -30,7 +27,7 @@ logger = get_logger(__name__)
 class LLMMemory:
     """Manages persistent storage of query results for LLM tool chaining."""
 
-    def __init__(self, base_dir: Optional[Path] = None, max_age_hours: int = 24):
+    def __init__(self, base_dir: Path | None = None, max_age_hours: int = 24):
         """Initialize the memory system.
 
         Args:
@@ -135,7 +132,7 @@ class LLMMemory:
 
             raise
 
-    def load_result(self, result_id: str) -> Optional[Dict[str, Any]]:
+    def load_result(self, result_id: str) -> dict[str, Any] | None:
         """Load previously saved results by ID.
 
         Args:
@@ -180,7 +177,7 @@ class LLMMemory:
             logger.error(f"[MEMORY_LOAD_ERROR] Failed to load {result_id}: {e}", exc_info=True)
             return None
 
-    def list_results(self, result_type: str = None) -> List[Dict[str, Any]]:
+    def list_results(self, result_type: str = None) -> list[dict[str, Any]]:
         """List available results, optionally filtered by type.
 
         Args:
@@ -270,7 +267,7 @@ class LLMMemory:
 
         return cleaned_count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics about stored results.
 
         Returns:

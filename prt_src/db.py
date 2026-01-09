@@ -2,11 +2,6 @@ import json
 import shutil
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from sqlalchemy import and_
 from sqlalchemy import case
@@ -89,7 +84,7 @@ class Database:
 
     def create_backup_with_metadata(
         self, comment: str = None, is_auto: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a timestamped backup with metadata tracking.
 
         Parameters
@@ -168,7 +163,7 @@ class Database:
         else:
             raise FileNotFoundError(f"Database file not found: {self.path}")
 
-    def list_backups(self) -> List[Dict[str, Any]]:
+    def list_backups(self) -> list[dict[str, Any]]:
         """List all tracked backups with metadata.
 
         Returns
@@ -317,7 +312,7 @@ class Database:
 
         return self.session.query(Note).count()
 
-    def insert_contacts(self, contacts: List[Dict[str, str]]):
+    def insert_contacts(self, contacts: list[dict[str, str]]):
         """Insert contacts from parsed data (CSV or Google Takeout)."""
         from .models import Contact
 
@@ -354,7 +349,7 @@ class Database:
 
         self.session.commit()
 
-    def insert_people(self, people: List[Dict[str, Any]]):
+    def insert_people(self, people: list[dict[str, Any]]):
         """Insert list of people dictionaries into the people table."""
         from .models import Person
 
@@ -364,7 +359,7 @@ class Database:
 
         self.session.commit()
 
-    def list_contacts(self) -> List[Tuple[int, str, str]]:
+    def list_contacts(self) -> list[tuple[int, str, str]]:
         from .models import Contact
 
         contacts = self.session.query(Contact).order_by(Contact.name).all()
@@ -438,7 +433,7 @@ class Database:
             contact.relationship.notes.append(note)
             self.session.commit()
 
-    def get_relationship_info(self, contact_id: int) -> Dict[str, Any]:
+    def get_relationship_info(self, contact_id: int) -> dict[str, Any]:
         """Get all relationship information for a contact."""
         from .models import Contact
 
@@ -454,21 +449,21 @@ class Database:
             ],
         }
 
-    def list_tags(self) -> List[Tuple[int, str]]:
+    def list_tags(self) -> list[tuple[int, str]]:
         """List all available tags."""
         from .models import Tag
 
         tags = self.session.query(Tag).order_by(Tag.name).all()
         return [(t.id, t.name) for t in tags]
 
-    def list_notes(self) -> List[Tuple[int, str, str]]:
+    def list_notes(self) -> list[tuple[int, str, str]]:
         """List all available notes with titles and content."""
         from .models import Note
 
         notes = self.session.query(Note).order_by(Note.title).all()
         return [(n.id, n.title, n.content) for n in notes]
 
-    def search_notes_by_title(self, title_search: str) -> List[Tuple[int, str, str]]:
+    def search_notes_by_title(self, title_search: str) -> list[tuple[int, str, str]]:
         """Search notes by title (case-insensitive partial match)."""
         from .models import Note
 
@@ -480,7 +475,7 @@ class Database:
         )
         return [(n.id, n.title, n.content) for n in notes]
 
-    def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
+    def get_note_by_id(self, note_id: int) -> dict[str, Any] | None:
         """Get a note by its ID.
 
         Args:
@@ -614,7 +609,7 @@ class Database:
         self.session.flush()
         return rel_type.id
 
-    def list_relationship_types(self) -> List[Dict[str, Any]]:
+    def list_relationship_types(self) -> list[dict[str, Any]]:
         """List all relationship types with their properties."""
         from .models import RelationshipType
 
@@ -705,7 +700,7 @@ class Database:
 
         self.session.commit()
 
-    def get_contact_relationships(self, contact_id: int) -> List[Dict[str, Any]]:
+    def get_contact_relationships(self, contact_id: int) -> list[dict[str, Any]]:
         """Get all relationships for a contact."""
         from .models import Contact
         from .models import ContactRelationship
@@ -773,7 +768,7 @@ class Database:
 
         return sorted(results, key=lambda x: (x["type"], x["other_contact_name"]))
 
-    def get_all_relationships(self) -> List[Dict[str, Any]]:
+    def get_all_relationships(self) -> list[dict[str, Any]]:
         """Get all relationships in the database."""
         from sqlalchemy.orm import aliased
 
@@ -906,7 +901,7 @@ class Database:
 
     # Advanced Relationship Analytics and Queries (Issue #64 Part 3)
 
-    def get_relationship_analytics(self) -> Dict[str, Any]:
+    def get_relationship_analytics(self) -> dict[str, Any]:
         """Get comprehensive relationship analytics for the database."""
         try:
             # Total relationships
@@ -988,7 +983,7 @@ class Database:
             self.logger.error(f"Error getting relationship analytics: {e}", exc_info=True)
             return {}
 
-    def find_mutual_connections(self, contact1_id: int, contact2_id: int) -> List[Dict[str, Any]]:
+    def find_mutual_connections(self, contact1_id: int, contact2_id: int) -> list[dict[str, Any]]:
         """Find mutual connections between two contacts."""
         try:
             # Get all connections for contact1
@@ -1043,7 +1038,7 @@ class Database:
             self.logger.error(f"Error finding mutual connections: {e}", exc_info=True)
             return []
 
-    def find_relationship_path(self, from_id: int, to_id: int, max_depth: int = 6) -> List[int]:
+    def find_relationship_path(self, from_id: int, to_id: int, max_depth: int = 6) -> list[int]:
         """Find the shortest relationship path between two contacts (BFS)."""
         try:
             if from_id == to_id:
@@ -1094,7 +1089,7 @@ class Database:
             self.logger.error(f"Error finding relationship path: {e}", exc_info=True)
             return []
 
-    def bulk_create_relationships(self, relationships: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def bulk_create_relationships(self, relationships: list[dict[str, Any]]) -> dict[str, Any]:
         """Create multiple relationships in a single transaction."""
         try:
             created = 0
@@ -1154,7 +1149,7 @@ class Database:
             self.session.rollback()
             return {"created": 0, "skipped": 0, "errors": [str(e)], "total": len(relationships)}
 
-    def export_relationships(self, format: str = "json") -> Union[str, List[Dict[str, Any]]]:
+    def export_relationships(self, format: str = "json") -> str | list[dict[str, Any]]:
         """Export all relationships in specified format."""
         try:
             # Create alias for the second contact join
@@ -1243,7 +1238,7 @@ class Database:
             self.logger.error(f"Error exporting relationships: {e}", exc_info=True)
             return [] if format == "json" else ""
 
-    def get_network_degrees(self, contact_id: int, degrees: int = 2) -> Dict[str, List[Dict]]:
+    def get_network_degrees(self, contact_id: int, degrees: int = 2) -> dict[str, list[dict]]:
         """Get network connections up to N degrees of separation."""
         try:
             result = {}

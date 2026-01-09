@@ -9,9 +9,6 @@ provides a consistent interface for all PRT functionality.
 import re
 from pathlib import Path
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,7 +25,7 @@ from .schema_manager import SchemaManager
 class PRTAPI:
     """Main API class for PRT operations."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         """Initialize PRT API with configuration."""
         self.logger = get_logger(__name__)
 
@@ -96,7 +93,7 @@ class PRTAPI:
         return "/tmp" in db_path_str or "temp" in db_path_str.lower()
 
     # Database management operations
-    def get_database_stats(self) -> Dict[str, int]:
+    def get_database_stats(self) -> dict[str, int]:
         """Get database statistics."""
         return {
             "contacts": self.db.count_contacts(),
@@ -111,7 +108,7 @@ class PRTAPI:
         """Create database backup."""
         return self.db.backup(suffix)
 
-    def create_backup_with_comment(self, comment: str = None, auto: bool = False) -> Dict[str, Any]:
+    def create_backup_with_comment(self, comment: str = None, auto: bool = False) -> dict[str, Any]:
         """Create a tracked backup with optional comment.
 
         Args:
@@ -130,7 +127,7 @@ class PRTAPI:
 
         return self.db.create_backup_with_metadata(comment, is_auto=auto)
 
-    def get_backup_history(self) -> List[Dict[str, Any]]:
+    def get_backup_history(self) -> list[dict[str, Any]]:
         """Get list of all tracked backups with metadata.
 
         Returns:
@@ -166,7 +163,7 @@ class PRTAPI:
         """
         self.db.cleanup_old_auto_backups(keep_count)
 
-    def auto_backup_before_operation(self, operation: str) -> Dict[str, Any]:
+    def auto_backup_before_operation(self, operation: str) -> dict[str, Any]:
         """Create automatic backup before a potentially dangerous operation.
 
         Args:
@@ -178,7 +175,7 @@ class PRTAPI:
         comment = f"Auto-backup before: {operation}"
         return self.create_backup_with_comment(comment, auto=True)
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         """Get current configuration."""
         return load_config()
 
@@ -193,7 +190,7 @@ class PRTAPI:
         except Exception:
             return False
 
-    def execute_sql(self, sql: str, confirm: bool = False) -> Dict[str, Any]:
+    def execute_sql(self, sql: str, confirm: bool = False) -> dict[str, Any]:
         """Execute raw SQL against the database.
 
         Args:
@@ -203,7 +200,7 @@ class PRTAPI:
         Returns:
             Dict containing rows (for SELECT), rowcount, and error message if any
         """
-        result: Dict[str, Any] = {"rows": None, "rowcount": 0, "error": None}
+        result: dict[str, Any] = {"rows": None, "rowcount": 0, "error": None}
 
         # Basic detection of write operations
         normalized = re.sub(r"\s+", " ", sql.strip()).lower()
@@ -307,7 +304,7 @@ class PRTAPI:
             self.logger.error(f"Error getting schema info: {e}")
             return f"Error retrieving schema information: {str(e)}"
 
-    def validate_sql_query(self, sql: str) -> Dict[str, Any]:
+    def validate_sql_query(self, sql: str) -> dict[str, Any]:
         """Validate SQL query against database schema.
 
         Args:
@@ -328,7 +325,7 @@ class PRTAPI:
             }
 
     # Search operations
-    def search_contacts(self, query: str) -> List[Dict[str, Any]]:
+    def search_contacts(self, query: str) -> list[dict[str, Any]]:
         """Search contacts by name (case-insensitive partial match)."""
         from .models import Contact
 
@@ -353,7 +350,7 @@ class PRTAPI:
             for c in contacts
         ]
 
-    def search_tags(self, query: str) -> List[Dict[str, Any]]:
+    def search_tags(self, query: str) -> list[dict[str, Any]]:
         """Search tags by name (case-insensitive partial match)."""
         from .models import Tag
 
@@ -363,7 +360,7 @@ class PRTAPI:
 
         return [{"id": t.id, "name": t.name, "contact_count": len(t.relationships)} for t in tags]
 
-    def search_notes(self, query: str) -> List[Dict[str, Any]]:
+    def search_notes(self, query: str) -> list[dict[str, Any]]:
         """Search notes by title or content (case-insensitive partial match)."""
         from .models import Note
 
@@ -384,7 +381,7 @@ class PRTAPI:
             for n in notes
         ]
 
-    def _query_relationships(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _query_relationships(self, query: str | None = None) -> list[dict[str, Any]]:
         """Query contact-to-contact relationships with optional filtering.
 
         Private helper method used by both search_relationships and list_all_relationships
@@ -452,7 +449,7 @@ class PRTAPI:
 
         return results
 
-    def search_relationships(self, query: str) -> List[Dict[str, Any]]:
+    def search_relationships(self, query: str) -> list[dict[str, Any]]:
         """Search contact-to-contact relationships by contact name or relationship type.
 
         Args:
@@ -463,7 +460,7 @@ class PRTAPI:
         """
         return self._query_relationships(query=query)
 
-    def list_all_relationships(self) -> List[Dict[str, Any]]:
+    def list_all_relationships(self) -> list[dict[str, Any]]:
         """List all contact-to-contact relationships.
 
         Returns:
@@ -471,7 +468,7 @@ class PRTAPI:
         """
         return self._query_relationships(query=None)
 
-    def search_relationship_types(self, query: str) -> List[Dict[str, Any]]:
+    def search_relationship_types(self, query: str) -> list[dict[str, Any]]:
         """Search relationship types by type key or description.
 
         Args:
@@ -515,7 +512,7 @@ class PRTAPI:
 
         return results
 
-    def get_contacts_by_tag(self, tag_name: str) -> List[Dict[str, Any]]:
+    def get_contacts_by_tag(self, tag_name: str) -> list[dict[str, Any]]:
         """Get all contacts that have a specific tag."""
         from .models import Tag
 
@@ -541,7 +538,7 @@ class PRTAPI:
 
         return sorted(contacts, key=lambda c: c["name"])
 
-    def get_contacts_by_note(self, note_title: str) -> List[Dict[str, Any]]:
+    def get_contacts_by_note(self, note_title: str) -> list[dict[str, Any]]:
         """Get all contacts that have a specific note."""
         from .models import Note
 
@@ -567,7 +564,7 @@ class PRTAPI:
 
         return sorted(contacts, key=lambda c: c["name"])
 
-    def get_relationship_info(self, contact_id: int) -> Dict[str, Any]:
+    def get_relationship_info(self, contact_id: int) -> dict[str, Any]:
         """Get relationship information for a contact."""
         return self.db.get_relationship_info(contact_id)
 
@@ -605,7 +602,7 @@ class PRTAPI:
         except ValueError:
             return False
 
-    def get_contact_notes(self, contact_id: int) -> List[Dict[str, Any]]:
+    def get_contact_notes(self, contact_id: int) -> list[dict[str, Any]]:
         """Get all notes associated with a specific contact.
 
         Args:
@@ -698,14 +695,14 @@ class PRTAPI:
         return True
 
     # Management operations for tags and notes
-    def list_all_tags(self) -> List[Dict[str, Any]]:
+    def list_all_tags(self) -> list[dict[str, Any]]:
         """List all tags with usage information."""
         from .models import Tag
 
         tags = self.db.session.query(Tag).order_by(Tag.name).all()
         return [{"id": t.id, "name": t.name, "contact_count": len(t.relationships)} for t in tags]
 
-    def create_tag(self, name: str) -> Optional[Dict[str, Any]]:
+    def create_tag(self, name: str) -> dict[str, Any] | None:
         """Create a new tag."""
         from .models import Tag
 
@@ -736,7 +733,7 @@ class PRTAPI:
         self.db.session.commit()
         return True
 
-    def list_all_notes(self) -> List[Dict[str, Any]]:
+    def list_all_notes(self) -> list[dict[str, Any]]:
         """List all notes with usage information."""
         from .models import Note
 
@@ -751,7 +748,7 @@ class PRTAPI:
             for n in notes
         ]
 
-    def create_note(self, title: str, content: str) -> Optional[Dict[str, Any]]:
+    def create_note(self, title: str, content: str) -> dict[str, Any] | None:
         """Create a new note."""
         from .models import Note
 
@@ -799,7 +796,7 @@ class PRTAPI:
         self.db.session.commit()
         return True
 
-    def get_contact_details(self, contact_id: int) -> Optional[Dict[str, Any]]:
+    def get_contact_details(self, contact_id: int) -> dict[str, Any] | None:
         """Get detailed information about a specific contact."""
         from .models import Contact
 
@@ -818,7 +815,7 @@ class PRTAPI:
             "relationship_info": self.get_relationship_info(contact.id),
         }
 
-    def list_all_contacts(self) -> List[Dict[str, Any]]:
+    def list_all_contacts(self) -> list[dict[str, Any]]:
         """List all contacts with basic relationship info."""
         from .models import Contact
 
@@ -837,7 +834,7 @@ class PRTAPI:
             for c in contacts
         ]
 
-    def get_contacts_paginated(self, page: int, limit: int) -> List[Dict[str, Any]]:
+    def get_contacts_paginated(self, page: int, limit: int) -> list[dict[str, Any]]:
         """Get contacts with pagination.
 
         Args:
@@ -858,7 +855,7 @@ class PRTAPI:
             self.logger.error(f"Error getting paginated contacts: {e}", exc_info=True)
             return []
 
-    def get_contacts_with_images(self) -> List[Dict[str, Any]]:
+    def get_contacts_with_images(self) -> list[dict[str, Any]]:
         """Get all contacts that have profile images.
 
         Optimized query using database index on profile_image IS NOT NULL.
@@ -955,7 +952,7 @@ class PRTAPI:
             )
             raise
 
-    def import_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
+    def import_contacts(self, contacts: list[dict[str, Any]]) -> bool:
         """Import contacts from parsed CSV data."""
         try:
             self.db.insert_contacts(contacts)
@@ -964,7 +961,7 @@ class PRTAPI:
             self.logger.error(f"Error importing contacts: {e}", exc_info=True)
             return False
 
-    def insert_contacts(self, contacts: List[Dict[str, Any]]) -> bool:
+    def insert_contacts(self, contacts: list[dict[str, Any]]) -> bool:
         """Insert contacts into the database."""
         try:
             self.db.insert_contacts(contacts)
@@ -973,7 +970,7 @@ class PRTAPI:
             self.logger.error(f"Error inserting contacts: {e}", exc_info=True)
             return False
 
-    def parse_csv_contacts(self, csv_path: str) -> List[Dict[str, Any]]:
+    def parse_csv_contacts(self, csv_path: str) -> list[dict[str, Any]]:
         """Parse CSV file and return contacts data."""
         try:
             from utils.google_contacts_summary import parse_contacts
@@ -983,14 +980,14 @@ class PRTAPI:
             self.logger.error(f"Error parsing CSV file: {e}", exc_info=True)
             return []
 
-    def get_csv_files(self) -> List[Path]:
+    def get_csv_files(self) -> list[Path]:
         """Get list of available CSV files in data directory."""
         data_dir_path = self.get_data_directory()
         return list(data_dir_path.glob("*.csv"))
 
     # ========== New Relationship Type Management API Methods ==========
 
-    def list_all_relationship_types(self) -> List[Dict[str, Any]]:
+    def list_all_relationship_types(self) -> list[dict[str, Any]]:
         """List all available relationship types."""
         types = self.db.list_relationship_types()
 
@@ -1194,7 +1191,7 @@ class PRTAPI:
                 "message": f"Failed to remove relationship: {str(e)}",
             }
 
-    def delete_relationship_by_id(self, relationship_id: int) -> Dict[str, Any]:
+    def delete_relationship_by_id(self, relationship_id: int) -> dict[str, Any]:
         """Delete a relationship by its ID directly.
 
         Args:
@@ -1249,8 +1246,8 @@ class PRTAPI:
             }
 
     def get_contact_relationships(
-        self, contact_name: str, type_filter: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, contact_name: str, type_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get all relationships for a contact."""
         contacts = self.search_contacts(contact_name)
         if not contacts:
@@ -1264,7 +1261,7 @@ class PRTAPI:
 
         return relationships
 
-    def get_family_tree(self, contact_name: str) -> Dict[str, Any]:
+    def get_family_tree(self, contact_name: str) -> dict[str, Any]:
         """Get family tree structure for a contact."""
         contacts = self.search_contacts(contact_name)
         if not contacts:
@@ -1294,7 +1291,7 @@ class PRTAPI:
 
         return family
 
-    def get_relationship_graph(self) -> Dict[str, Any]:
+    def get_relationship_graph(self) -> dict[str, Any]:
         """Get all relationships in a graph structure."""
         from .models import Contact
         from .models import ContactRelationship
@@ -1336,7 +1333,7 @@ class PRTAPI:
 
     # ========== Additional API Methods for TUI DataService ==========
 
-    def get_all_relationships(self) -> List[Dict[str, Any]]:
+    def get_all_relationships(self) -> list[dict[str, Any]]:
         """Get all relationships using the database layer method.
 
         This method provides API access to the database's get_all_relationships
@@ -1383,7 +1380,7 @@ class PRTAPI:
             self.logger.error(f"Error deleting note {note_id}: {e}", exc_info=True)
             return False
 
-    def get_note_by_id(self, note_id: int) -> Optional[Dict[str, Any]]:
+    def get_note_by_id(self, note_id: int) -> dict[str, Any] | None:
         """Get a note by ID.
 
         Args:
@@ -1404,8 +1401,8 @@ class PRTAPI:
             return None
 
     def unified_search(
-        self, query: str, entity_types: Optional[List[str]] = None, limit: int = 100
-    ) -> Dict[str, Any]:
+        self, query: str, entity_types: list[str] | None = None, limit: int = 100
+    ) -> dict[str, Any]:
         """Perform unified search across all entity types through API layer.
 
         This method provides API access to the unified search functionality,
@@ -1534,7 +1531,7 @@ class PRTAPI:
         """
         return self.add_tag_to_contact(contact_id, tag_name)
 
-    def get_contact(self, contact_id: int) -> Optional[Dict[str, Any]]:
+    def get_contact(self, contact_id: int) -> dict[str, Any] | None:
         """Get a contact by ID (wrapper for existing method).
 
         Args:
@@ -1547,7 +1544,7 @@ class PRTAPI:
 
     def add_contact(
         self, first_name: str, last_name: str, email: str = None, phone: str = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Add a new contact.
 
         Args:
@@ -1634,7 +1631,7 @@ class PRTAPI:
             self.db.session.rollback()
             return False
 
-    def add_note(self, title: str, content: str) -> Optional[Dict[str, Any]]:
+    def add_note(self, title: str, content: str) -> dict[str, Any] | None:
         """Add a new note (wrapper for existing method).
 
         Args:
@@ -1646,7 +1643,7 @@ class PRTAPI:
         """
         return self.create_note(title, content)
 
-    def get_all_notes(self) -> List[Dict[str, Any]]:
+    def get_all_notes(self) -> list[dict[str, Any]]:
         """Get all notes (wrapper for existing method).
 
         Returns:
@@ -1654,7 +1651,7 @@ class PRTAPI:
         """
         return self.list_all_notes()
 
-    def get_all_tags(self) -> List[Dict[str, Any]]:
+    def get_all_tags(self) -> list[dict[str, Any]]:
         """Get all tags (wrapper for existing method).
 
         Returns:

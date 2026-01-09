@@ -9,9 +9,6 @@ import re
 from datetime import datetime
 from datetime import timedelta
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 import requests
 from lru import LRU
@@ -24,7 +21,7 @@ logger = get_logger(__name__)
 class ModelInfo:
     """Information about a discovered model."""
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: dict[str, Any]):
         """Initialize from Ollama API response.
 
         Args:
@@ -156,7 +153,7 @@ class OllamaModelRegistry:
         self.cache_ttl = cache_ttl
         self.max_cache_size = max_cache_size
         self._model_cache = LRU(max_cache_size)
-        self._cache_timestamp: Optional[datetime] = None
+        self._cache_timestamp: datetime | None = None
 
         # Cache statistics
         self._stats = {
@@ -192,7 +189,7 @@ class OllamaModelRegistry:
         age = datetime.now() - self._cache_timestamp
         return age < timedelta(seconds=self.cache_ttl)
 
-    def list_models(self, force_refresh: bool = False) -> List[ModelInfo]:
+    def list_models(self, force_refresh: bool = False) -> list[ModelInfo]:
         """List all available models from Ollama.
 
         Args:
@@ -250,7 +247,7 @@ class OllamaModelRegistry:
             logger.error(f"Error fetching models from Ollama: {e}")
             return []
 
-    def get_model_info(self, model_name: str, force_refresh: bool = False) -> Optional[ModelInfo]:
+    def get_model_info(self, model_name: str, force_refresh: bool = False) -> ModelInfo | None:
         """Get detailed information about a specific model.
 
         Args:
@@ -335,7 +332,7 @@ class OllamaModelRegistry:
             logger.error(f"Error getting model info for {model_name}: {e}")
             return None
 
-    def resolve_alias(self, alias: str) -> Optional[str]:
+    def resolve_alias(self, alias: str) -> str | None:
         """Resolve a friendly alias to the full model name.
 
         Args:
@@ -381,7 +378,7 @@ class OllamaModelRegistry:
         """
         return alias.lower().replace("-", "").replace("_", "")
 
-    def get_aliases(self) -> Dict[str, str]:
+    def get_aliases(self) -> dict[str, str]:
         """Get all available aliases and their full names.
 
         Returns:
@@ -390,7 +387,7 @@ class OllamaModelRegistry:
         models = self.list_models()
         return {model.friendly_name: model.name for model in models}
 
-    def get_default_model(self) -> Optional[str]:
+    def get_default_model(self) -> str | None:
         """Get a sensible default model.
 
         Priority:

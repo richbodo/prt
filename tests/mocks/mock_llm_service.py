@@ -4,9 +4,6 @@ import json
 import re
 import time
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.api import PRTAPI
 from prt_src.logging_config import get_logger
@@ -56,7 +53,7 @@ class MockOllamaLLM:
 
         logger.info(f"Initialized MockOllamaLLM with model: {self.model}")
 
-    def _create_tools(self) -> List[Dict[str, Any]]:
+    def _create_tools(self) -> list[dict[str, Any]]:
         """Create tool definitions matching real LLM tools."""
         return [
             {
@@ -186,7 +183,7 @@ class MockOllamaLLM:
             logger.warning(f"Error in tool simulation: {e}")
             return {"error": str(e)}
 
-    def _match_response_pattern(self, message: str) -> Optional[str]:
+    def _match_response_pattern(self, message: str) -> str | None:
         """Match message against response patterns and return formatted response."""
         message_lower = message.lower()
 
@@ -279,7 +276,7 @@ class MockOllamaLLM:
 
         return context
 
-    def _should_call_tool(self, message: str) -> Optional[tuple]:
+    def _should_call_tool(self, message: str) -> tuple | None:
         """Determine if message should trigger a tool call."""
         message_lower = message.lower()
 
@@ -399,7 +396,7 @@ class MockOllamaLLM:
         """Always return True for testing."""
         return True
 
-    def get_conversation_history(self) -> List[dict]:
+    def get_conversation_history(self) -> list[dict]:
         """Get conversation history for testing."""
         return self.conversation_history.copy()
 
@@ -409,11 +406,11 @@ class MockOllamaLLM:
         self.tool_call_history.clear()
         self.last_tool_called = None
 
-    def get_tool_call_history(self) -> List[dict]:
+    def get_tool_call_history(self) -> list[dict]:
         """Get history of simulated tool calls."""
         return self.tool_call_history.copy()
 
-    def _get_contacts_with_images(self) -> Dict[str, Any]:
+    def _get_contacts_with_images(self) -> dict[str, Any]:
         """Mock the _get_contacts_with_images tool for testing."""
         self.last_tool_called = "_get_contacts_with_images"
         self.tool_call_history.append({"tool": "_get_contacts_with_images", "args": {}})
@@ -451,7 +448,7 @@ class MockOllamaLLM:
 
     def _create_directory_from_contacts_with_images(
         self, output_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Mock the directory creation tool for testing."""
         self.last_tool_called = "_create_directory_from_contacts_with_images"
         self.tool_call_history.append(

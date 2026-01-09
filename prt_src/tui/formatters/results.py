@@ -8,10 +8,6 @@ Supports multiple formatting modes:
 """
 
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
 
 
 class ResultsFormatter:
@@ -19,14 +15,14 @@ class ResultsFormatter:
 
     def render(
         self,
-        items: Optional[List[Dict[str, Any]]],
+        items: list[dict[str, Any]] | None,
         result_type: str,
         mode: str = "numbered_list",
         show_selection: bool = False,
-        selected_ids: Optional[Set[int]] = None,
-        pagination: Optional[Dict[str, int]] = None,
+        selected_ids: set[int] | None = None,
+        pagination: dict[str, int] | None = None,
         max_column_width: int = 30,
-        style: Optional[str] = None,
+        style: str | None = None,
     ) -> str:
         """Render items in the specified format.
 
@@ -74,11 +70,11 @@ class ResultsFormatter:
 
     def _format_numbered_list(
         self,
-        items: List[Dict[str, Any]],
+        items: list[dict[str, Any]],
         result_type: str,
         show_selection: bool,
-        selected_ids: Optional[Set[int]],
-        pagination: Optional[Dict[str, int]],
+        selected_ids: set[int] | None,
+        pagination: dict[str, int] | None,
     ) -> str:
         """Format items as numbered list."""
         lines = []
@@ -110,7 +106,7 @@ class ResultsFormatter:
 
     def _format_table(
         self,
-        items: List[Dict[str, Any]],
+        items: list[dict[str, Any]],
         result_type: str,
         max_column_width: int,
     ) -> str:
@@ -165,7 +161,7 @@ class ResultsFormatter:
         # Build table
         return self._build_ascii_table(headers, rows)
 
-    def _build_ascii_table(self, headers: List[str], rows: List[List[str]]) -> str:
+    def _build_ascii_table(self, headers: list[str], rows: list[list[str]]) -> str:
         """Build ASCII table from headers and rows."""
         if not rows:
             return ""
@@ -189,7 +185,7 @@ class ResultsFormatter:
         # Combine
         return "\n".join([header_row, separator] + data_rows)
 
-    def _format_card(self, items: List[Dict[str, Any]], result_type: str) -> str:
+    def _format_card(self, items: list[dict[str, Any]], result_type: str) -> str:
         """Format items as detailed cards."""
         cards = []
 
@@ -237,7 +233,7 @@ class ResultsFormatter:
         return "\n---\n".join(cards)
 
     def _format_compact(
-        self, items: List[Dict[str, Any]], result_type: str, style: Optional[str]
+        self, items: list[dict[str, Any]], result_type: str, style: str | None
     ) -> str:
         """Format items in compact mode."""
         if style == "lines":
@@ -263,7 +259,7 @@ class ResultsFormatter:
 
             return ", ".join(names)
 
-    def _format_item_one_line(self, item: Dict[str, Any], result_type: str) -> str:
+    def _format_item_one_line(self, item: dict[str, Any], result_type: str) -> str:
         """Format single item as one line summary."""
         if result_type == "contacts":
             name = item.get("name", "Unknown")
@@ -296,7 +292,7 @@ class ResultsFormatter:
             # Generic fallback
             return str(item.get("name", item.get("id", "Item")))
 
-    def _format_contact_one_line(self, contact: Dict[str, Any]) -> str:
+    def _format_contact_one_line(self, contact: dict[str, Any]) -> str:
         """Format contact as one-line summary (helper for testing)."""
         return self._format_item_one_line(contact, "contacts")
 

@@ -6,7 +6,6 @@ Provides async interface for loading test fixture data.
 import asyncio
 import contextlib
 from typing import Any
-from typing import Dict
 
 from prt_src.db import Database
 from prt_src.logging_config import get_logger
@@ -28,7 +27,7 @@ class FixtureService:
         self.db = db
         self.logger = get_logger(__name__)
 
-    def get_fixture_summary(self) -> Dict[str, Any]:
+    def get_fixture_summary(self) -> dict[str, Any]:
         """Get summary of fixture data without loading.
 
         Returns:
@@ -116,7 +115,7 @@ class FixtureService:
                 self.db.session.rollback()
             return False
 
-    async def load_fixtures(self) -> Dict[str, Any]:
+    async def load_fixtures(self) -> dict[str, Any]:
         """Load fixture data into database.
 
         Note: This does NOT clear the database first. Call clear_database()
@@ -170,7 +169,7 @@ class FixtureService:
                 "message": error_msg,
             }
 
-    async def clear_and_load_fixtures(self) -> Dict[str, Any]:
+    async def clear_and_load_fixtures(self) -> dict[str, Any]:
         """Clear database and load fresh fixture data.
 
         This is a convenience method that combines clear_database() and

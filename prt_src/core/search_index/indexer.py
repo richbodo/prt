@@ -9,9 +9,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
@@ -35,11 +32,11 @@ class SearchResult:
     entity_type: EntityType
     entity_id: int
     title: str
-    subtitle: Optional[str] = None
-    snippet: Optional[str] = None
+    subtitle: str | None = None
+    snippet: str | None = None
     relevance_score: float = 0.0
-    matched_fields: List[str] = None
-    metadata: Dict[str, Any] = None
+    matched_fields: list[str] = None
+    metadata: dict[str, Any] = None
 
     def __post_init__(self):
         """Initialize default values."""
@@ -86,11 +83,11 @@ class SearchIndexer:
     def search(
         self,
         query: str,
-        entity_types: Optional[List[EntityType]] = None,
+        entity_types: list[EntityType] | None = None,
         limit: int = 50,
         offset: int = 0,
         rank_by_relevance: bool = True,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Perform a full-text search across specified entity types.
 
         Args:
@@ -158,7 +155,7 @@ class SearchIndexer:
             # Multiple terms - search for any of them
             return " OR ".join(f"{term}*" for term in terms)
 
-    def _search_contacts(self, fts_query: str, limit: int) -> List[SearchResult]:
+    def _search_contacts(self, fts_query: str, limit: int) -> list[SearchResult]:
         """Search contacts using FTS5.
 
         Args:
@@ -219,7 +216,7 @@ class SearchIndexer:
 
         return results
 
-    def _search_notes(self, fts_query: str, limit: int) -> List[SearchResult]:
+    def _search_notes(self, fts_query: str, limit: int) -> list[SearchResult]:
         """Search notes using FTS5.
 
         Args:
@@ -278,7 +275,7 @@ class SearchIndexer:
 
         return results
 
-    def _search_tags(self, fts_query: str, limit: int) -> List[SearchResult]:
+    def _search_tags(self, fts_query: str, limit: int) -> list[SearchResult]:
         """Search tags using FTS5.
 
         Args:
@@ -333,10 +330,10 @@ class SearchIndexer:
     def _fallback_search(
         self,
         query: str,
-        entity_types: Optional[List[EntityType]],
+        entity_types: list[EntityType] | None,
         limit: int,
         offset: int,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """Fallback search when FTS5 is not available.
 
         Uses LIKE queries as a fallback for basic search functionality.
@@ -553,7 +550,7 @@ class SearchIndexer:
             self.logger.error(f"Error rebuilding index: {e}", exc_info=True)
             return False
 
-    def get_index_stats(self) -> Dict[str, Any]:
+    def get_index_stats(self) -> dict[str, Any]:
         """Get statistics about the search index.
 
         Returns:

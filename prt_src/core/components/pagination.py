@@ -5,12 +5,9 @@ for efficient navigation through large contact lists. UI-agnostic.
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.logging_config import get_logger
 
@@ -22,7 +19,7 @@ class Page:
     """Represents a single page of results."""
 
     page_number: int
-    items: List[Dict[str, Any]]
+    items: list[dict[str, Any]]
     total_pages: int
     total_items: int
     has_next: bool
@@ -44,10 +41,10 @@ class AlphabeticalIndex:
     """Manage alphabetical index for quick jumping."""
 
     def __init__(self):
-        self.index: Dict[str, int] = {}
-        self.available_letters: List[str] = []
+        self.index: dict[str, int] = {}
+        self.available_letters: list[str] = []
 
-    def build_index(self, items: List[Dict[str, Any]], key: str = "name") -> None:
+    def build_index(self, items: list[dict[str, Any]], key: str = "name") -> None:
         """Build alphabetical index from items.
 
         Args:
@@ -67,11 +64,11 @@ class AlphabeticalIndex:
 
         self.available_letters = sorted(letters_seen)
 
-    def get_available_letters(self) -> List[str]:
+    def get_available_letters(self) -> list[str]:
         """Get list of available letters in the index."""
         return self.available_letters
 
-    def get_position_for_letter(self, letter: str) -> Optional[int]:
+    def get_position_for_letter(self, letter: str) -> int | None:
         """Get the item index for a given letter.
 
         Args:
@@ -83,7 +80,7 @@ class AlphabeticalIndex:
         letter = letter.upper()
         return self.index.get(letter)
 
-    def get_closest_letter(self, letter: str) -> Optional[str]:
+    def get_closest_letter(self, letter: str) -> str | None:
         """Find the closest available letter.
 
         Args:
@@ -109,9 +106,9 @@ class PositionMemory:
     """Remember position in different lists."""
 
     def __init__(self):
-        self.positions: Dict[str, Dict[str, Any]] = {}
+        self.positions: dict[str, dict[str, Any]] = {}
 
-    def save_position(self, list_id: str, page: int, item_index: Optional[int] = None) -> None:
+    def save_position(self, list_id: str, page: int, item_index: int | None = None) -> None:
         """Save current position for a list.
 
         Args:
@@ -121,7 +118,7 @@ class PositionMemory:
         """
         self.positions[list_id] = {"page": page, "item_index": item_index}
 
-    def get_position(self, list_id: str) -> Optional[Dict[str, Any]]:
+    def get_position(self, list_id: str) -> dict[str, Any] | None:
         """Get saved position for a list.
 
         Args:
@@ -169,7 +166,7 @@ class PaginationSystem:
         self.cache_pages = cache_pages
         self.enable_memory = enable_memory
 
-        self.items: List[Dict[str, Any]] = []
+        self.items: list[dict[str, Any]] = []
         self.total_items = 0
         self.current_page = 1
         self.total_pages = 0
@@ -178,13 +175,13 @@ class PaginationSystem:
         self.position_memory = PositionMemory() if enable_memory else None
 
         # For lazy loading
-        self.data_provider: Optional[Callable] = None
-        self.page_cache: Dict[int, List[Dict[str, Any]]] = {}
+        self.data_provider: Callable | None = None
+        self.page_cache: dict[int, list[dict[str, Any]]] = {}
 
         # Current list identifier for position memory
-        self.current_list_id: Optional[str] = None
+        self.current_list_id: str | None = None
 
-    def set_items(self, items: List[Dict[str, Any]], list_id: Optional[str] = None) -> None:
+    def set_items(self, items: list[dict[str, Any]], list_id: str | None = None) -> None:
         """Set items for pagination.
 
         Args:
@@ -222,7 +219,7 @@ class PaginationSystem:
         self.page_cache.clear()
 
     def set_data_provider(
-        self, provider: Callable[[int, int], List[Dict[str, Any]]], total_count: int
+        self, provider: Callable[[int, int], list[dict[str, Any]]], total_count: int
     ) -> None:
         """Set a data provider for lazy loading.
 
@@ -281,7 +278,7 @@ class PaginationSystem:
             page_size=self.page_size,
         )
 
-    def _get_page_items(self, page_number: int) -> List[Dict[str, Any]]:
+    def _get_page_items(self, page_number: int) -> list[dict[str, Any]]:
         """Get items for a specific page from loaded items.
 
         Args:
@@ -294,7 +291,7 @@ class PaginationSystem:
         end_index = start_index + self.page_size
         return self.items[start_index:end_index]
 
-    def _load_page_lazy(self, page_number: int) -> List[Dict[str, Any]]:
+    def _load_page_lazy(self, page_number: int) -> list[dict[str, Any]]:
         """Load a page using the data provider.
 
         Args:
@@ -340,7 +337,7 @@ class PaginationSystem:
         """Jump to a specific page."""
         return self.get_page(page_number)
 
-    def jump_to_letter(self, letter: str) -> Optional[Page]:
+    def jump_to_letter(self, letter: str) -> Page | None:
         """Jump to the page containing items starting with a letter.
 
         Args:
@@ -393,7 +390,7 @@ class PaginationSystem:
         # Clear cache as pagination has changed
         self.page_cache.clear()
 
-    def get_pagination_info(self) -> Dict[str, Any]:
+    def get_pagination_info(self) -> dict[str, Any]:
         """Get detailed pagination information.
 
         Returns:

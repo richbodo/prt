@@ -5,9 +5,6 @@ This module provides a unified system prompt generation eliminating duplication
 across different LLM providers and enabling provider-specific customization.
 """
 
-from typing import List
-from typing import Set
-
 from .llm_tools import Tool
 from .logging_config import get_logger
 from .schema_info import get_schema_for_llm
@@ -18,7 +15,7 @@ logger = get_logger(__name__)
 class LLMPromptGenerator:
     """Provider-aware system prompt generation."""
 
-    def __init__(self, tools: List[Tool]):
+    def __init__(self, tools: list[Tool]):
         """Initialize the prompt generator.
 
         Args:
@@ -101,7 +98,7 @@ WORKFLOW:
 ## AVAILABLE TOOLS:
 {tools_description}"""
 
-    def _get_directory_guidance(self, tool_names: Set[str]) -> str:
+    def _get_directory_guidance(self, tool_names: set[str]) -> str:
         """Get directory generation guidance based on available tools."""
         if {"save_contacts_with_images", "generate_directory"}.issubset(tool_names):
             return """

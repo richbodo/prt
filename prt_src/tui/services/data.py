@@ -4,9 +4,6 @@ Wraps PRTAPI to provide data access for screens.
 """
 
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from prt_src.api import PRTAPI
 from prt_src.logging_config import get_logger
@@ -21,7 +18,7 @@ class DataService:
     to access contacts, relationships, tags, and notes.
     """
 
-    def __init__(self, api: Optional[PRTAPI] = None):
+    def __init__(self, api: PRTAPI | None = None):
         """Initialize data service.
 
         Args:
@@ -31,7 +28,7 @@ class DataService:
 
     # Contact operations
 
-    async def get_contacts(self, limit: int = 100, offset: int = 0) -> List[Dict]:
+    async def get_contacts(self, limit: int = 100, offset: int = 0) -> list[dict]:
         """Get paginated list of contacts.
 
         Args:
@@ -49,7 +46,7 @@ class DataService:
             logger.error(f"Failed to get contacts: {e}")
             return []
 
-    async def get_contact(self, contact_id: int) -> Optional[Dict]:
+    async def get_contact(self, contact_id: int) -> dict | None:
         """Get a single contact by ID.
 
         Args:
@@ -64,7 +61,7 @@ class DataService:
             logger.error(f"Failed to get contact {contact_id}: {e}")
             return None
 
-    async def create_contact(self, data: Dict) -> Optional[Dict]:
+    async def create_contact(self, data: dict) -> dict | None:
         """Create a new contact.
 
         Args:
@@ -84,7 +81,7 @@ class DataService:
             logger.error(f"Failed to create contact: {e}")
             return None
 
-    async def update_contact(self, contact_id: int, data: Dict) -> bool:
+    async def update_contact(self, contact_id: int, data: dict) -> bool:
         """Update an existing contact.
 
         Args:
@@ -115,7 +112,7 @@ class DataService:
             logger.error(f"Failed to delete contact {contact_id}: {e}")
             return False
 
-    async def search_contacts(self, query: str) -> List[Dict]:
+    async def search_contacts(self, query: str) -> list[dict]:
         """Search contacts.
 
         Args:
@@ -130,7 +127,7 @@ class DataService:
             logger.error(f"Failed to search contacts: {e}", exc_info=True)
             return []
 
-    async def search_tags(self, query: str) -> List[Dict]:
+    async def search_tags(self, query: str) -> list[dict]:
         """Search tags.
 
         Args:
@@ -145,7 +142,7 @@ class DataService:
             logger.error(f"Failed to search tags: {e}", exc_info=True)
             return []
 
-    async def search_notes(self, query: str) -> List[Dict]:
+    async def search_notes(self, query: str) -> list[dict]:
         """Search notes.
 
         Args:
@@ -160,7 +157,7 @@ class DataService:
             logger.error(f"Failed to search notes: {e}", exc_info=True)
             return []
 
-    async def search_relationships(self, query: str) -> List[Dict]:
+    async def search_relationships(self, query: str) -> list[dict]:
         """Search contact-to-contact relationships.
 
         Args:
@@ -175,7 +172,7 @@ class DataService:
             logger.error(f"Failed to search relationships: {e}", exc_info=True)
             return []
 
-    async def search_relationship_types(self, query: str) -> List[Dict]:
+    async def search_relationship_types(self, query: str) -> list[dict]:
         """Search relationship types.
 
         Args:
@@ -190,7 +187,7 @@ class DataService:
             logger.error(f"Failed to search relationship types: {e}", exc_info=True)
             return []
 
-    async def list_all_contacts(self) -> List[Dict]:
+    async def list_all_contacts(self) -> list[dict]:
         """List all contacts.
 
         Returns:
@@ -202,7 +199,7 @@ class DataService:
             logger.error(f"Failed to list all contacts: {e}", exc_info=True)
             return []
 
-    async def list_all_tags(self) -> List[Dict]:
+    async def list_all_tags(self) -> list[dict]:
         """List all tags.
 
         Returns:
@@ -214,7 +211,7 @@ class DataService:
             logger.error(f"Failed to list all tags: {e}", exc_info=True)
             return []
 
-    async def list_all_notes(self) -> List[Dict]:
+    async def list_all_notes(self) -> list[dict]:
         """List all notes.
 
         Returns:
@@ -226,7 +223,7 @@ class DataService:
             logger.error(f"Failed to list all notes: {e}", exc_info=True)
             return []
 
-    async def list_all_relationships(self) -> List[Dict]:
+    async def list_all_relationships(self) -> list[dict]:
         """List all contact-to-contact relationships.
 
         Returns:
@@ -238,7 +235,7 @@ class DataService:
             logger.error(f"Failed to list all relationships: {e}", exc_info=True)
             return []
 
-    async def list_all_relationship_types(self) -> List[Dict]:
+    async def list_all_relationship_types(self) -> list[dict]:
         """List all relationship types.
 
         Returns:
@@ -252,7 +249,7 @@ class DataService:
 
     # Relationship operations
 
-    async def get_relationships(self, contact_id: Optional[int] = None) -> List[Dict]:
+    async def get_relationships(self, contact_id: int | None = None) -> list[dict]:
         """Get relationships.
 
         Args:
@@ -312,7 +309,7 @@ class DataService:
 
     # Tag operations
 
-    async def get_tags(self) -> List[Dict]:
+    async def get_tags(self) -> list[dict]:
         """Get all tags.
 
         Returns:
@@ -324,7 +321,7 @@ class DataService:
             logger.error(f"Failed to get tags: {e}")
             return []
 
-    async def create_tag(self, name: str) -> Optional[Dict]:
+    async def create_tag(self, name: str) -> dict | None:
         """Create a new tag.
 
         Args:
@@ -418,7 +415,7 @@ class DataService:
 
     # Note operations
 
-    async def get_notes(self, contact_id: Optional[int] = None) -> List[Dict]:
+    async def get_notes(self, contact_id: int | None = None) -> list[dict]:
         """Get notes.
 
         Args:
@@ -436,8 +433,8 @@ class DataService:
             return []
 
     async def create_note(
-        self, title: str, content: str, contact_id: Optional[int] = None
-    ) -> Optional[Dict]:
+        self, title: str, content: str, contact_id: int | None = None
+    ) -> dict | None:
         """Create a note.
 
         Args:
@@ -497,8 +494,8 @@ class DataService:
     # Search operations
 
     async def unified_search(
-        self, query: str, entity_types: Optional[List[str]] = None, limit: int = 100
-    ) -> Dict[str, Any]:
+        self, query: str, entity_types: list[str] | None = None, limit: int = 100
+    ) -> dict[str, Any]:
         """Perform unified search across all entity types.
 
         Args:
@@ -529,7 +526,7 @@ class DataService:
 
     # Statistics
 
-    async def get_stats(self) -> Dict[str, int]:
+    async def get_stats(self) -> dict[str, int]:
         """Get database statistics.
 
         Returns:
@@ -548,7 +545,7 @@ class DataService:
 
     # Database management operations
 
-    async def get_database_stats(self) -> Dict[str, int]:
+    async def get_database_stats(self) -> dict[str, int]:
         """Get comprehensive database statistics.
 
         Returns:
@@ -585,7 +582,7 @@ class DataService:
             logger.error(f"Failed to get database size: {e}")
             return 0
 
-    async def get_backup_history(self) -> List[Dict[str, Any]]:
+    async def get_backup_history(self) -> list[dict[str, Any]]:
         """Get list of available backups.
 
         Returns:
@@ -597,7 +594,7 @@ class DataService:
             logger.error(f"Failed to get backup history: {e}")
             return []
 
-    async def create_backup(self, comment: str = None) -> Optional[Dict[str, Any]]:
+    async def create_backup(self, comment: str = None) -> dict[str, Any] | None:
         """Create a database backup.
 
         Args:
@@ -629,7 +626,7 @@ class DataService:
             logger.error(f"Failed to restore backup {backup_id}: {e}")
             return False
 
-    async def export_data(self, format: str = "json") -> Optional[str]:
+    async def export_data(self, format: str = "json") -> str | None:
         """Export database data.
 
         Args:
@@ -843,7 +840,7 @@ class DataService:
 
     # Relationship type management operations
 
-    async def get_relationship_types(self) -> List[Dict]:
+    async def get_relationship_types(self) -> list[dict]:
         """Get all relationship types.
 
         Returns:
@@ -859,9 +856,9 @@ class DataService:
         self,
         type_key: str,
         description: str,
-        inverse_key: Optional[str] = None,
+        inverse_key: str | None = None,
         is_symmetrical: bool = False,
-    ) -> Optional[Dict]:
+    ) -> dict | None:
         """Create a new relationship type.
 
         Args:
@@ -894,9 +891,9 @@ class DataService:
     async def update_relationship_type(
         self,
         type_key: str,
-        description: Optional[str] = None,
-        inverse_key: Optional[str] = None,
-        is_symmetrical: Optional[bool] = None,
+        description: str | None = None,
+        inverse_key: str | None = None,
+        is_symmetrical: bool | None = None,
     ) -> bool:
         """Update a relationship type.
 
@@ -989,8 +986,8 @@ class DataService:
         from_contact_id: int,
         to_contact_id: int,
         type_key: str,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> bool:
         """Create a relationship with detailed information.
 
@@ -1029,7 +1026,7 @@ class DataService:
             logger.error(f"Failed to create relationship with details: {e}")
             return False
 
-    async def get_relationship_details(self, relationship_id: int) -> Optional[Dict]:
+    async def get_relationship_details(self, relationship_id: int) -> dict | None:
         """Get detailed information about a relationship.
 
         Args:
@@ -1051,9 +1048,9 @@ class DataService:
     async def update_relationship(
         self,
         relationship_id: int,
-        type_key: Optional[str] = None,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
+        type_key: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
     ) -> bool:
         """Update a relationship.
 

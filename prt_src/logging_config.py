@@ -9,13 +9,12 @@ and system logging for debugging, error tracking, and monitoring.
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
 
 from .config import data_dir
 
 
 def setup_logging(
-    log_level: str = "INFO", log_file: Optional[Path] = None, enable_console_logging: bool = False
+    log_level: str = "INFO", log_file: Path | None = None, enable_console_logging: bool = False
 ) -> logging.Logger:
     """
     Set up centralized logging for PRT.
@@ -83,7 +82,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 # Convenience function for quick logger access
-def log_error(message: str, exception: Optional[Exception] = None, module: str = "general") -> None:
+def log_error(message: str, exception: Exception | None = None, module: str = "general") -> None:
     """Log an error message with optional exception details."""
     logger = get_logger(module)
     if exception:

@@ -9,7 +9,6 @@ import platform
 import subprocess
 import sys
 from typing import Any
-from typing import Dict
 
 from . import __version__
 from .api import PRTAPI
@@ -23,7 +22,7 @@ from .schema_manager import SchemaManager
 logger = get_logger(__name__)
 
 
-def collect_system_environment() -> Dict[str, Any]:
+def collect_system_environment() -> dict[str, Any]:
     """Collect system environment information (OS, Python, Ollama versions)."""
     env_info = {
         "os": {
@@ -63,7 +62,7 @@ def collect_system_environment() -> Dict[str, Any]:
     return env_info
 
 
-def collect_database_info() -> Dict[str, Any]:
+def collect_database_info() -> dict[str, Any]:
     """Collect database information using existing API functions."""
     db_info = {
         "status": "unknown",
@@ -137,7 +136,7 @@ def collect_database_info() -> Dict[str, Any]:
     return db_info
 
 
-def collect_llm_info() -> Dict[str, Any]:
+def collect_llm_info() -> dict[str, Any]:
     """Collect LLM information using existing factory functions."""
     llm_info = {
         "status": "unknown",
@@ -215,7 +214,7 @@ def collect_llm_info() -> Dict[str, Any]:
     return llm_info
 
 
-def collect_system_prompt() -> Dict[str, Any]:
+def collect_system_prompt() -> dict[str, Any]:
     """Collect system prompt information using existing LLM methods."""
     prompt_info = {
         "status": "unknown",
@@ -270,7 +269,7 @@ def collect_system_prompt() -> Dict[str, Any]:
     return prompt_info
 
 
-def collect_config_info() -> Dict[str, Any]:
+def collect_config_info() -> dict[str, Any]:
     """Collect configuration information using existing config functions."""
     config_info = {
         "status": "unknown",
@@ -314,7 +313,7 @@ def collect_config_info() -> Dict[str, Any]:
     return config_info
 
 
-def format_debug_output(debug_data: Dict[str, Any]) -> str:
+def format_debug_output(debug_data: dict[str, Any]) -> str:
     """Format debug information for display."""
     lines = []
 
@@ -462,7 +461,7 @@ def format_debug_output(debug_data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def collect_debug_info() -> Dict[str, Any]:
+def collect_debug_info() -> dict[str, Any]:
     """Main orchestration function to collect all debug information."""
     logger.info("Starting debug info collection")
 

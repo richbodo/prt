@@ -2,7 +2,7 @@
 """Summarize Google Contacts CSV exports.
 
 This script reads an exported Google Contacts CSV file, counts the
-number of contacts, and prints the total number of contacts along with 
+number of contacts, and prints the total number of contacts along with
 each contact's name and associated email addresses and phone numbers.
 
 Usage:
@@ -16,11 +16,9 @@ from __future__ import annotations
 
 import csv
 import sys
-from typing import Dict
-from typing import List
 
 
-def _extract_fields(row: Dict[str, str], prefix: str) -> List[str]:
+def _extract_fields(row: dict[str, str], prefix: str) -> list[str]:
     """Return list of label/value pairs for a given contact field prefix.
 
     Parameters
@@ -30,7 +28,7 @@ def _extract_fields(row: Dict[str, str], prefix: str) -> List[str]:
     prefix: str
         ``"E-mail"`` or ``"Phone"``.
     """
-    results: List[str] = []
+    results: list[str] = []
     for key, value in row.items():
         if key.startswith(prefix) and key.endswith("Value"):
             val = value.strip()
@@ -42,9 +40,9 @@ def _extract_fields(row: Dict[str, str], prefix: str) -> List[str]:
     return results
 
 
-def parse_contacts(csv_path: str) -> List[Dict[str, List[str]]]:
+def parse_contacts(csv_path: str) -> list[dict[str, list[str]]]:
     """Parse contacts from a Google Contacts CSV export."""
-    contacts: List[Dict[str, List[str]]] = []
+    contacts: list[dict[str, list[str]]] = []
     try:
         with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)

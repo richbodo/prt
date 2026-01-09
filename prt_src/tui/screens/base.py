@@ -10,8 +10,6 @@ Refactored for Issue #120 to use Textual's Screen class directly.
 import contextlib
 from enum import Enum
 from typing import Any
-from typing import Dict
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.screen import Screen
@@ -81,7 +79,7 @@ class BaseScreen(Screen):
         self._show_header = True
         self._show_footer = True
 
-    def get_header_config(self) -> Optional[Dict[str, Any]]:
+    def get_header_config(self) -> dict[str, Any] | None:
         """Get header slot configuration.
 
         Returns:
@@ -109,7 +107,7 @@ class BaseScreen(Screen):
             "compact": False,
         }
 
-    def get_footer_config(self) -> Optional[Dict[str, Any]]:
+    def get_footer_config(self) -> dict[str, Any] | None:
         """Get footer slot configuration.
 
         Returns:

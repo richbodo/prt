@@ -4,10 +4,8 @@ Provides a keyboard-driven menu for navigating between application sections.
 Supports single-key activation and vim-style navigation.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
-from typing import List
-from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
@@ -26,7 +24,7 @@ class MenuItem:
     label: str  # Display label for the item
     description: str  # Longer description
     action: str  # Action identifier when selected
-    icon: Optional[str] = None  # Optional emoji/icon
+    icon: str | None = None  # Optional emoji/icon
     disabled: bool = False  # Whether the item is disabled
 
     @property
@@ -53,8 +51,8 @@ class NavigationMenu(ModeAwareWidget):
 
     def __init__(
         self,
-        items: Optional[List[MenuItem]] = None,
-        on_activate: Optional[Callable[[MenuItem], None]] = None,
+        items: list[MenuItem] | None = None,
+        on_activate: Callable[[MenuItem], None] | None = None,
     ):
         """Initialize the navigation menu.
 
@@ -65,10 +63,10 @@ class NavigationMenu(ModeAwareWidget):
         super().__init__()
         self.on_activate = on_activate
         self.menu_items = items if items is not None else self._get_default_items()
-        self.menu_rows: List[Static] = []
+        self.menu_rows: list[Static] = []
         self.add_class("navigation-menu")
 
-    def _get_default_items(self) -> List[MenuItem]:
+    def _get_default_items(self) -> list[MenuItem]:
         """Get the default menu items for the home screen.
 
         Returns:
@@ -138,7 +136,7 @@ class NavigationMenu(ModeAwareWidget):
         self.selected_index = (self.selected_index - 1) % len(self.menu_items)
         self._update_selection()
 
-    def select_by_key(self, key: str) -> Optional[MenuItem]:
+    def select_by_key(self, key: str) -> MenuItem | None:
         """Select and activate a menu item by its key shortcut.
 
         Args:
@@ -156,7 +154,7 @@ class NavigationMenu(ModeAwareWidget):
                 return self._activate_current()
         return None
 
-    def get_selected(self) -> Optional[MenuItem]:
+    def get_selected(self) -> MenuItem | None:
         """Get the currently selected menu item.
 
         Returns:
@@ -188,7 +186,7 @@ class NavigationMenu(ModeAwareWidget):
             if item.action == self.current_section:
                 row.add_class("current")
 
-    def _activate_current(self) -> Optional[MenuItem]:
+    def _activate_current(self) -> MenuItem | None:
         """Activate the currently selected menu item.
 
         Returns:

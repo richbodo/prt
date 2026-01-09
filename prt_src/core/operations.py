@@ -1,8 +1,6 @@
 """Main operations orchestrator for PRT core business logic."""
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 from .contacts import ContactOperations
 from .database import DatabaseOperations
@@ -32,7 +30,7 @@ class Operations:
         self.search = SearchOperations(api)
         self.database = DatabaseOperations(api)
 
-    def validate_operation(self, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_operation(self, operation: str, params: dict[str, Any]) -> dict[str, Any]:
         """Validates parameters before operations.
 
         Args:
@@ -78,7 +76,7 @@ class Operations:
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}
 
-    def execute_batch(self, operations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def execute_batch(self, operations: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Executes multiple operations in sequence.
 
         Args:
@@ -111,7 +109,7 @@ class Operations:
 
         return results
 
-    def _execute_single_operation(self, op_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_single_operation(self, op_type: str, params: dict[str, Any]) -> dict[str, Any]:
         """Execute a single operation.
 
         Args:
@@ -159,7 +157,7 @@ class Operations:
         else:
             return {"success": False, "error": f"Unknown operation type: {op_type}"}
 
-    def get_operation_metadata(self, op_type: str) -> Dict[str, Any]:
+    def get_operation_metadata(self, op_type: str) -> dict[str, Any]:
         """Get metadata about an operation.
 
         Args:
@@ -203,7 +201,7 @@ class Operations:
             op_type, {"description": "Unknown operation", "params": {}, "returns": "Unknown"}
         )
 
-    def get_available_operations(self) -> List[str]:
+    def get_available_operations(self) -> list[str]:
         """Get list of all available operations.
 
         Returns:
