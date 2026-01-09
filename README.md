@@ -27,9 +27,7 @@ There is a [github project](https://github.com/users/richbodo/projects/2) where 
 
 We have not merged these yet, so:
 
-Claude Code start with Claude.md
-Gemini CLI start with Gemini.md
-Codex CLI and all other AI/LLM agents start with Agents.md
+Agents please start by reading Claude.md.  Then read all of the .claude directories commands, and then run the /prime command.  That will give you a good overview and get you ready to start work.
 
 ## 🛠️ Basic Development Workflow
 
