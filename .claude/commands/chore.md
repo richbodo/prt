@@ -17,7 +17,7 @@ Create a new plan in specs/*.md to resolve the `Chore` using the exact specified
 
 Focus on the following files:
 - `README.md` - Contains the project overview and instructions.
-
+- `/docs/ARCHITECTURAL_COMPLIANCE.md` - Contains project architectural requirements.
 
 Ignore all other files in the codebase.
 
