@@ -4,16 +4,48 @@ ADW automates software development by integrating GitHub issues with Claude Code
 
 ## Quick Start
 
-### 1. Set Environment Variables
+### 1. Automated Environment Setup
+
+From the PRT project root:
 
 ```bash
-export GITHUB_REPO_URL="https://github.com/owner/repository"
-export ANTHROPIC_API_KEY="sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export CLAUDE_CODE_PATH="/path/to/claude"  # Optional, defaults to "claude"
-export GITHUB_PAT="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # Optional, only if using different account than 'gh auth login'
+# Setup PRT environment (includes ADWS integration)
+source ./init.sh
+
+# Setup ADWS environment variables interactively
+source ./setup_adws.sh
+
+# Verify ADWS configuration
+source ./setup_adws.sh --check
 ```
 
-### 2. Install Prerequisites
+The setup script will:
+- Check for required prerequisites
+- Prompt for GitHub repository URL and Anthropic API key
+- Validate API connectivity
+- Save configuration to `.env` file (gitignored)
+- Load environment automatically with `source ./init.sh`
+
+### 2. Manual Environment Setup (Alternative)
+
+If you prefer manual setup, create a `.env` file in the project root:
+
+```bash
+# Copy template and edit with your values
+cp .env.example .env
+
+# Required variables
+GITHUB_REPO_URL=https://github.com/owner/repository
+ANTHROPIC_API_KEY=sk-ant-your-api-key-here
+
+# Optional variables (uncomment if needed)
+#CLAUDE_CODE_PATH=/custom/path/to/claude
+#GITHUB_PAT=ghp_your-github-token-here
+```
+
+### 3. Prerequisites
+
+The setup script checks for these tools and provides installation instructions:
 
 ```bash
 # GitHub CLI
@@ -21,8 +53,7 @@ brew install gh              # macOS
 # or: sudo apt install gh    # Ubuntu/Debian
 # or: winget install --id GitHub.cli  # Windows
 
-# Claude Code CLI
-# Follow instructions at https://docs.anthropic.com/en/docs/claude-code
+# Claude Code CLI - https://docs.anthropic.com/en/docs/claude-code
 
 # Python dependency manager (uv)
 curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
@@ -32,7 +63,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
 gh auth login
 ```
 
-### 3. Run ADW
+### 4. Run ADWS
 
 ```bash
 cd adws/
@@ -45,6 +76,19 @@ uv run trigger_cron.py
 
 # Start webhook server (for instant GitHub events)
 uv run trigger_webhook.py
+```
+
+### 5. Configuration Management
+
+```bash
+# Check current configuration
+source ./setup_adws.sh --check
+
+# Reconfigure everything
+source ./setup_adws.sh --reset
+
+# Get help
+source ./setup_adws.sh --help
 ```
 
 ## Script Usage Guide
@@ -173,7 +217,10 @@ uv run trigger_webhook.py
 
 ### Environment Issues
 ```bash
-# Check required variables
+# Check ADWS configuration
+source ./setup_adws.sh --check
+
+# Check all environment variables
 env | grep -E "(GITHUB|ANTHROPIC|CLAUDE)"
 
 # Verify GitHub auth
@@ -181,6 +228,9 @@ gh auth status
 
 # Test Claude Code
 claude --version
+
+# Reset configuration if needed
+source ./setup_adws.sh --reset
 ```
 
 ### Common Errors
@@ -193,6 +243,10 @@ which claude  # Check if installed
 
 **"Missing GITHUB_PAT"** (Optional - only needed if using different account than 'gh auth login')
 ```bash
+# Add to your .env file or run setup again
+source ./setup_adws.sh --reset
+
+# Or set manually
 export GITHUB_PAT=$(gh auth token)
 ```
 

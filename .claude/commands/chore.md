@@ -1,23 +1,35 @@
 # Chore Planning
 
-Create a new plan in specs/*.md to resolve the `Chore` using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.
+Create a new plan to resolve the `Chore` using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files. Follow the `Report` section to properly report the results of your work.
+
+## Variables
+issue_number: $1
+adw_id: $2
+issue_json: $3
 
 ## Instructions
 
+- IMPORTANT: You're writing a plan to resolve a chore based on the `Chore` that will add value to the application.
+- IMPORTANT: The `Chore` describes the chore that will be resolved but remember we're not resolving the chore, we're creating the plan that will be used to resolve the chore based on the `Plan Format` below.
 - You're writing a plan to resolve a chore, it should be simple but we need to be thorough and precise so we don't miss anything or waste time with any second round of changes.
-- Create the plan in the `specs/*.md` file. Name it appropriately based on the `Chore`.
+- Create the plan in the `specs/` directory with filename: `issue-{issue_number}-adw-{adw_id}-sdlc_planner-{descriptive-name}.md`
+  - Replace `{descriptive-name}` with a short, descriptive name based on the chore (e.g., "update-readme", "fix-tests", "refactor-auth")
 - Use the plan format below to create the plan. 
 - Research the codebase and put together a plan to accomplish the chore.
 - IMPORTANT: Replace every <placeholder> in the `Plan Format` with the requested value. Add as much detail as needed to accomplish the chore.
 - Use your reasoning model: THINK HARD about the plan and the steps to accomplish the chore.
 - Respect requested files in the `Relevant Files` section.
 - Start your research by reading the `README.md` file.
+- `adws/*.py` contain astral uv single file python scripts. So if you want to run them use `uv run <script_name>`.
+- When you finish creating the plan for the chore, follow the `Report` section to properly report the results of your work.
 
 ## Relevant Files
 
 Focus on the following files:
 - `README.md` - Contains the project overview and instructions.
-- `/docs/ARCHITECTURAL_COMPLIANCE.md` - Contains project architectural requirements.
+- `app/**` - Contains the codebase client/server.
+- `scripts/**` - Contains the scripts to start and stop the server + client.
+- `adws/**` - Contains the AI Developer Workflow (ADW) scripts.
 
 Ignore all other files in the codebase.
 
@@ -43,11 +55,15 @@ IMPORTANT: Execute every step in order, top to bottom.
 Execute every command to validate the chore is complete with zero regressions.
 
 <list commands you'll use to validate with 100% confidence the chore is complete with zero regressions. every command must execute without errors so be specific about what you want to run to validate the chore is complete with zero regressions. Don't validate with curl commands.>
-
+- `cd app/server && uv run pytest` - Run server tests to validate the chore is complete with zero regressions
 
 ## Notes
 <optionally list any additional notes or context that are relevant to the chore that will be helpful to the developer>
 ```
 
 ## Chore
-$ARGUMENTS
+Extract the chore details from the `issue_json` variable (parse the JSON and use the title and body fields).
+
+## Report
+- Summarize the work you've just done in a concise bullet point list.
+- Include the full path to the plan file you created (e.g., `specs/issue-7-adw-abc123-sdlc_planner-update-readme.md`)

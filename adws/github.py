@@ -42,6 +42,22 @@ def get_github_env() -> dict | None:
     if not github_pat:
         return None
 
+    # Sanitize token - strip whitespace and newlines
+    github_pat = github_pat.strip()
+
+    # Validate token is not empty after stripping
+    if not github_pat:
+        return None
+
+    # Check for obviously invalid tokens (contains newlines or control chars)
+    if "\n" in github_pat or "\r" in github_pat:
+        print(
+            "Warning: GITHUB_PAT contains newline characters, ignoring. "
+            "Please fix your .env file or regenerate it with: source ./setup_adws.sh --reset",
+            file=sys.stderr,
+        )
+        return None
+
     # Only create minimal env with GitHub token
     env = {
         "GH_TOKEN": github_pat,
