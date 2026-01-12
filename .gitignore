@@ -1,5 +1,6 @@
 # PRT App Data
 prt_data/
+agents/
 directories/
 exports/
 
@@ -139,7 +140,8 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+.env*
+!.env.example
 .venv
 prt_env/
 env/
