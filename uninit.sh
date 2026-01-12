@@ -26,3 +26,14 @@ if [ -n "$SQLCIPHER_PATH" ]; then
     unset CPPFLAGS
     echo "SQLCipher environment variables cleaned up!"
 fi
+
+# Clean up ADWS environment variables
+if [ -n "$GITHUB_REPO_URL" ] || [ -n "$ANTHROPIC_API_KEY" ] || [ -n "$GITHUB_PAT" ] || [ -n "$CLAUDE_CODE_PATH" ]; then
+    echo "Cleaning up ADWS environment variables..."
+    unset GITHUB_REPO_URL
+    unset ANTHROPIC_API_KEY
+    unset GITHUB_PAT
+    unset CLAUDE_CODE_PATH
+    echo "ADWS environment variables cleaned up!"
+    echo "Note: .env file preserved for next session"
+fi

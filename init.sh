@@ -120,14 +120,39 @@ if [ -n "$VIRTUAL_ENV" ]; then
     echo "🧪 Verifying installation..."
     python -c "import textual; import sqlalchemy; import typer; print('✅ Core packages verified')" || { echo "❌ Installation verification failed"; return 1; }
     
+    # Load ADWS environment if available
+    if [[ -f ".env" ]]; then
+        echo "🤖 Loading ADWS environment variables..."
+        set -a  # Mark variables for export
+        source .env
+        set +a  # Unmark variables for export
+        ADWS_ENV_LOADED=1
+    else
+        ADWS_ENV_LOADED=0
+    fi
+
     echo ""
     echo "🎉 PRT development environment ready!"
     echo ""
     echo "🚀 Quick Start:"
-    echo "  python -m prt_src        # Launch modern TUI"  
+    echo "  python -m prt_src        # Launch modern TUI"
     echo "  python -m prt_src --classic  # Classic CLI"
     echo "  python -m pytest tests/  # Run tests"
     echo ""
+
+    # ADWS integration information
+    if [[ "$ADWS_ENV_LOADED" == "1" ]]; then
+        echo "🤖 ADWS (AI Developer Workflow) ready:"
+        echo "  cd adws && uv run adw_plan_build.py <issue-number>  # Process GitHub issue"
+        echo "  source ./setup_adws.sh --check                     # Validate ADWS config"
+        echo ""
+    else
+        echo "🤖 ADWS (AI Developer Workflow) available:"
+        echo "  source ./setup_adws.sh      # Setup ADWS environment"
+        echo "  source ./setup_adws.sh --help  # Learn about ADWS"
+        echo ""
+    fi
+
     echo "📚 More info: https://github.com/richbodo/prt"
 else
     echo "Warning: Virtual environment not properly activated"
