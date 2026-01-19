@@ -32,9 +32,7 @@ issue_json: $3
 ## Relevant Files
 
 Focus on the following files:
-- `README.md` - Contains the project overview and instructions.
-- `app/server/**` - Contains the codebase server.
-- `app/client/**` - Contains the codebase client.
+- `README.md` - Contains the project overview and instructions.rm 
 - `scripts/**` - Contains the scripts to start and stop the server + client.
 - `adws/**` - Contains the AI Developer Workflow (ADW) scripts.
 
