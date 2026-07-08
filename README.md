@@ -1,5 +1,7 @@
 # Personal Relationship Toolkit (PRT)
 
+Note - this was a year-long effort to prototype an application that ultimately needed a conformance suite to stay on track, and real user feedback to go anywhere - those things were developed in the [Personal Network Toolkit](https://github.com/social-network-health/personal_network_toolkit) and this repository is now retired but still being harvested for some value before being removed.
+
 ## Quick Start for Developers
 
 Right now we work out of the repository root and keep the virtual environment active while iterating with Cursor, Codex, or Claude. Use the shell scripts init.sh and uninit.sh.
