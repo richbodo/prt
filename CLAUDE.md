@@ -1,5 +1,33 @@
 # CLAUDE.md
 
+> ## ⚠️ This repository is being archived — do not start new work here
+>
+> Substantive development stopped **2026-01-12**. `prt` has been superseded by
+> **[prm](https://github.com/social-network-health/prm)** (Personal Relationship Manager),
+> which is the actively developed relationship manager and a PNA Toolkit reference design.
+>
+> **If you were sent here to build something, you are in the wrong repo — go to `prm`.**
+>
+> The one legitimate task remaining is the **harvest pass** before archiving, tracked in the
+> hub repo's [`plans/ORG-TASKS.md`](https://github.com/social-network-health/social-network-health/blob/main/plans/ORG-TASKS.md).
+> It has three parts, because reading the issues alone misses a third of the value:
+>
+> 1. **The open issues** — roughly 7 of 19 carry real concept material. Strongest: **#147**
+>    (CRT/PRT notification protocol — unbuilt and captured nowhere else), **#145** (small
+>    models can't chain bespoke per-lookup tools; give them one general SQL tool instead),
+>    **#69** (confirm a new relationship against a rendered diagram of it), **#37** (the
+>    decision record for rejecting SQLCipher in favour of app-level encryption).
+> 2. **The code** — import-pipeline sophistication is **not** in the backlog; every import
+>    issue is already closed. It lives in `prt_src/google_takeout.py`,
+>    `prt_src/google_contacts.py`, `prt_src/cli_modules/services/import_google.py`, and the
+>    Google People schema docs under `docs/Database/`.
+> 3. **`ROADMAP.md`** — self-declared obsolete, but its "FUN FACTORS" section is transcribed
+>    brainstorm material worth mining before it goes read-only.
+>
+> Everything below this banner describes how the project worked while it was live. It is
+> accurate history, kept for the harvest — not an invitation to develop against it.
+
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 

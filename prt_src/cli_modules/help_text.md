@@ -54,4 +54,4 @@ python -m prt_src --chat="" --model gpt-oss-20b
 python -m prt_src list-models     # Show available AI models
 ```
 
-Documentation: https://github.com/richbodo/prt
+Documentation: https://github.com/social-network-health/prt

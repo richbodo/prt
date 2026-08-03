@@ -559,7 +559,7 @@ For security concerns or to report vulnerabilities:
 
 1. **Check logs** for evidence of exploit attempt
 2. **Document** the attack vector and impact
-3. **Create issue** at https://github.com/richbodo/prt/issues
+3. **Create issue** at https://github.com/social-network-health/prt/issues
 4. **Include:**
    - Attack vector description
    - Steps to reproduce
