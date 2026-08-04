@@ -68,7 +68,7 @@ This design supports unlimited tags and notes per relationship while remaining c
 
 ### Version 3 (Support relationship types)
 
-See https://github.com/richbodo/prt/issues/38
+See https://github.com/social-network-health/prt/issues/38
 
 ## Migration Management
 

@@ -79,7 +79,7 @@ I am solving a few personal pain points with this project:
 3) It is depressing to look at a list of thousands of contacts and try to find the people I need to find immediately with the tools I have - this is made worse by my unwillingness to share certain data about contacts with big corporations.  I therefore almost never find the people I need to find when I most need to find them, using any centralized contact db (google, apple, facebook, linkedin, etc.).  I need a better, multifaceted, LLM-enabled chat-UI for search, and I need it to be humane and privacy preserving.  Prt will be my UI for finding folks.
 4) I want to nerd out with P2P privacy and ZKPs, the ultimate fun goal once I get those first three under control.  There is actually a lot to do in that space and improving privacy preserving community health is one of those things to do.  Prt will be that nerdfest for me.
 
-   For more detail on the vision of the project, see the [ROADMAP](https://github.com/richbodo/prt/blob/main/ROADMAP.md)
+   For more detail on the vision of the project, see the [ROADMAP](https://github.com/social-network-health/prt/blob/main/ROADMAP.md)
 
 ## CLI, TUI, and Chat
 
@@ -278,7 +278,7 @@ For detailed troubleshooting and advanced database management, see [DB_MANAGEMEN
 
 ```bash
 # Clone the repository
-git clone https://github.com/richbodo/prt.git
+git clone https://github.com/social-network-health/prt.git
 cd prt
 
 # Set up virtual environment and dependencies
